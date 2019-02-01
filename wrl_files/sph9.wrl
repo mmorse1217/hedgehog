@@ -1,0 +1,28 @@
+groups 9
+ctr  0.0  0.0  0.0
+scl  1.0  1.0  1.0
+orient 1
+ctr -0.25 -0.25 -0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr -0.25 -0.25  0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr -0.25  0.25 -0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr -0.25  0.25  0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr  0.25 -0.25 -0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr  0.25 -0.25  0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr  0.25  0.25 -0.25
+scl  0.1  0.1  0.1
+orient -1
+ctr  0.25  0.25  0.25
+scl  0.1  0.1  0.1
+orient -1

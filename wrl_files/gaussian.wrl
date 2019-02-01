@@ -1,0 +1,18 @@
+points 4
+-1 -1 0 
+ 1 -1 0 
+ 1  1 0 
+-1  1 0 
+
+
+coords 1
+0 3 2 1
+
+gids 1
+0
+
+groups 1
+intpt 0 0 0
+orient 1
+
+
