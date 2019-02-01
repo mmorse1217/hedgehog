@@ -1,0 +1,8 @@
+-Isrc/
+-Isrc/common/
+-Isrc/bie3d/
+-Isrc/bdry3d/
+-Isrc/fmm3d/
+-Isrc/deps/
+-Iface_map/src/
+-Ipvfmm/include/
