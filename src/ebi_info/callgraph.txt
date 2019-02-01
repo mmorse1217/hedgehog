@@ -1,0 +1,49 @@
+main
+  Bd3dBd* bdbd = new Bd3dBd("BD3D_", "bd3d_");
+  bd->setFromOptions();
+      CCSubMatLib* submatlib = new CCSubMatLib(); //  load precomputed subdivision matrices
+      submatlib->setup(..);  
+      BdULib* bdulib = new BdULib(); 
+      bdulib->setup(...);  // load another set of matrices 
+      // bdsurf initialized in constructor    
+      bdsurf->setup(); 
+  bd->setup(); // finds an interior point for each connected component of the boundary
+      gpmesh.get_interior_points();
+      gpmesh.get_intpt_orientation();
+  Bis3dOvLapDr<EbiNode>* bis = new Bis3dOvLapDr<EbiNode>("BIS3D_", "bis3d_");
+  bis->bdry() = bd;  
+  bis->setup();
+      // sets up kernels for the solver, calls initializers for Dn3dOv structure storing patch sample point information
+      // initializes refined sample points to be used by near evaluation
+      *knl  = Kernel3d(...);
+      this->_dstz = new DN3dOv(this->name()+"DN_", this->prefix()+"dn_");       
+      this->dstz())->bdry()  = this->bdry();
+      this->dstz())->setup() // initializes all per sample point data
+      this->_refined_dstz = new DN3dOv(this->name()+"RFDDN_", this->prefix()+"refined_dn_");
+      this->refined_dstz())->bdry() = this->bdry();
+      this->refined_dstz())->setup();
+
+      _matre = new BE3dOvRon<N>(this->name()+"RE_", this->prefix()+"re_");
+      _matre->bis() = this;
+      _matre->trgpos() = this->dstz->sample_point_position();
+      _matre->trgbpt() = this->dstz->sample_as_face_      
+      _matre->setup(); 
+          BE3dOv->setuptdata(_trgpos, _trgbpt, _tdata) ); // initializes collocation points for per-patch operations stored in TData
+	    _bis->dstz()->tctran(_trgbpt, _tdata.c2tmap(), _tdata.colnumvec(), _tdata.colbegvec()) ); // fills out indexing data for colloc points
+	    and maps from colloc to target
+      setupcdata();
+
+Vec den_solved, val;
+  // initialize val = rhs
+  bis->solve(val, den_solved);
+      Vec ina,  oua; // initialize ina from val and aux data gg
+      _matre->eval(ina, oua) 
+         sgeval(den, val)   // den = ina, val = oua	 	     	   
+             fmm->evaluate(srcDen, trgVal) ); // srcDen = den rescaled, trgVal = val
+	     pchsub(..) // floating pou -- subtract the local part of a singular integral computed by fmm inaccurately
+	     pchadd(..) // floating pou -- add the integral for the local part obtained by resampling on 
+
+-------
+evaluation:
+  for points on the surface, as above
+  for points in the far zone (more than bbb*spacing() away from the surface 

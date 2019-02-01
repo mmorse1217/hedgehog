@@ -1,0 +1,2083 @@
+#include "bis3dov.hpp"
+#include "vec2t.hpp"
+#include <omp.h>
+#include "fmm3d/kifmm/Efmm3d.hpp"
+
+BEGIN_EBI_NAMESPACE
+
+using std::pair;
+using std::min;
+using std::max;
+using std::abs;
+using std::cerr;
+using std::ofstream;
+
+template <class N>
+Bis3dOv<N>::Bis3dOv(const string& n, const string& p):
+  EbiObject(n,p), _bdry(NULL), _dstz(NULL), _refined_dstz(NULL), _dnref(4), _np(-1), _maxlevel(-1), _nits(0)
+{
+}
+
+template <class N>
+Bis3dOv<N>::~Bis3dOv()
+{
+  if(_dstz!=NULL) delete _dstz;
+  if(_refined_dstz!=NULL) delete _refined_dstz;
+}
+// ---------------------------------------------------------------------- 
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::setFromOptions"
+template <class N>
+int Bis3dOv<N>::setFromOptions()
+{
+  ebiFunctionBegin;
+  // Parses parameters from specified options file and passes them about
+  
+  PetscBool flg = PETSC_FALSE;
+  
+  iC( PetscOptionsGetReal(NULL, prefix().c_str(),  "-spacing", &_spacing,  &flg) );
+  ebiAssert(flg==true);
+
+  cout << "SPACING = " << _spacing << endl;
+  //TODO: find out if this is required for correctness or just convienent 
+  if (_spacing <= 0.2 && _spacing > 0.025) {
+      _refined_spacing = _spacing/2.0;
+  } else if (_spacing <= 0.025) {
+      _refined_spacing = _spacing/3.0;
+  } else { ebiAssert(0); }
+
+  cout << "SPACING = " << _spacing << endl;
+  cout << "RFD SPACING = " << _refined_spacing << endl;
+  iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-dnref", &_dnref,  &flg) ); //?
+
+  if(flg!=PETSC_TRUE) { _dnref = 16; }  cerr<<"DNREF "<<_dnref<<endl; //DNREF ALWAYS SET TO 8 NOW BUT CAN BE CHANGED AS OPTION
+  
+  double tmpR[3];  int64_t tmpN=3;
+  iC( PetscOptionsGetRealArray(NULL, prefix().c_str(), "-ctr", tmpR, &tmpN, &flg) );	ebiAssert(tmpN==3 && flg==true);
+  _ctr = Point3(tmpR);
+  
+  iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-rootlvl", &_rootlvl,  &flg) ); ebiAssert(flg==PETSC_TRUE);
+
+  iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-np", &_np,  &flg) ); ebiAssert(flg==PETSC_TRUE);
+  iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-maxlevel", &_maxlevel,  &flg) ); ebiAssert(flg==PETSC_TRUE);
+  iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-ptsmax", &_ptsmax,  &flg) ); ebiAssert(flg==PETSC_TRUE);
+  
+
+  cerr << _np << " " << _maxlevel << " "<< _ptsmax << endl;
+  
+  ebiFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::marknodes"
+template <class N>
+int Bis3dOv<N>::marknodes(bool mrklvs){
+/* Mark a node as IN/OUT/CRV by the following technique:
+ * create a 3^3 grid of
+ * - one each corner
+ * - one each edge
+ * - one each face
+ * - one in center of box
+ * By labeling each point using a dense labeling technique, we
+ * figure out if all points are the same.  If so, mark node as IN/OUT based
+ * on the points.  Otherwise, node has curve going through it.
+ * Also, if a boundary point goes through the node, we know it is CRV, though
+ * if a node has no bdry point, it may still be CRV (e.g., very-refined grid
+ * and sparse surface - not advisable but possible)
+ */
+  ebiFunctionBegin;
+  ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+
+  VLet3d<N>* vlet = _vfmm->vlet();
+  
+  // Fill ordVec with list of decreasing node indices 
+  // ordVec = [num_nodes-1, num_nodes-2, ..., 0]
+  vector<int> ordVec; 
+  iC( vlet->upwOrderCollect(ordVec) ); //BOTTOM UP
+  (*(_vfmm->intns_edges())).resize(ordVec.size()*NUMEDGES);
+  
+  //lvlOrdVec is a map from the ith level in the tree to the list of node 
+  //indices on that level, in a reverse level order traversal
+  map<int, vector<int> > lvlOrdVec;
+  iC( vlet->revLvlOrderCollect(lvlOrdVec) ); //BOTTOM UP
+
+  // Clear out the node marking parameters for each leaf node on every level so that 
+  // we start fresh, in case the FMM was previously used.
+  for (int j = lvlOrdVec.size(); j >= 0; j--){
+	 vector<int>& thisLevBoxes = lvlOrdVec[j];
+#pragma omp parallel for
+	 for (int i = 0; i < thisLevBoxes.size(); i++){
+		int gNodeIdx = thisLevBoxes[i];
+		// Reset each node to no color and no bdry points 
+		N& curNode = _vfmm->node(gNodeIdx);
+		curNode.bndCrvPts().clear();
+		curNode.color() = -1;
+		curNode.bndCrv() = false;
+		curNode.dist() = -1.0;
+	 }
+  }
+  
+  /* For each boundary point, find the terminal in which it is located
+	* and then label it is a CRV node
+	*/
+  /*
+  for (int i = NN; i < NN + ufpnum; i++){
+	 int gNodeIdx = _vfmm->trgPosGni(i); // Leaf where i is located 
+	 ebiAssert(vlet->terminal(gNodeIdx));
+	 N& curNode = _vfmm->node(gNodeIdx);
+	 curNode.bndCrvPts().push_back(i);
+	 curNode.bndCrv() = true;
+	 curNode.color() = CRV;
+	 curNode.dist() = 0.0; // dist is 0 because curve is in there 
+  }
+  */
+  
+  // For each node, on each level, in the reverse level order traversal,
+  // call marknode if we haven't already.
+  for (int j = lvlOrdVec.size(); j >= 0; j--){
+	 vector<int>& thisLevBoxes = lvlOrdVec[j];
+#pragma omp parallel for
+	 for (int i = 0; i < thisLevBoxes.size(); i++){
+		int gNodeIdx = thisLevBoxes[i];
+		N& curNode = _vfmm->node(gNodeIdx);
+		char cgc = curNode.color(); // current color of this leaf
+		if (cgc == -1) {
+		  iC( marknode(gNodeIdx)); ebiAssert(curNode.color() != -1);
+		}
+	 }
+  }
+
+  if (mrklvs){  
+     // crvVec: list of box indices corresponding to leaf boxes that contain a 
+     //         piece of the boundary
+	 vector<int> crvVec;
+	 for (int i = 0; i < ordVec.size(); i++){
+		int gni = ordVec[i];
+		if (vlet->terminal(gni)){ //leaf boxes only here
+		  if (vlet->node(gni).color() == CRV) {
+			 crvVec.push_back(gni);
+		  }
+		  else if (vlet->node(gni).color() == IN) {
+			 vlet->node(gni).numIntPts() = vlet->srcGrdSze(); 
+                                           //= kSrcVal^3 = source grid size
+                                           //this is loaded from optionsfiles
+                                           //and is not present in any existing file
+		  }
+		  else if (vlet->node(gni).color() == OUT) {
+			 vlet->node(gni).numIntPts() = 0;
+		  }
+		  else { ebiAssert(0); }
+		}
+	 }
+
+#pragma omp parallel for
+	 for (int i = 0; i < crvVec.size(); i++){
+		markleafgrid(crvVec[i], true);
+		//cerr << crvVec[i] << " " << vlet->node(crvVec[i]).numIntPts() << " " << vlet->node(crvVec[i]).isInt().size() << " " << vlet->node(crvVec[i]).isIntDbl().size() << endl;
+	 }
+  }
+
+  ebiFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::marknode"
+template <class N>
+int Bis3dOv<N>::marknode(int gNodeIdx){
+  ebiFunctionBegin;
+  ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+  
+  Bd3dOv* bd = bdry();
+  DN3dOv* dn = dstz(); //USE THE DENSE ONE
+
+  VLet3d<N>* vlet = _vfmm->vlet();
+  
+  /* Current node - should not have been labeled yet! */
+  N& curNode = _vfmm->node(gNodeIdx);
+  char cgc = curNode.color(); // current color of this leaf
+  {
+     // make sure the node hasn't already been marked
+     //closest distance to closest boundary point 
+     //initialized to -1.0 in markgrid to force marking
+	 double dist =   curNode.dist(); 
+	 ebiAssert(cgc == -1 && dist < 0);
+  }
+
+  // if this node has no children:
+  if (vlet->terminal(gNodeIdx)){
+
+	 /* Vecs for labeling */
+     // The following vectors store data about the nearest sample point on the
+     // boundary to each FMM box point. A box point is defined here as a point
+     // on the edge, face, corner, or at the center of an FMM box (node).; this
+     // produces 27 total points that need to be classified as interior or 
+     // exterior points. If all 27 are in (resp. out), then the entire box is in
+     // (resp. out).
+     //
+     //intns: indicate whether the ith box point is inside (=1),
+     //outside (=0) or passing through the boundary curve (crv) (=2)
+     //
+     //distVec: distance from ith box point to nearest sample point on the  boundary 
+     //pivec: index of the patch that contains the nearest sample point to ith
+     //       boxpoint
+     //xyvec: coordinates of the nearest sample point to ith boxpoint in the 
+     //       2d parameter domain 
+	 
+     ChrNumVec intns(_vfmm->intns_edges(gNodeIdx)); setvalue(intns,(char)(-1));
+	 DblNumVec distVec(27); setvalue(distVec,-1.0);  
+	 IntNumVec pivec(27); NumVec<Point2> xyvec(27);
+	 
+	 Point3 ctr(vlet->center(gNodeIdx));
+     double rad = vlet->radius(gNodeIdx);
+
+
+     // Iterate over all dominant sample points and determine the one nearest to
+     // each box point.
+     //
+     // For parallel: start this loop with if(patch_partition[pi] == mpiRank){...}
+     // and this should work as is. Should also work with omp as is. 
+     //
+     // Only change  is probably adding an MPI_All_to_All at the end to sync up
+     // computed data, but needs to be in markgrid instead of here
+     for(int pi=0; pi<bd->patches().size(); pi++) {
+         Pch3dOv* curpch = bd->patches()[pi];
+         IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+         double bnd = curpch->bnd();	 double init = -bnd;
+         double step = dn->step_size()[pi];	 int num_samples = dn->num_sample_points()[pi];
+
+         DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+         DblNumVec sample_point_props(dn->sample_point_props(pi));
+
+         for(int ri=0; ri<num_samples; ri++){
+           for(int rj=0; rj<num_samples; rj++) {
+              
+              int ui = patch_sampling_index(ri,rj);
+              
+              if(ui!=-1) {
+                 DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+                 
+                 // if the (ri,rj)th sample point is a sample point on the 
+                 // (pi)th patch and this sample is dominant...
+                 if(tag->_dmt==true) { 
+                   Point3 curpos(sample_point_3d_position.clmdata(ui));
+                   int cnt = 0;
+                   // Check each box point to see if the current  sample is the 
+                   // nearest one
+                   // Store the closest distance and other data about that point
+                   // if it's the closest
+                   for (int a = -1; a <2; a++){
+                       for (int b = -1; b <2; b++){
+                           for (int c = -1; c <2; c++){
+                               double x= ctr(0) + a*rad;
+                               double y= ctr(1) + b*rad;
+                               double z= ctr(2) + c*rad;
+
+                               Point3 newpos = Point3(x,y,z);
+                               Point3 offset(newpos - curpos);
+                               double dist = offset.length();
+                               ebiAssert(dist >= 0.0);
+                               // misleading;Really want to check curNode.dist()
+                               // != -1 (i.e. not yet computed) 
+                               // distances shouldn't be negative
+                               if (curNode.dist() < 0 || dist < curNode.dist()){
+                                  curNode.dist() = dist;
+                               }	
+                               if (distVec(cnt) < 0 || dist < distVec(cnt)){
+                                  distVec(cnt) = dist;
+                                  pivec(cnt) = pi;
+                                  xyvec(cnt) = Point2(init+ri*step, init+rj*step);
+                               }
+                               cnt++;
+                            } 
+                        } 
+                    }
+                 }		
+              }
+           }
+         }
+     }
+    // Label 27 box points as in or out based on surface normals 
+    int cnt = 0; //TODO: cnt = 3*a + 3*b + c; //?
+    for (int a = -1; a <2; a++){
+        for (int b = -1; b <2; b++){
+            for (int c = -1; c <2; c++){
+                 ebiAssert(distVec(cnt) >= 0); 
+                 
+                 int pi = pivec(cnt);
+                 Point2 xyc = xyvec(cnt);
+                 
+                 double x= ctr(0) + a*rad;
+                 double y= ctr(1) + b*rad;
+                 double z= ctr(2) + c*rad;
+
+
+                 Point3 target_3d_position = Point3(x,y,z);
+                 Pch3dOv* curpch = bd->patches()[pi];
+                 Point3 ret[3];
+                 iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD,
+                             (double*)ret, _surface_interpolation_num_samples) );
+                 //p = vector pointing from the ith box point of the FMM box to 
+                 //    closest sample points
+                 /*        
+                  *         |          
+                  *  x ---> o <--- x 
+                  *         |
+                  *    <=== |
+                  *         |
+                  *
+                  *  x = possible box point locations
+                  *  o = nearest boundary sample point to x
+                  *  --> = p
+                  *  <== = surface normal at o
+                  *
+                  * Below: n = normal at o.
+                  * If: p \dot n > 0, x is outside the boundary hence outside
+                  *     p \dot n = 0, p is perp to n, hence x is closer to the 
+                  *                   surface at another point assuming geometry 
+                  *                   is nice. NOTE this is important to 
+                  *                   consider for complex geometry as an edge case;
+                  *                   but this will never be exactly zero in practice
+                  *     p \dot n < 0, x is in the interior
+                  */
+
+                 //MJM BUG if p might need to be negated in order for logic to
+                 //work geometrically?
+                 Point3 p = target_3d_position - ret[0];
+                 Point3 u = ret[1];
+                 Point3 v = ret[2]; 			 //Point3 buf = ret[0];
+                 Point3 n = cross(u, v);
+                 n /= n.l2();
+
+                 double pn = dot(p, n);
+                 //From common/NbrDefs:
+                 //#define IN 1
+                 //#define OUT 0
+                 //#define CRV 2
+                 
+                 if(pn>=0) {
+                     intns(cnt) = 0; //out
+                 } else {
+                     intns(cnt) = 1;  //in
+                 }
+                 cnt++;
+            }
+        }
+    }
+
+    // Check to see if all box points labeled as the same.
+    //If so, the entire box is marked as IN or OUT. Else, we are on the boundary
+    
+    bool all_same = true;
+    for (int i = 0; i <27; i++){
+        ebiAssert(intns(i) != -1);
+        if (intns(i) != intns(0)){ all_same = false; }
+    }
+
+    if (all_same){
+        if (intns(0) == 0){
+            curNode.color() = OUT; 
+        } else {
+            curNode.color() = IN; 
+        }	
+    }
+    else { 
+        // if not all points not labeled the same, this box intersects the boundary (CRV node). 
+        // Plus, set dist to 0
+        curNode.color() = CRV;
+        curNode.dist() = 0.0;
+    }
+
+  } else { /* NON-TERMINALS */
+      /* If all children are same color, label non-terminal box that color
+      * Else, it has a piece of the boundary going through a child (or several children)
+      * Also, all terminals should be labeled before non-terminals!
+      * Non terminals are marked mainly for error-checking.
+      */
+      bool all_same = true;
+      int chi_chkr = vlet->child(gNodeIdx,Index3(0,0,0));
+       char cgc_chkr = _vfmm->node(chi_chkr).color(); ebiAssert(cgc_chkr != -1);
+       for (int a = 0; a < 2; a++){
+           for (int b = 0; b < 2; b++){
+               for (int c = 0; c < 2; c++){
+
+                   int chi = vlet->child(gNodeIdx,Index3(a,b,c));
+                   N& chiNode = _vfmm->node(chi);
+                   char cgc_chi = chiNode.color(); ebiAssert(cgc_chi != -1);
+
+                   if (cgc_chi != cgc_chkr){
+                       all_same = false; 
+                   }
+                   if (curNode.dist() < 0 || chiNode.dist() < curNode.dist()){
+                      curNode.dist() = chiNode.dist();
+                   }	
+                }
+           }
+       }
+       if (all_same){
+           curNode.color() = (cgc_chkr);
+       }
+       else {
+           curNode.color() = CRV;
+       }
+  }
+       
+  ebiAssert( curNode.color() != -1);
+  ebiAssert( curNode.dist() >= 0.0);
+
+  ebiFunctionReturn(0);
+}
+
+/* This function labels which of the k^3 leaf points on a CRV leaf node
+* are interior or exterior.  If dbl == true, we also lable the (2k)^3 grid
+* (i.e. refined grid)
+*/
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::markleafgrid"
+template <class N>
+int Bis3dOv<N>::markleafgrid(int gNodeIdx, bool dbl){
+    ebiFunctionBegin;
+
+    VLet3d<N>* vlet = _vfmm->vlet();
+    N& curNode = vlet->node(gNodeIdx);
+
+    int kVal = vlet->kSrcVal();
+    double h = vlet->radius(gNodeIdx)*2.0/vlet->kSrcVal();
+
+    /* All grid points within 2*h or spacing() of surface will be labeled */
+    double bs = max(2.0*h, 2.0  * spacing());
+    //double bs = 2.0 * h;
+
+    /* Make sure only on CRV leaf node */
+    cerr << (int)(curNode.color()) << " " << curNode.terminal() << endl;
+    ebiAssert(curNode.color() == CRV && curNode.terminal() == true);
+
+    /* Resize and initialize isInt vectors as not marked */
+    // MJM RENAME isInt == is_interior
+    // MJM BUG srcGrdSze() = (vlet->kSrcVal())^3, and this is never initialized
+    // in the options file
+    curNode.isInt().resize(0); curNode.isIntDbl().resize(0);
+    curNode.isInt().resize(vlet->srcGrdSze());
+    for (int i=0; i < vlet->srcGrdSze(); i++){
+        curNode.isInt(i) = NMRK;
+    }
+
+    if (dbl){ //for refined grid
+        curNode.isIntDbl().resize(vlet->dblSrcGrdSze());
+
+        for (int i=0; i < vlet->dblSrcGrdSze(); i++){
+            curNode.isIntDbl(i) = NMRK;
+        }
+    }
+
+    curNode.numIntPts() = 0;
+    curNode.numIntDblPts() = 0;
+
+    DblNumMat grdPos(vlet->grdSrcExaPos(gNodeIdx));
+    DblNumMat grdDblPos(vlet->grdDblSrcExaPos(gNodeIdx));
+
+    int NN = (dbl ? grdPos.n() + grdDblPos.n() : grdPos.n());
+    DblNumVec distvec(NN); setvalue(distvec, -1.0);
+    IntNumVec pivec(NN);
+    NumVec<Point2> xyvec(NN);
+    ChrNumVec intns(NN);
+
+    Bd3dOv* bd = bdry();
+    DN3dOv* dn = dstz(); //USE THE DENSE ONE (MJM: dense == refined? 
+                        // if so, need to ensure this is initiailized properly)
+
+    /* NN points include k^3 AND (2k)^3 grid when dbl == true
+    * In this loop, we only label the closest points using
+    * the surface points */
+    for (int i = 0; i < NN; i++){
+        intns(i) = -1;
+        /* Check if we are labeling the regular grid or refined grid */
+        if (i < grdPos.n()){
+            ebiAssert( curNode.isInt(i) == NMRK);
+        }
+        else {
+            // is refined
+            ebiAssert(curNode.isIntDbl(i-grdPos.n()) == NMRK); 
+        }
+        double x = (i < grdPos.n() ? grdPos(0,i) : grdDblPos(0, i - grdPos.n()));
+        double y = (i < grdPos.n() ? grdPos(1,i) : grdDblPos(1, i - grdPos.n()));
+        double z = (i < grdPos.n() ? grdPos(2,i) : grdDblPos(2, i - grdPos.n()));
+        Point3 newpos = Point3(x,y,z);
+
+        /* First, find the closest surface point to the grid points
+         * closest to to each dominant surface point */
+        // This is copy-pasted from marknode() and slightly modified. 
+        // Only difference is that instead of finding the nearest surface 
+        // sample to FMM box points, we're finding the nearest surface sample to
+        // each point in a regular grid
+        // MJM Consider factoring out.
+        for(int pi=0; pi<bd->patches().size(); pi++) {
+           Pch3dOv* curpch = bd->patches()[pi];
+           IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+           double bnd = curpch->bnd();	 double init = -bnd;
+           double step = dn->step_size()[pi];	 int num_samples = dn->num_sample_points()[pi];
+           
+           DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+           DblNumVec sample_point_props(dn->sample_point_props(pi));
+           
+           //cout << "Patch # " << pi << endl;
+           for(int ri=0; ri<num_samples; ri++){
+             for(int rj=0; rj<num_samples; rj++) {
+                //------------------------
+                int ui = patch_sampling_index(ri,rj);
+                if(ui!=-1) {
+                   DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+
+                   if(tag->_dmt==true) { //LEXING: ONLY USE THE DOMINATION ONES TO MARK
+                     Point3 curpos(sample_point_3d_position.clmdata(ui));
+                     Point3 offset(newpos - curpos);
+                     double dist = offset.length();
+                     ebiAssert(dist >= 0.0);
+
+                     if (dist < bs){	
+                        if (distvec(i) < 0 || dist < distvec(i)){
+                           /* Mark smallest distance, which patch and which (ri,rj) point */
+                           distvec(i) = dist;  pivec(i) = pi;
+                           xyvec(i) = Point2(init+ri*step, init+rj*step);
+                        }
+                     }
+                   }
+                }
+             }		
+           }
+        }
+
+        /* If a point was marked as close enough, the dist is non-neg
+         * Now, compute normal to surface to see if point in or out */
+        if (distvec(i) > 0){	 
+           int pi = pivec(i);
+           Point2 xyc = xyvec(i);
+           Pch3dOv* curpch = bd->patches()[pi];
+           //Copied comment from marknode()
+           //p = vector pointing from the ith grid point of regular sampling of 
+           //    the FMM box to  closest sample points
+           /*        
+            *         |          
+            *  x ---> o <--- x 
+            *         |
+            *    <=== |
+            *         |
+            *
+            *  x = possible grid point locations
+            *  o = nearest boundary sample point to x
+            *  --> = p
+            *  <== = surface normal at o
+            *
+            * Below: n = normal at o.
+            * If: p \dot n > 0, x is outside the boundary hence outside
+            *     p \dot n = 0, p is perp to n, hence x is closer to the 
+            *                   surface at another point assuming geometry 
+            *                   is nice. NOTE this is important to 
+            *                   consider for complex geometry as an edge case;
+            *                   but this will never be exactly zero in practice
+            *     p \dot n < 0, x is in the interior
+            */
+
+           //MJM BUG if p might need to be negated in order for logic to
+           //work geometrically?
+
+           Point3 ret[3];
+           iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                       (double*)ret, _surface_interpolation_num_samples) );
+
+           Point3 p = newpos - ret[0];
+           Point3 u = ret[1];
+           Point3 v = ret[2]; 			 //Point3 buf = ret[0];
+           Point3 n = cross(u, v);  n /= n.l2();
+
+           double pn = dot(p, n);
+           bool is_valid = true;
+           
+           // MJM @BUG HARDCODED MINIMUM LENGTH
+           // MJM @TODO check this by hand, not sure why the loop is needed.
+           while(abs(pn)<0.975*p.length() && p.length()>1e-12) {
+             Point3 pp = p - pn*n;
+             Point3 up = cross(n,u);
+             Point3 vp = cross(n,v);
+             
+             Point2 xyd(dot(vp,pp)/dot(vp,u), dot(up,pp)/dot(up,v)); //difference
+
+             //LEXING, 0.25 VERY IMPORTANT
+             // MJM @BUG what is (1/4)^3 and why is it hardcoded?
+             xyc += (1.0/64.0) * xyd;
+             iC( curpch->is_xy_valid(xyc.array(), is_valid) );
+
+             if(is_valid==false) {
+                cerr<<"STT FALSE " << xyc<<" "<<xyd<<" " << (i) << " " << endl;
+                ebiAssert(is_valid==true);
+             }
+             else {
+                iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                            (double*)ret, _surface_interpolation_num_samples) );
+                p = newpos - ret[0];
+                u = ret[1];
+                v = ret[2];
+                n = cross(u, v);  n /= n.l2();
+                pn = dot(p, n);
+             }		
+           }
+           
+           if (is_valid){
+             // MJM @BUG HARDCODED MINIMUM LENGTH
+             if(p.length()<1e-12) { // Point is really close
+                cerr<<newpos<<" & "<<ret[0]<< " " << p.length() << endl; intns(i) = 1;
+             }
+             else {
+                //OUT or IN
+                if(pn>=0) {intns(i) = 0; } //out 
+                else{ intns(i) = 1; } //in
+             }
+           }		
+           else { cerr << "is_valid false" << endl; exit(-1); }
+        }
+    }
+
+    int cnt = 0;
+    /* populate in/out information by moving left->right, down->up, etc.
+    * until we locate a labeled point and then go in reverse direction
+    * to ensure all k^3 points get labeled */
+    // MJM @TODO factor these loops out
+    for(int gi=1; gi<=kVal; gi++) {
+        for(int gj=1; gj<=kVal; gj++) {
+            for(int gk=1; gk<=kVal; gk++) {
+                ebiAssert( cnt == ((gi-1)*kVal + (gj-1))*kVal + (gk-1));
+                char color = intns(cnt);
+                if(color!=-1) {//marked
+                   if(gi<=kVal-1) {//TODO remove these conditionals?
+                      int cnt_ip1 = cnt + kVal*kVal;
+                      if(intns(cnt_ip1)==-1) { intns(cnt_ip1)=color; }
+                   }
+                   if(gj<=kVal-1) {
+                      int cnt_jp1 = cnt+ kVal;
+                      if(intns(cnt_jp1)==-1) { intns(cnt_jp1)=color; }
+                   }
+                   if(gk<=kVal-1) {
+                      int cnt_kp1 = cnt + 1;
+                      if(intns(cnt_kp1)==-1) { intns(cnt_kp1)=color; }
+                   }
+                }
+                cnt++;
+            } 
+        } 
+    }
+    cnt--;
+    for(int gi=kVal; gi>=1; gi--) {
+      for(int gj=kVal; gj>=1; gj--) {
+        for(int gk=kVal; gk>=1; gk--) {
+          ebiAssert( cnt == ((gi-1)*kVal + (gj-1))*kVal + (gk-1));
+          char color = intns(cnt);
+          if(color!=-1) {
+             if(gi>=2) { //TODO remove conditionals, change for loop condition to >1
+                int cnt_im1 = cnt - kVal*kVal;
+                if(intns(cnt_im1)==-1) { intns(cnt_im1)=color; }
+             }
+             if(gj>=2) {
+                int cnt_jm1 = cnt- kVal;
+                if(intns(cnt_jm1)==-1) { intns(cnt_jm1)=color; }
+             }
+             if(gk>=2) {
+                int cnt_km1 = cnt - 1;
+                if(intns(cnt_km1)==-1) { intns(cnt_km1)=color; }
+             }
+          }
+          cnt--;
+        } 
+      } 
+    }	
+
+    /* Repeat for (2k)^3 grid */
+    if (dbl){
+     cnt = grdPos.n();
+     //3. populate in/out information
+     int tK = 2*kVal;
+     for(int gi=1; gi<=tK; gi++) { for(int gj=1; gj<=tK; gj++) { for(int gk=1; gk<=tK; gk++) {
+             ebiAssert( cnt-grdPos.n() == ((gi-1)*(tK) + (gj-1))*(tK) + (gk-1));
+             char color = intns(cnt);
+             if(color!=-1) {//marked
+                if(gi<=tK-1) {
+                  int cnt_ip1 = cnt + (tK)*(tK);
+                  if(intns(cnt_ip1)==-1) { intns(cnt_ip1)=color; }
+                }
+                if(gj<=tK-1) {
+                  int cnt_jp1 = cnt+ (tK);
+                  if(intns(cnt_jp1)==-1) { intns(cnt_jp1)=color; }
+                }
+                if(gk<=tK-1) {
+                  int cnt_kp1 = cnt + 1;
+                  if(intns(cnt_kp1)==-1) { intns(cnt_kp1)=color; }
+                }
+             }
+             cnt++;
+          } } }
+     cnt--;
+     for(int gi=tK; gi>=1; gi--) { for(int gj=tK; gj>=1; gj--) { for(int gk=tK; gk>=1; gk--) {
+             ebiAssert( cnt-grdPos.n() == ((gi-1)*(tK) + (gj-1))*(tK) + (gk-1));
+             char color = intns(cnt);
+             if(color!=-1) {
+                if(gi>=2) {
+                  int cnt_im1 = cnt - (tK)*(tK);
+                  if(intns(cnt_im1)==-1) { intns(cnt_im1)=color; }
+                }
+                if(gj>=2) {
+                  int cnt_jm1 = cnt- (tK);
+                  if(intns(cnt_jm1)==-1) { intns(cnt_jm1)=color; }
+                }
+                if(gk>=2) {
+                  int cnt_km1 = cnt - 1;
+                  if(intns(cnt_km1)==-1) {	intns(cnt_km1)=color; }
+                }
+             }
+             cnt--;
+          } } }
+    }
+
+    /* Populate isInt and isIntDbl vectors with intns results from above
+    * Also, count number of internal points and store in node info */
+    for (int i = 0; i < NN; i++){
+     int pnt = (i < grdPos.n() ? i : i - grdPos.n());
+     if (i < grdPos.n()){
+        /* //MJM TODO: there's no reason to make this so complicated.
+         * // make sure you can't jsut copy the underlying arrays and do it in two lines.
+         * curNode.isInt(pnt) = intns(i);
+         * curNode.numIntPts()++;
+         */
+        if (intns(i) == IN){
+          curNode.isInt(pnt) = IN;
+          curNode.numIntPts()++;
+        }
+        else { curNode.isInt(i) = OUT; }
+        ebiAssert(curNode.isInt(i) != NMRK);
+     }
+     else {
+        if (intns(i) == IN){
+          curNode.isIntDbl(pnt) = IN;
+          curNode.numIntDblPts()++;
+        }
+        else { curNode.isIntDbl(pnt) = OUT; }
+     }
+    }
+    /* Make sure everything has been labeled */
+    for (int i = 0; i < NN; i++){ ebiAssert(intns(i) != NMRK); }
+
+    ebiFunctionReturn(0);
+}
+
+// ---------------------------------------------------------------------- 
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::markgrid"
+template <class N>
+int Bis3dOv<N>::markgrid(ChrNumVec& nrtns, ChrNumVec& intns, 
+    vector<double>& face_point_vec, vector<Point3>& posvec)
+{
+ebiFunctionBegin;
+ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+
+// Mark each box in the tree as inside, outside, or containing a piece of the boundary
+iC( this->marknodes(true));
+
+Bd3dOv* bd = bdry(); DN3dOv* dn = dstz();
+VLet3d<N>* vlet = _vfmm->vlet();
+DblNumMat& pos = *(_vfmm->trgPos()); int ufpnum = dn->global_num_sample_points();
+int NN = pos.n() - ufpnum;
+nrtns.resize(NN); setvalue(nrtns, char(0)); //all faraway
+IntNumVec mktns(NN); setvalue(mktns,-1);
+intns.resize(NN); setvalue(intns, char(-1)); //unknown whether it is in or out
+
+DblNumVec distvec(NN); IntNumVec pivec(NN); NumVec<Point2> xyvec(NN);
+
+// Changed bbb to compare with mobo vesicles
+double bbb = 4.0; //MJM @BUG this is nice and hardcoded. 
+if (spacing() > 0.05) { bbb = 2.0; }
+if (spacing() <= 0.025) { bbb = 6.0; }
+if (spacing() <= 0.0125) { bbb = 8.0; }
+//if (spacing() <= 0.0125) { bbb = 16.0; }
+//if (spacing() <= 0.00625) { bbb = 24.0; }
+
+double bs = bbb*spacing(); 
+cerr<<"bbb = "<<bbb<<" BS= "<<bs<<endl;
+
+int posvecsze = 0;
+
+/* mark each point, find approx. distance to surface, which patch is closest,
+* which surface point is closest, etc.  This info used below for ultimate
+* marking
+*/
+#pragma omp parallel for	 
+for (int gg = 0; gg < NN; gg++){
+ if (gg % 25000 == 0) { cerr << "Point # " << gg << " thread = " << omp_get_thread_num() << endl; }
+ for(int pi=0; pi<bd->patches().size(); pi++) {
+    // MJM for parallel: add if(patch_partition[pi] == mpiRank) here.
+    Pch3dOv* curpch = bd->patches()[pi];
+    IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+    double bnd = curpch->bnd();
+	double init = -bnd;
+
+    double step = dn->step_size()[pi];
+	int num_samples = dn->num_sample_points()[pi];
+
+    DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+    DblNumVec sample_point_props(dn->sample_point_props(pi));
+    
+    //cout << "Patch # " << pi << endl;
+    for(int ri=0; ri<num_samples; ri++){
+      for(int rj=0; rj<num_samples; rj++) {
+         //------------------------
+         int ui = patch_sampling_index(ri,rj);
+         if(ui!=-1) {
+            DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+            if(tag->_dmt==true) { //LEXING: ONLY USE THE DOMINATION ONES TO MARK
+              Point3 curpos(sample_point_3d_position.clmdata(ui));
+              //char cgc = _vfmm->node(_vfmm->trgPosGni(gg)).color();
+              //if (cgc == CRV || cgc == IN){ /* Leaf where i is located */
+              if (1) { //cute
+                 double x = pos(0,gg);
+                 double y = pos(1,gg);
+                 double z = pos(2,gg);
+
+                 Point3 newpos = Point3(x,y,z);
+                 Point3 offset(newpos - curpos);
+                 double dist = offset.length();
+                 ebiAssert(dist >= 0.0);					 
+                 if(dist<bs) { //nearby points
+                    nrtns(gg) = 1;
+                    if(mktns(gg)==-1) { //not marked yet
+                      mktns(gg) = 1;	distvec(gg) = dist;
+                      pivec(gg) = pi;
+                      xyvec(gg) = Point2(init+ri*step, init+rj*step);
+
+                    } else { //marked already
+                      if(dist < distvec(gg)) {
+                         distvec(gg) = dist; pivec(gg) = pi;
+                         xyvec(gg) =  Point2(init+ri*step, init+rj*step);
+                         
+                      }
+                    }
+                 }
+              }
+            }
+         }
+      }
+    }
+ }
+}
+
+for (int gg = 0; gg < NN; gg++){
+ if(nrtns(gg) == 1){ posvecsze++; }
+}
+
+cerr<<"step 1 finished "<<endl;//distvec.size()<<endl;
+
+//2. for near ones (mktns()!=-1) find face_point and pos
+
+face_point_vec.clear();
+posvec.clear();
+
+int face_point_size_in_doubles = dn->face_point_size_in_doubles();
+face_point_vec.resize(posvecsze * face_point_size_in_doubles);
+posvec.resize(posvecsze);
+
+/* Mark all of the CLOSEST points
+* This is a dense computation.  All points within
+* bs were marked as close, so now we compute
+* whether each of these points is inside or outside
+* of the surface
+*/
+
+//MJM BUG parentheses mismatch; patch pi is not defined below...
+int cnt = 0;
+#pragma omp parallel for
+for (int gg = 0; gg < NN; gg++){
+ if(mktns(gg)!=-1) { //nearby point
+    int pi = pivec(gg); Point2 xyc = xyvec(gg);
+    double x = pos(0, gg); double y = pos(1, gg); double z = pos(2, gg);
+
+    Point3 target_3d_position = Point3(x,y,z);
+    
+    Pch3dOv* curpch = bd->patches()[pi];
+    Point3 ret[3];
+    iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD,
+                (double*)ret, _surface_interpolation_num_samples) );
+    Point3 p = target_3d_position - ret[0]; Point3 u = ret[1]; Point3 v = ret[2]; 
+    Point3 n = cross(u, v);  n /= n.l2();
+    double pn = dot(p, n);
+    bool is_valid = true;
+    
+    while(abs(pn)<0.975*p.length() && p.length()>1e-12) {
+      Point3 pp = p - pn*n;
+      Point3 up = cross(n,u); Point3 vp = cross(n,v);
+      Point2 xyd(dot(vp,pp)/dot(vp,u), dot(up,pp)/dot(up,v)); //difference
+      //LEXING, 0.25 VERY IMPORTANT
+      xyc += (1.0/64.0) * xyd;
+      iC( curpch->is_xy_valid(xyc.array(), is_valid) );
+
+      if(is_valid==false) {
+         cerr<<xyc<<" "<<xyd<<" " << (int)nrtns(gg) << " " << endl;
+         ebiAssert(is_valid==true);
+      }	
+      else {
+         iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                     (double*)ret, _surface_interpolation_num_samples) );
+         p = target_3d_position - ret[0];
+         u = ret[1];
+         v = ret[2];
+
+         n = cross(u, v);
+         n /= n.l2();
+         pn = dot(p, n);
+
+      }
+    }					 //cerr<<endl;
+    if (is_valid){
+      if(p.length()<1e-12) { cerr<<target_3d_position<<" & "<<ret[0]<< " " << p.length() << endl; }
+      if (nrtns(gg) == 1){
+         FacePointOverlapping* face_point_arr = 
+             (FacePointOverlapping*)(&face_point_vec[cnt*face_point_size_in_doubles]); 
+         iC( curpch->xy_to_face_point(xyc, face_point_arr) );
+         posvec[cnt] = ret[0];
+		  }
+		  if (p.length() < 1e-12) { intns(gg) = 1; } //in
+		  else { //OUT or IN
+			 if(pn>=0) { intns(gg) = 0; } // out 
+			 else{ intns(gg) = 1; } //in
+		  }
+		  if (nrtns(gg) == 1){ cnt ++; }
+		}
+		else { cerr << "is_valid false" << endl; ebiAssert(0); }
+	 }
+  }
+  ebiAssert(cnt==posvecsze);
+
+  cerr<<"step 2 finished "<<endl;
+
+  /* For CRV nodes, go through and make sure all points have been labeled
+	* All target points nearby are already be labeled, but for others,
+	* we use the double-size regular grid, which has been labeled by marknodes()
+	* We then find the closest grid point and lable the target point with that label.
+	* This is guaranteed to work because all grid points within 2*h for grid-spacing
+	* h were labeled using the dense process.  Further, all target points within bs > 2*h
+	* were also labeled, so we know that an unlabeled target point must lie beyond
+	* a spacing that would be covered by the double-sized grid
+	*/
+  
+  // Fill ordVec with list of decreasing node indices 
+  // ordVec = [num_nodes-1, num_nodes-2, ..., 0]
+  vector<int> ordVec;  iC( vlet->dwnOrderCollect(ordVec) );
+
+#pragma omp parallel for
+  for(int ii=0; ii<ordVec.size(); ii++) {
+	 int gni = ordVec[ii];
+	 N& curNode = _vfmm->node(gni);
+
+	 if (vlet->terminal(gni) && curNode.color() == CRV){
+		for (int i = 0; i < curNode.trgOwnVecIdxs().size(); i++){
+
+		  int pnti = curNode.trgOwnVecIdxs()[i];
+		  if (pnti < NN && intns(pnti) == -1){
+
+			 Point3 posi(pos(0,pnti), pos(1,pnti), pos(2,pnti));
+			 int numdgpnts = vlet->grdDblSrcSamPos().n(); 
+             DblNumMat grdPos(vlet->grdDblSrcExaPos(gni));
+
+			 //int numdgpnts = vlet->grdSrcSamPos().n(); DblNumMat grdPos(vlet->grdSrcExaPos(gni));
+			 ebiAssert(curNode.isIntDbl().size() == numdgpnts && grdPos.n() == numdgpnts);
+			 //ebiAssert(curNode.isInt().size() == numdgpnts && grdPos.n() == numdgpnts);
+			 
+             double rcls =  4.0*(vlet->radius());
+			 for (int jj = 0; jj < numdgpnts; jj++){
+				ebiAssert( curNode.isIntDbl(jj) != NMRK);
+				//ebiAssert( curNode.isInt(jj) != NMRK);
+				double x = grdPos(0,jj);
+                double y = grdPos(1,jj);  
+                double z = grdPos(2,jj);
+
+				Point3 posg = Point3(x,y,z);
+				double r = Point3(posi - posg).l2();
+
+				if (r < rcls) {
+				  rcls = r; 
+				  intns(pnti) = ((char)(curNode.isIntDbl(jj) == IN ? IN : OUT));
+				  //intns(pnti) = (curNode.isInt(jj) == IN ? IN : OUT);
+				}
+			 }
+		  }
+		}	
+	 }	
+  }
+
+  cerr << "All CRV points labeled" << endl;
+
+  /* Make sure CRV nodes have been fully labeled now */
+#pragma omp parallel for
+  for(int ii=0; ii<ordVec.size(); ii++) {
+	 int gni = ordVec[ii];
+	 N& curNode = _vfmm->node(gni);
+	 if (vlet->terminal(gni) && (curNode.color() == CRV)){
+		for (int i = 0; i < curNode.trgOwnVecIdxs().size(); i++){
+		  int pnti = curNode.trgOwnVecIdxs()[i];
+		  if (pnti < NN){ iA (intns(pnti) != -1); }
+		}
+	 }
+  }
+
+  cerr << "Double-check CRV points labeled" << endl;
+  
+  /* For interior or exterior leaf nodes, label all of the points
+	* according to how the node was marked in the marknode procedure
+	* i.e., if the node is IN, all points are in, nothing special to do
+	*/
+  for(int i=0; i<	ordVec.size(); i++) {
+	 int gni = ordVec[i];
+	 N& curNode = _vfmm->node(gni);
+	 if (vlet->terminal(gni) && curNode.color() != CRV) {
+		for (int j = 0; j < curNode.trgOwnVecIdxs().size(); j++){
+		  int curpnt = curNode.trgOwnVecIdxs()[j];
+		  if (curpnt < NN){ //Important
+			 if (intns(curpnt) == -1) { intns(curpnt) = curNode.color(); }
+			 else { ebiAssert(intns(curpnt) == curNode.color()); }
+		  }
+		}
+	 }	
+  }
+
+  cerr << "Label all remaining IN points" << endl;
+	   
+  /* Check to make sure everything is marked */
+  for(int gg=0; gg < NN; gg++) {
+	 int gni = _vfmm->trgPosGni(gg); // Look up what leaf it goes through
+	 char cgc = _vfmm->node(gni).color();
+	 if (intns(gg) == -1){
+		cerr << gg << " " << gni << " " << (int)cgc << " " << (int)intns(gg) << endl;
+		ebiAssert(0); 
+	 }	
+  }
+
+  cerr<<"step 3 finished "<<endl;
+  
+}
+  ebiFunctionReturn(0);
+
+
+// ---------------------------------------------------------------------- 
+// Begin Generic implementation of markgrid
+// ---------------------------------------------------------------------- 
+
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::marknodes_generic"
+template <class N>
+int Bis3dOv<N>::marknodes_generic(bool mrklvs){
+/* Mark a node as IN/OUT/CRV by the following technique:
+ * create a 3^3 grid of
+ * - one each corner
+ * - one each edge
+ * - one each face
+ * - one in center of box
+ * By labeling each point using a dense labeling technique, we
+ * figure out if all points are the same.  If so, mark node as IN/OUT based
+ * on the points.  Otherwise, node has curve going through it.
+ * Also, if a boundary point goes through the node, we know it is CRV, though
+ * if a node has no bdry point, it may still be CRV (e.g., very-refined grid
+ * and sparse surface - not advisable but possible)
+ */
+  ebiFunctionBegin;
+  ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+
+  //Tree* vlet = _pvfmm->vlet();
+  Tree* vlet = _pvfmm->tree();
+  
+  // Fill ordVec with list of decreasing node indices 
+  // ordVec = [num_nodes-1, num_nodes-2, ..., 0]
+  vector<int> ordVec; 
+  iC( vlet->upwOrderCollect(ordVec) ); //BOTTOM UP
+  (*(_vfmm->intns_edges())).resize(ordVec.size()*NUMEDGES);
+  
+  //lvlOrdVec is a map from the ith level in the tree to the list of node 
+  //indices on that level, in a reverse level order traversal
+  map<int, vector<int> > lvlOrdVec;
+  iC( vlet->revLvlOrderCollect(lvlOrdVec) ); //BOTTOM UP
+
+  // Clear out the node marking parameters for each leaf node on every level so that 
+  // we start fresh, in case the FMM was previously used.
+  for (int j = lvlOrdVec.size(); j >= 0; j--){
+	 vector<int>& thisLevBoxes = lvlOrdVec[j];
+#pragma omp parallel for
+	 for (int i = 0; i < thisLevBoxes.size(); i++){
+		int gNodeIdx = thisLevBoxes[i];
+		// Reset each node to no color and no bdry points 
+		PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gNodeIdx);
+		//curNode.bndCrvPts().clear();  //sketchy but fine
+		curNode.color() = -1;
+		//curNode.bndCrv() = false;     //sketchy but fine
+		curNode.dist() = -1.0;
+	 }
+  }
+  
+  /* For each boundary point, find the terminal in which it is located
+	* and then label it is a CRV node
+	*/
+  /*
+  for (int i = NN; i < NN + ufpnum; i++){
+	 int gNodeIdx = _vfmm->trgPosGni(i); // Leaf where i is located 
+	 ebiAssert(vlet->terminal(gNodeIdx));
+	 N& curNode = _vfmm->node(gNodeIdx);
+	 curNode.bndCrvPts().push_back(i);
+	 curNode.bndCrv() = true;
+	 curNode.color() = CRV;
+	 curNode.dist() = 0.0; // dist is 0 because curve is in there 
+  }
+  */
+  
+  // For each node, on each level, in the reverse level order traversal,
+  // call marknode if we haven't already.
+  for (int j = lvlOrdVec.size(); j >= 0; j--){
+	 vector<int>& thisLevBoxes = lvlOrdVec[j];
+#pragma omp parallel for
+	 for (int i = 0; i < thisLevBoxes.size(); i++){
+		int gNodeIdx = thisLevBoxes[i];
+		PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gNodeIdx);
+		//TreeNode& curNode = _pvfmm->node(gNodeIdx);
+		char cgc = curNode.color(); // current color of this leaf
+		if (cgc == -1) {
+		  iC( marknode_generic(gNodeIdx)); ebiAssert(curNode.color() != -1);
+		}
+	 }
+  }
+
+  if (mrklvs){  
+     // crvVec: list of box indices corresponding to leaf boxes that contain a 
+     //         piece of the boundary
+	 vector<int> crvVec;
+	 for (int i = 0; i < ordVec.size(); i++){
+		int gni = ordVec[i];
+		if (vlet->terminal(gni)){ //leaf boxes only here
+		  if (vlet->node(gni).color() == CRV) {
+			 crvVec.push_back(gni);
+		  }
+		  else if (vlet->node(gni).color() == IN) {
+			 vlet->node(gni).numIntPts() = vlet->srcGrdSze(); 
+                                           //= kSrcVal^3 = source grid size
+                                           //this is loaded from optionsfiles
+                                           //and is not present in any existing file
+		  }
+		  else if (vlet->node(gni).color() == OUT) {
+			 vlet->node(gni).numIntPts() = 0;
+		  }
+		  else { ebiAssert(0); }
+		}
+	 }
+
+#pragma omp parallel for
+	 for (int i = 0; i < crvVec.size(); i++){
+		markleafgrid_generic(crvVec[i], true);
+		//cerr << crvVec[i] << " " << vlet->node(crvVec[i]).numIntPts() << " " << vlet->node(crvVec[i]).isInt().size() << " " << vlet->node(crvVec[i]).isIntDbl().size() << endl;
+	 }
+  }
+
+  ebiFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::marknode_generic"
+template <class N>
+int Bis3dOv<N>::marknode_generic(int gNodeIdx){
+  ebiFunctionBegin;
+  ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+  
+  Bd3dOv* bd = bdry();
+  DN3dOv* dn = dstz(); //USE THE DENSE ONE
+
+  //Tree* vlet = _vfmm->vlet();
+  Tree* vlet = _pvfmm->tree();
+  
+  /* Current node - should not have been labeled yet! */
+  PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gNodeIdx);
+  //TreeNode& curNode = _pvfmm->node(gNodeIdx);
+  char cgc = curNode.color(); // current color of this leaf
+  {
+     // make sure the node hasn't already been marked
+     //closest distance to closest boundary point 
+     //initialized to -1.0 in markgrid to force marking
+	 double dist =   curNode.dist(); 
+	 ebiAssert(cgc == -1 && dist < 0);
+  }
+
+  // if this node has no children:
+  if (vlet->terminal(gNodeIdx)){
+
+	 /* Vecs for labeling */
+     // The following vectors store data about the nearest sample point on the
+     // boundary to each FMM box point. A box point is defined here as a point
+     // on the edge, face, corner, or at the center of an FMM box (node).; this
+     // produces 27 total points that need to be classified as interior or 
+     // exterior points. If all 27 are in (resp. out), then the entire box is in
+     // (resp. out).
+     //
+     //intns: indicate whether the ith box point is inside (=1),
+     //outside (=0) or passing through the boundary curve (crv) (=2)
+     //
+     //distVec: distance from ith box point to nearest sample point on the  boundary 
+     //pivec: index of the patch that contains the nearest sample point to ith
+     //       boxpoint
+     //xyvec: coordinates of the nearest sample point to ith boxpoint in the 
+     //       2d parameter domain 
+	 
+
+     // MJM BUG commented out following line; this appears not to do 
+     // anything of interest
+     //ChrNumVec intns(_pvfmm->intns_edges(gNodeIdx)); setvalue(intns,(char)(-1));
+     ChrNumVec intns(27); setvalue(intns,(char)(-1));
+	 DblNumVec distVec(27); setvalue(distVec,-1.0);  
+	 IntNumVec pivec(27); NumVec<Point2> xyvec(27);
+	 
+	 Point3 ctr(vlet->center(gNodeIdx));
+     double rad = vlet->radius(gNodeIdx);
+
+
+     // Iterate over all dominant sample points and determine the one nearest to
+     // each box point.
+     //
+     // For parallel: start this loop with if(patch_partition[pi] == mpiRank){...}
+     // and this should work as is. Should also work with omp as is. 
+     //
+     // Only change  is probably adding an MPI_All_to_All at the end to sync up
+     // computed data, but needs to be in markgrid instead of here
+     for(int pi=0; pi<bd->patches().size(); pi++) {
+         Pch3dOv* curpch = bd->patches()[pi];
+         IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+         double bnd = curpch->bnd();	 double init = -bnd;
+         double step = dn->step_size()[pi];	 int num_samples = dn->num_sample_points()[pi];
+
+         DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+         DblNumVec sample_point_props(dn->sample_point_props(pi));
+
+         for(int ri=0; ri<num_samples; ri++){
+           for(int rj=0; rj<num_samples; rj++) {
+              
+              int ui = patch_sampling_index(ri,rj);
+              
+              if(ui!=-1) {
+                 DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+                 
+                 // if the (ri,rj)th sample point is a sample point on the 
+                 // (pi)th patch and this sample is dominant...
+                 if(tag->_dmt==true) { 
+                   Point3 curpos(sample_point_3d_position.clmdata(ui));
+                   int cnt = 0;
+                   // Check each box point to see if the current  sample is the 
+                   // nearest one
+                   // Store the closest distance and other data about that point
+                   // if it's the closest
+                   for (int a = -1; a <2; a++){
+                       for (int b = -1; b <2; b++){
+                           for (int c = -1; c <2; c++){
+                               double x= ctr(0) + a*rad;
+                               double y= ctr(1) + b*rad;
+                               double z= ctr(2) + c*rad;
+
+                               Point3 newpos = Point3(x,y,z);
+                               Point3 offset(newpos - curpos);
+                               double dist = offset.length();
+                               ebiAssert(dist >= 0.0);
+                               // misleading;Really want to check curNode.dist()
+                               // != -1 (i.e. not yet computed) 
+                               // distances shouldn't be negative
+                               if (curNode.dist() < 0 || dist < curNode.dist()){
+                                  curNode.dist() = dist;
+                               }	
+                               if (distVec(cnt) < 0 || dist < distVec(cnt)){
+                                  distVec(cnt) = dist;
+                                  pivec(cnt) = pi;
+                                  xyvec(cnt) = Point2(init+ri*step, init+rj*step);
+                               }
+                               cnt++;
+                            } 
+                        } 
+                    }
+                 }		
+              }
+           }
+         }
+     }
+    // Label 27 box points as in or out based on surface normals 
+    int cnt = 0; //TODO: cnt = 3*a + 3*b + c; //?
+    for (int a = -1; a <2; a++){
+        for (int b = -1; b <2; b++){
+            for (int c = -1; c <2; c++){
+                 ebiAssert(distVec(cnt) >= 0); 
+                 
+                 int pi = pivec(cnt);
+                 Point2 xyc = xyvec(cnt);
+                 
+                 double x= ctr(0) + a*rad;
+                 double y= ctr(1) + b*rad;
+                 double z= ctr(2) + c*rad;
+
+
+                 Point3 target_3d_position = Point3(x,y,z);
+                 Pch3dOv* curpch = bd->patches()[pi];
+                 Point3 ret[3];
+                 iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD,
+                             (double*)ret, _surface_interpolation_num_samples) );
+                 //p = vector pointing from the ith box point of the FMM box to 
+                 //    closest sample points
+                 /*        
+                  *         |          
+                  *  x ---> o <--- x 
+                  *         |
+                  *    <=== |
+                  *         |
+                  *
+                  *  x = possible box point locations
+                  *  o = nearest boundary sample point to x
+                  *  --> = p
+                  *  <== = surface normal at o
+                  *
+                  * Below: n = normal at o.
+                  * If: p \dot n > 0, x is outside the boundary hence outside
+                  *     p \dot n = 0, p is perp to n, hence x is closer to the 
+                  *                   surface at another point assuming geometry 
+                  *                   is nice. NOTE this is important to 
+                  *                   consider for complex geometry as an edge case;
+                  *                   but this will never be exactly zero in practice
+                  *     p \dot n < 0, x is in the interior
+                  */
+
+                 //MJM BUG if p might need to be negated in order for logic to
+                 //work geometrically?
+                 Point3 p = target_3d_position - ret[0];
+                 Point3 u = ret[1];
+                 Point3 v = ret[2]; 			 //Point3 buf = ret[0];
+                 Point3 n = cross(u, v);
+                 n /= n.l2();
+
+                 double pn = dot(p, n);
+                 //From common/NbrDefs:
+                 //#define IN 1
+                 //#define OUT 0
+                 //#define CRV 2
+                 
+                 if(pn>=0) {
+                     intns(cnt) = 0; //out
+                 } else {
+                     intns(cnt) = 1;  //in
+                 }
+                 cnt++;
+            }
+        }
+    }
+
+    // Check to see if all box points labeled as the same.
+    //If so, the entire box is marked as IN or OUT. Else, we are on the boundary
+    
+    bool all_same = true;
+    for (int i = 0; i <27; i++){
+        ebiAssert(intns(i) != -1);
+        if (intns(i) != intns(0)){ all_same = false; }
+    }
+
+    if (all_same){
+        if (intns(0) == 0){
+            curNode.color() = OUT; 
+        } else {
+            curNode.color() = IN; 
+        }	
+    }
+    else { 
+        // if not all points not labeled the same, this box intersects the boundary (CRV node). 
+        // Plus, set dist to 0
+        curNode.color() = CRV;
+        curNode.dist() = 0.0;
+    }
+
+  } else { /* NON-TERMINALS */
+      /* If all children are same color, label non-terminal box that color
+      * Else, it has a piece of the boundary going through a child (or several children)
+      * Also, all terminals should be labeled before non-terminals!
+      * Non terminals are marked mainly for error-checking.
+      */
+      bool all_same = true;
+      Index3 temp = Index3(0,0,0);
+      int chi_chkr = vlet->child(gNodeIdx,temp);
+       char cgc_chkr = _pvfmm->node(chi_chkr).color(); ebiAssert(cgc_chkr != -1);
+       for (int a = 0; a < 2; a++){
+           for (int b = 0; b < 2; b++){
+               for (int c = 0; c < 2; c++){
+                   Index3 inner_loop_temp = Index3(a,b,c);
+                   int chi = vlet->child(gNodeIdx,inner_loop_temp);
+                   PvFMM::PvFMMTreeNode& chiNode = _pvfmm->node(chi);
+                   //TreeNode& chiNode = _pvfmm->node(chi);
+                   char cgc_chi = chiNode.color(); ebiAssert(cgc_chi != -1);
+
+                   if (cgc_chi != cgc_chkr){
+                       all_same = false; 
+                   }
+                   if (curNode.dist() < 0 || chiNode.dist() < curNode.dist()){
+                      curNode.dist() = chiNode.dist();
+                   }	
+                }
+           }
+       }
+       if (all_same){
+           curNode.color() = (cgc_chkr);
+       }
+       else {
+           curNode.color() = CRV;
+       }
+  }
+       
+  ebiAssert( curNode.color() != -1);
+  ebiAssert( curNode.dist() >= 0.0);
+
+  ebiFunctionReturn(0);
+}
+
+/* This function labels which of the k^3 leaf points on a CRV leaf node
+* are interior or exterior.  If dbl == true, we also lable the (2k)^3 grid
+* (i.e. refined grid)
+*/
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::markleafgrid_generic"
+template <class N>
+int Bis3dOv<N>::markleafgrid_generic(int gNodeIdx, bool dbl){
+    ebiFunctionBegin;
+
+    //Tree* vlet = _vfmm->vlet();
+    PvFMM::PvFMMTree* vlet = _pvfmm->tree();
+    TreeNode curNode =  vlet->node(gNodeIdx);
+    //PvFMM::PvFMMTreeNode curNode =  _pvfmm->node(gNodeIdx);
+    //TreeNode curNode =  _pvfmm->node(gNodeIdx);
+
+    int kVal = vlet->kSrcVal();
+    double h = vlet->radius(gNodeIdx)*2.0/vlet->kSrcVal();
+
+    /* All grid points within 2*h or spacing() of surface will be labeled */
+    double bs = max(2.0*h, 2.0  * spacing());
+    //double bs = 2.0 * h;
+
+    /* Make sure only on CRV leaf node */
+    bool is_leaf = vlet->terminal(gNodeIdx);
+    cerr << (int)(curNode.color()) << " " << is_leaf << endl;
+    ebiAssert(curNode.color() == CRV && is_leaf == true);
+
+    /* Resize and initialize isInt vectors as not marked */
+    // MJM RENAME isInt == is_interior
+    // MJM BUG srcGrdSze() = (vlet->kSrcVal())^3, and this is never initialized
+    // in the options file
+    curNode.isInt().resize(0); curNode.isIntDbl().resize(0);
+    curNode.isInt().resize(vlet->srcGrdSze());
+    for (int i=0; i < vlet->srcGrdSze(); i++){
+        curNode.isInt(i) = NMRK;
+    }
+
+    if (dbl){ //for refined grid
+        curNode.isIntDbl().resize(vlet->dblSrcGrdSze());
+
+        for (int i=0; i < vlet->dblSrcGrdSze(); i++){
+            curNode.isIntDbl(i) = NMRK;
+        }
+    }
+
+    curNode.numIntPts() = 0;
+    curNode.numIntDblPts() = 0;
+
+    DblNumMat grdPos(vlet->grdSrcExaPos(gNodeIdx));
+    DblNumMat grdDblPos(vlet->grdDblSrcExaPos(gNodeIdx));
+
+    int NN = (dbl ? grdPos.n() + grdDblPos.n() : grdPos.n());
+    DblNumVec distvec(NN); setvalue(distvec, -1.0);
+    IntNumVec pivec(NN);
+    NumVec<Point2> xyvec(NN);
+    ChrNumVec intns(NN);
+
+    Bd3dOv* bd = bdry();
+    DN3dOv* dn = dstz(); //USE THE DENSE ONE (MJM: dense == refined? 
+                        // if so, need to ensure this is initiailized properly)
+
+    /* NN points include k^3 AND (2k)^3 grid when dbl == true
+    * In this loop, we only label the closest points using
+    * the surface points */
+    for (int i = 0; i < NN; i++){
+        intns(i) = -1;
+        /* Check if we are labeling the regular grid or refined grid */
+        if (i < grdPos.n()){
+            ebiAssert( curNode.isInt(i) == NMRK);
+        }
+        else {
+            // is refined
+            ebiAssert(curNode.isIntDbl(i-grdPos.n()) == NMRK); 
+        }
+        double x = (i < grdPos.n() ? grdPos(0,i) : grdDblPos(0, i - grdPos.n()));
+        double y = (i < grdPos.n() ? grdPos(1,i) : grdDblPos(1, i - grdPos.n()));
+        double z = (i < grdPos.n() ? grdPos(2,i) : grdDblPos(2, i - grdPos.n()));
+        Point3 newpos = Point3(x,y,z);
+
+        /* First, find the closest surface point to the grid points
+         * closest to to each dominant surface point */
+        // This is copy-pasted from marknode() and slightly modified. 
+        // Only difference is that instead of finding the nearest surface 
+        // sample to FMM box points, we're finding the nearest surface sample to
+        // each point in a regular grid
+        // MJM Consider factoring out.
+        for(int pi=0; pi<bd->patches().size(); pi++) {
+           Pch3dOv* curpch = bd->patches()[pi];
+           IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+           double bnd = curpch->bnd();	 double init = -bnd;
+           double step = dn->step_size()[pi];	 int num_samples = dn->num_sample_points()[pi];
+           
+           DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+           DblNumVec sample_point_props(dn->sample_point_props(pi));
+           
+           //cout << "Patch # " << pi << endl;
+           for(int ri=0; ri<num_samples; ri++){
+             for(int rj=0; rj<num_samples; rj++) {
+                //------------------------
+                int ui = patch_sampling_index(ri,rj);
+                if(ui!=-1) {
+                   DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+
+                   if(tag->_dmt==true) { //LEXING: ONLY USE THE DOMINATION ONES TO MARK
+                     Point3 curpos(sample_point_3d_position.clmdata(ui));
+                     Point3 offset(newpos - curpos);
+                     double dist = offset.length();
+                     ebiAssert(dist >= 0.0);
+
+                     if (dist < bs){	
+                        if (distvec(i) < 0 || dist < distvec(i)){
+                           /* Mark smallest distance, which patch and which (ri,rj) point */
+                           distvec(i) = dist;  pivec(i) = pi;
+                           xyvec(i) = Point2(init+ri*step, init+rj*step);
+                        }
+                     }
+                   }
+                }
+             }		
+           }
+        }
+
+        /* If a point was marked as close enough, the dist is non-neg
+         * Now, compute normal to surface to see if point in or out */
+        if (distvec(i) > 0){	 
+           int pi = pivec(i);
+           Point2 xyc = xyvec(i);
+           Pch3dOv* curpch = bd->patches()[pi];
+           //Copied comment from marknode()
+           //p = vector pointing from the ith grid point of regular sampling of 
+           //    the FMM box to  closest sample points
+           /*        
+            *         |          
+            *  x ---> o <--- x 
+            *         |
+            *    <=== |
+            *         |
+            *
+            *  x = possible grid point locations
+            *  o = nearest boundary sample point to x
+            *  --> = p
+            *  <== = surface normal at o
+            *
+            * Below: n = normal at o.
+            * If: p \dot n > 0, x is outside the boundary hence outside
+            *     p \dot n = 0, p is perp to n, hence x is closer to the 
+            *                   surface at another point assuming geometry 
+            *                   is nice. NOTE this is important to 
+            *                   consider for complex geometry as an edge case;
+            *                   but this will never be exactly zero in practice
+            *     p \dot n < 0, x is in the interior
+            */
+
+           //MJM BUG if p might need to be negated in order for logic to
+           //work geometrically?
+
+           Point3 ret[3];
+           iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                       (double*)ret, _surface_interpolation_num_samples) );
+
+           Point3 p = newpos - ret[0];
+           Point3 u = ret[1];
+           Point3 v = ret[2]; 			 //Point3 buf = ret[0];
+           Point3 n = cross(u, v);  n /= n.l2();
+
+           double pn = dot(p, n);
+           bool is_valid = true;
+           
+           // MJM @BUG HARDCODED MINIMUM LENGTH
+           // MJM @TODO check this by hand, not sure why the loop is needed.
+           while(abs(pn)<0.975*p.length() && p.length()>1e-12) {
+             Point3 pp = p - pn*n;
+             Point3 up = cross(n,u);
+             Point3 vp = cross(n,v);
+             
+             Point2 xyd(dot(vp,pp)/dot(vp,u), dot(up,pp)/dot(up,v)); //difference
+
+             //LEXING, 0.25 VERY IMPORTANT
+             // MJM @BUG what is (1/4)^3 and why is it hardcoded?
+             xyc += (1.0/64.0) * xyd;
+             iC( curpch->is_xy_valid(xyc.array(), is_valid) );
+
+             if(is_valid==false) {
+                cerr<<"STT FALSE " << xyc<<" "<<xyd<<" " << (i) << " " << endl;
+                ebiAssert(is_valid==true);
+             }
+             else {
+                iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                            (double*)ret, _surface_interpolation_num_samples) );
+                p = newpos - ret[0];
+                u = ret[1];
+                v = ret[2];
+                n = cross(u, v);  n /= n.l2();
+                pn = dot(p, n);
+             }		
+           }
+           
+           if (is_valid){
+             // MJM @BUG HARDCODED MINIMUM LENGTH
+             if(p.length()<1e-12) { // Point is really close
+                cerr<<newpos<<" & "<<ret[0]<< " " << p.length() << endl; intns(i) = 1;
+             }
+             else {
+                //OUT or IN
+                if(pn>=0) {intns(i) = 0; } //out 
+                else{ intns(i) = 1; } //in
+             }
+           }		
+           else { cerr << "is_valid false" << endl; exit(-1); }
+        }
+    }
+
+    int cnt = 0;
+    /* populate in/out information by moving left->right, down->up, etc.
+    * until we locate a labeled point and then go in reverse direction
+    * to ensure all k^3 points get labeled */
+    // MJM @TODO factor these loops out
+    for(int gi=1; gi<=kVal; gi++) {
+        for(int gj=1; gj<=kVal; gj++) {
+            for(int gk=1; gk<=kVal; gk++) {
+                ebiAssert( cnt == ((gi-1)*kVal + (gj-1))*kVal + (gk-1));
+                char color = intns(cnt);
+                if(color!=-1) {//marked
+                   if(gi<=kVal-1) {//TODO remove these conditionals?
+                      int cnt_ip1 = cnt + kVal*kVal;
+                      if(intns(cnt_ip1)==-1) { intns(cnt_ip1)=color; }
+                   }
+                   if(gj<=kVal-1) {
+                      int cnt_jp1 = cnt+ kVal;
+                      if(intns(cnt_jp1)==-1) { intns(cnt_jp1)=color; }
+                   }
+                   if(gk<=kVal-1) {
+                      int cnt_kp1 = cnt + 1;
+                      if(intns(cnt_kp1)==-1) { intns(cnt_kp1)=color; }
+                   }
+                }
+                cnt++;
+            } 
+        } 
+    }
+    cnt--;
+    for(int gi=kVal; gi>=1; gi--) {
+      for(int gj=kVal; gj>=1; gj--) {
+        for(int gk=kVal; gk>=1; gk--) {
+          ebiAssert( cnt == ((gi-1)*kVal + (gj-1))*kVal + (gk-1));
+          char color = intns(cnt);
+          if(color!=-1) {
+             if(gi>=2) { //TODO remove conditionals, change for loop condition to >1
+                int cnt_im1 = cnt - kVal*kVal;
+                if(intns(cnt_im1)==-1) { intns(cnt_im1)=color; }
+             }
+             if(gj>=2) {
+                int cnt_jm1 = cnt- kVal;
+                if(intns(cnt_jm1)==-1) { intns(cnt_jm1)=color; }
+             }
+             if(gk>=2) {
+                int cnt_km1 = cnt - 1;
+                if(intns(cnt_km1)==-1) { intns(cnt_km1)=color; }
+             }
+          }
+          cnt--;
+        } 
+      } 
+    }	
+
+    /* Repeat for (2k)^3 grid */
+    if (dbl){
+     cnt = grdPos.n();
+     //3. populate in/out information
+     int tK = 2*kVal;
+     for(int gi=1; gi<=tK; gi++) { for(int gj=1; gj<=tK; gj++) { for(int gk=1; gk<=tK; gk++) {
+             ebiAssert( cnt-grdPos.n() == ((gi-1)*(tK) + (gj-1))*(tK) + (gk-1));
+             char color = intns(cnt);
+             if(color!=-1) {//marked
+                if(gi<=tK-1) {
+                  int cnt_ip1 = cnt + (tK)*(tK);
+                  if(intns(cnt_ip1)==-1) { intns(cnt_ip1)=color; }
+                }
+                if(gj<=tK-1) {
+                  int cnt_jp1 = cnt+ (tK);
+                  if(intns(cnt_jp1)==-1) { intns(cnt_jp1)=color; }
+                }
+                if(gk<=tK-1) {
+                  int cnt_kp1 = cnt + 1;
+                  if(intns(cnt_kp1)==-1) { intns(cnt_kp1)=color; }
+                }
+             }
+             cnt++;
+          } } }
+     cnt--;
+     for(int gi=tK; gi>=1; gi--) { for(int gj=tK; gj>=1; gj--) { for(int gk=tK; gk>=1; gk--) {
+             ebiAssert( cnt-grdPos.n() == ((gi-1)*(tK) + (gj-1))*(tK) + (gk-1));
+             char color = intns(cnt);
+             if(color!=-1) {
+                if(gi>=2) {
+                  int cnt_im1 = cnt - (tK)*(tK);
+                  if(intns(cnt_im1)==-1) { intns(cnt_im1)=color; }
+                }
+                if(gj>=2) {
+                  int cnt_jm1 = cnt- (tK);
+                  if(intns(cnt_jm1)==-1) { intns(cnt_jm1)=color; }
+                }
+                if(gk>=2) {
+                  int cnt_km1 = cnt - 1;
+                  if(intns(cnt_km1)==-1) {	intns(cnt_km1)=color; }
+                }
+             }
+             cnt--;
+          } } }
+    }
+
+    /* Populate isInt and isIntDbl vectors with intns results from above
+    * Also, count number of internal points and store in node info */
+    for (int i = 0; i < NN; i++){
+     int pnt = (i < grdPos.n() ? i : i - grdPos.n());
+     if (i < grdPos.n()){
+        /* //MJM TODO: there's no reason to make this so complicated.
+         * // make sure you can't jsut copy the underlying arrays and do it in two lines.
+         * curNode.isInt(pnt) = intns(i);
+         * curNode.numIntPts()++;
+         */
+        if (intns(i) == IN){
+          curNode.isInt(pnt) = IN;
+          curNode.numIntPts()++;
+        }
+        else { curNode.isInt(i) = OUT; }
+        ebiAssert(curNode.isInt(i) != NMRK);
+     }
+     else {
+        if (intns(i) == IN){
+          curNode.isIntDbl(pnt) = IN;
+          curNode.numIntDblPts()++;
+        }
+        else { curNode.isIntDbl(pnt) = OUT; }
+     }
+    }
+    /* Make sure everything has been labeled */
+    for (int i = 0; i < NN; i++){ ebiAssert(intns(i) != NMRK); }
+
+    ebiFunctionReturn(0);
+}
+
+// ---------------------------------------------------------------------- 
+#undef __FUNCT__
+#define __FUNCT__ "Bis3dOv::markgrid_generic"
+template <class N>
+int Bis3dOv<N>::markgrid_generic(ChrNumVec& nrtns, ChrNumVec& intns, 
+    vector<double>& face_point_vec, vector<Point3>& posvec)
+{
+ebiFunctionBegin;
+ebiAssert(mpiSize()==1); //UNIT PROCESSOR CODE
+
+// Mark each box in the tree as inside, outside, or containing a piece of the boundary
+iC( this->marknodes_generic(true));
+
+Bd3dOv* bd = bdry(); DN3dOv* dn = dstz();
+//Tree* vlet = _vfmm->vlet();
+Tree* vlet = _pvfmm->tree();
+DblNumMat& pos = *(_vfmm->trgPos()); int ufpnum = dn->global_num_sample_points();
+int NN = pos.n() - ufpnum;
+nrtns.resize(NN); setvalue(nrtns, char(0)); //all faraway
+IntNumVec mktns(NN); setvalue(mktns,-1);
+intns.resize(NN); setvalue(intns, char(-1)); //unknown whether it is in or out
+
+DblNumVec distvec(NN); IntNumVec pivec(NN); NumVec<Point2> xyvec(NN);
+
+// Changed bbb to compare with mobo vesicles
+double bbb = 4.0; //MJM @BUG this is nice and hardcoded. 
+if (spacing() > 0.05) { bbb = 2.0; }
+if (spacing() <= 0.025) { bbb = 6.0; }
+if (spacing() <= 0.0125) { bbb = 8.0; }
+//if (spacing() <= 0.0125) { bbb = 16.0; }
+//if (spacing() <= 0.00625) { bbb = 24.0; }
+
+double bs = bbb*spacing(); 
+cerr<<"bbb = "<<bbb<<" BS= "<<bs<<endl;
+
+int posvecsze = 0;
+
+/* mark each point, find approx. distance to surface, which patch is closest,
+* which surface point is closest, etc.  This info used below for ultimate
+* marking
+*/
+#pragma omp parallel for	 
+for (int gg = 0; gg < NN; gg++){
+ if (gg % 25000 == 0) { cerr << "Point # " << gg << " thread = " << omp_get_thread_num() << endl; }
+ for(int pi=0; pi<bd->patches().size(); pi++) {
+    // MJM for parallel: add if(patch_partition[pi] == mpiRank) here.
+    Pch3dOv* curpch = bd->patches()[pi];
+    IntNumMat& patch_sampling_index = dn->patch_sampling_index()[pi];
+    double bnd = curpch->bnd();
+	double init = -bnd;
+
+    double step = dn->step_size()[pi];
+	int num_samples = dn->num_sample_points()[pi];
+
+    DblNumMat sample_point_3d_position(dn->sample_point_3d_position(pi));
+    DblNumVec sample_point_props(dn->sample_point_props(pi));
+    
+    //cout << "Patch # " << pi << endl;
+    for(int ri=0; ri<num_samples; ri++){
+      for(int rj=0; rj<num_samples; rj++) {
+         //------------------------
+         int ui = patch_sampling_index(ri,rj);
+         if(ui!=-1) {
+            DN3dOv::Tag* tag = (DN3dOv::Tag*)&(sample_point_props(ui));
+            if(tag->_dmt==true) { //LEXING: ONLY USE THE DOMINATION ONES TO MARK
+              Point3 curpos(sample_point_3d_position.clmdata(ui));
+              //char cgc = _vfmm->node(_vfmm->trgPosGni(gg)).color();
+              //if (cgc == CRV || cgc == IN){ /* Leaf where i is located */
+              if (1) { //cute
+                 double x = pos(0,gg);
+                 double y = pos(1,gg);
+                 double z = pos(2,gg);
+
+                 Point3 newpos = Point3(x,y,z);
+                 Point3 offset(newpos - curpos);
+                 double dist = offset.length();
+                 ebiAssert(dist >= 0.0);					 
+                 if(dist<bs) { //nearby points
+                    nrtns(gg) = 1;
+                    if(mktns(gg)==-1) { //not marked yet
+                      mktns(gg) = 1;	distvec(gg) = dist;
+                      pivec(gg) = pi;
+                      xyvec(gg) = Point2(init+ri*step, init+rj*step);
+
+                    } else { //marked already
+                      if(dist < distvec(gg)) {
+                         distvec(gg) = dist; pivec(gg) = pi;
+                         xyvec(gg) =  Point2(init+ri*step, init+rj*step);
+                         
+                      }
+                    }
+                 }
+              }
+            }
+         }
+      }
+    }
+ }
+}
+
+for (int gg = 0; gg < NN; gg++){
+ if(nrtns(gg) == 1){ posvecsze++; }
+}
+
+cerr<<"step 1 finished "<<endl;//distvec.size()<<endl;
+
+//2. for near ones (mktns()!=-1) find face_point and pos
+
+face_point_vec.clear();
+posvec.clear();
+
+int face_point_size_in_doubles = dn->face_point_size_in_doubles();
+face_point_vec.resize(posvecsze * face_point_size_in_doubles);
+posvec.resize(posvecsze);
+
+/* Mark all of the CLOSEST points
+* This is a dense computation.  All points within
+* bs were marked as close, so now we compute
+* whether each of these points is inside or outside
+* of the surface
+*/
+
+//MJM BUG parentheses mismatch; patch pi is not defined below...
+int cnt = 0;
+#pragma omp parallel for
+for (int gg = 0; gg < NN; gg++){
+ if(mktns(gg)!=-1) { //nearby point
+    int pi = pivec(gg); Point2 xyc = xyvec(gg);
+    double x = pos(0, gg); double y = pos(1, gg); double z = pos(2, gg);
+
+    Point3 target_3d_position = Point3(x,y,z);
+    
+    Pch3dOv* curpch = bd->patches()[pi];
+    Point3 ret[3];
+    iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD,
+                (double*)ret, _surface_interpolation_num_samples) );
+    Point3 p = target_3d_position - ret[0]; Point3 u = ret[1]; Point3 v = ret[2]; 
+    Point3 n = cross(u, v);  n /= n.l2();
+    double pn = dot(p, n);
+    bool is_valid = true;
+    
+    while(abs(pn)<0.975*p.length() && p.length()>1e-12) {
+      Point3 pp = p - pn*n;
+      Point3 up = cross(n,u); Point3 vp = cross(n,v);
+      Point2 xyd(dot(vp,pp)/dot(vp,u), dot(up,pp)/dot(up,v)); //difference
+      //LEXING, 0.25 VERY IMPORTANT
+      xyc += (1.0/64.0) * xyd;
+      iC( curpch->is_xy_valid(xyc.array(), is_valid) );
+
+      if(is_valid==false) {
+         cerr<<xyc<<" "<<xyd<<" " << (int)nrtns(gg) << " " << endl;
+         ebiAssert(is_valid==true);
+      }	
+      else {
+         iC( curpch->xy_to_patch_coords(xyc, DN3dOv::EVAL_VL|DN3dOv::EVAL_FD, 
+                     (double*)ret, _surface_interpolation_num_samples) );
+         p = target_3d_position - ret[0];
+         u = ret[1];
+         v = ret[2];
+
+         n = cross(u, v);
+         n /= n.l2();
+         pn = dot(p, n);
+
+      }
+    }					 //cerr<<endl;
+    if (is_valid){
+      if(p.length()<1e-12) { cerr<<target_3d_position<<" & "<<ret[0]<< " " << p.length() << endl; }
+      if (nrtns(gg) == 1){
+         FacePointOverlapping* face_point_arr = 
+             (FacePointOverlapping*)(&face_point_vec[cnt*face_point_size_in_doubles]); 
+         iC( curpch->xy_to_face_point(xyc, face_point_arr) );
+         posvec[cnt] = ret[0];
+		  }
+		  if (p.length() < 1e-12) { intns(gg) = 1; } //in
+		  else { //OUT or IN
+			 if(pn>=0) { intns(gg) = 0; } // out 
+			 else{ intns(gg) = 1; } //in
+		  }
+		  if (nrtns(gg) == 1){ cnt ++; }
+		}
+		else { cerr << "is_valid false" << endl; ebiAssert(0); }
+	 }
+  }
+  ebiAssert(cnt==posvecsze);
+
+  cerr<<"step 2 finished "<<endl;
+
+  /* For CRV nodes, go through and make sure all points have been labeled
+	* All target points nearby are already be labeled, but for others,
+	* we use the double-size regular grid, which has been labeled by marknodes()
+	* We then find the closest grid point and lable the target point with that label.
+	* This is guaranteed to work because all grid points within 2*h for grid-spacing
+	* h were labeled using the dense process.  Further, all target points within bs > 2*h
+	* were also labeled, so we know that an unlabeled target point must lie beyond
+	* a spacing that would be covered by the double-sized grid
+	*/
+  
+  // Fill ordVec with list of decreasing node indices 
+  // ordVec = [num_nodes-1, num_nodes-2, ..., 0]
+  vector<int> ordVec;  iC( vlet->dwnOrderCollect(ordVec) );
+
+#pragma omp parallel for
+  for(int ii=0; ii<ordVec.size(); ii++) {
+	 int gni = ordVec[ii];
+     PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gni);
+     //TreeNode& curNode = _pvfmm->node(gni);
+
+	 if (vlet->terminal(gni) && curNode.color() == CRV){
+		for (int i = 0; i < curNode.trgOwnVecIdxs().size(); i++){
+
+		  int pnti = curNode.trgOwnVecIdxs()[i];
+		  if (pnti < NN && intns(pnti) == -1){
+
+			 Point3 posi(pos(0,pnti), pos(1,pnti), pos(2,pnti));
+			 int numdgpnts = vlet->grdDblSrcSamPos().n(); 
+             DblNumMat grdPos(vlet->grdDblSrcExaPos(gni));
+
+			 //int numdgpnts = vlet->grdSrcSamPos().n(); DblNumMat grdPos(vlet->grdSrcExaPos(gni));
+			 ebiAssert(curNode.isIntDbl().size() == numdgpnts && grdPos.n() == numdgpnts);
+			 //ebiAssert(curNode.isInt().size() == numdgpnts && grdPos.n() == numdgpnts);
+			 
+             double rcls =  4.0*(vlet->radius());
+			 for (int jj = 0; jj < numdgpnts; jj++){
+				ebiAssert( curNode.isIntDbl(jj) != NMRK);
+				//ebiAssert( curNode.isInt(jj) != NMRK);
+				double x = grdPos(0,jj);
+                double y = grdPos(1,jj);  
+                double z = grdPos(2,jj);
+
+				Point3 posg = Point3(x,y,z);
+				double r = Point3(posi - posg).l2();
+
+				if (r < rcls) {
+				  rcls = r; 
+				  intns(pnti) = ((char)(curNode.isIntDbl(jj) == IN ? IN : OUT));
+				  //intns(pnti) = (curNode.isInt(jj) == IN ? IN : OUT);
+				}
+			 }
+		  }
+		}	
+	 }	
+  }
+
+  cerr << "All CRV points labeled" << endl;
+
+  /* Make sure CRV nodes have been fully labeled now */
+#pragma omp parallel for
+  for(int ii=0; ii<ordVec.size(); ii++) {
+	 int gni = ordVec[ii];
+	 PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gni);
+	 //TreeNode& curNode = _pvfmm->node(gni);
+	 if (vlet->terminal(gni) && (curNode.color() == CRV)){
+		for (int i = 0; i < curNode.trgOwnVecIdxs().size(); i++){
+		  int pnti = curNode.trgOwnVecIdxs()[i];
+		  if (pnti < NN){ iA (intns(pnti) != -1); }
+		}
+	 }
+  }
+
+  cerr << "Double-check CRV points labeled" << endl;
+  
+  /* For interior or exterior leaf nodes, label all of the points
+	* according to how the node was marked in the marknode procedure
+	* i.e., if the node is IN, all points are in, nothing special to do
+	*/
+  for(int i=0; i<	ordVec.size(); i++) {
+	 int gni = ordVec[i];
+	 PvFMM::PvFMMTreeNode& curNode = _pvfmm->node(gni);
+	 //TreeNode& curNode = _pvfmm->node(gni);
+	 if (vlet->terminal(gni) && curNode.color() != CRV) {
+		for (int j = 0; j < curNode.trgOwnVecIdxs().size(); j++){
+		  int curpnt = curNode.trgOwnVecIdxs()[j];
+		  if (curpnt < NN){ //Important
+			 if (intns(curpnt) == -1) { intns(curpnt) = curNode.color(); }
+			 else {
+                 cout <<"bad node:" << gni << ", " <<  (int) intns(curpnt) <<" , " <<  curNode.color() << endl;
+                 //ebiAssert(intns(curpnt) == curNode.color());
+             }
+		  }
+		}
+	 }	
+  }
+
+  cerr << "Label all remaining IN points" << endl;
+	   
+  /* Check to make sure everything is marked */
+  for(int gg=0; gg < NN; gg++) {
+      // MJM TODO reimplement this for PvFMM
+	 //int gni = _vfmm->trgPosGni(gg); // Look up what leaf it goes through
+	 //char cgc = _pvfmm->node(gni).color();
+	 if (intns(gg) == -1){
+		//cerr << gg << " " << gni << " " << (int)cgc << " " << (int)intns(gg) << endl;
+		cerr << gg << " " << " " << (int)intns(gg) << endl;
+		//ebiAssert(0); 
+	 }	
+  }
+
+  cerr<<"step 3 finished "<<endl;
+  
+  ebiFunctionReturn(0);
+}
+
+END_EBI_NAMESPACE

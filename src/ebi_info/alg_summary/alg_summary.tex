@@ -1,0 +1,281 @@
+\documentclass[10pt]{article}
+\addtolength{\oddsidemargin}{-.875in}
+\addtolength{\evensidemargin}{-.875in}
+\addtolength{\textwidth}{1.75in}
+\addtolength{\topmargin}{-.875in}
+\addtolength{\textheight}{1.75in}
+\usepackage{algorithmic}
+\title{Boundary Integral Solver Algorithm Summary}
+
+\newcommand{\cS}{{\cal S}}
+\newcommand{\cD}{{\cal D}}
+\newcommand{\cR}{{\cal R}}
+\newcommand{\cK}{{\cal K}}
+
+\begin{document}
+\maketitle
+
+\subsection*{Surface definition}
+We start with the description of the overlapping-chart surface
+abstraction used in the code, which is based on (Ying, Biros, Zorin, 2006);
+however, we make some slight changes in notation, to be more consistent with the code.
+
+The surface is viewed as an abstract domain $M$.
+The overlapping charts domains $U_k$  are
+equipped with bijective maps $\xi_k: P_k \rightarrow U_k$, where
+$P_k$ is a subset of $M$; $U_k$ cover all of $M$, and may overlap.
+
+			    For each chart, there is a geometry map
+$g^k: U_k \rightarrow \mathbf{R}^3$, and a partition-of-unity blending
+function $w_k: U_k \rightarrow \mathbf{R}$. Defining
+$\tilde{w}_k(s) = w_k(\xi^{-1}_k(s))$ for any point $s \in P_k$, and zero for other
+points of $M$, we require $\sum_k \tilde{w}_k(s) = 1$, for all points
+$s \in M$.
+
+In the code, there are two realizations of this abstraction. 
+Both require some way of identifying points on $M$.
+
+In the specific case of manifold-based surfaces of (Ying and Zorin
+2004), the domain $M$ corresponds to an abstract (i.e., with no 3d
+embedding specified) quad mesh, i.e. a collection of unit squares (faces) with
+a coordinate system $(c,d)$  specified on each square with an
+arbitrary vertex of the square chosen as the origin, with coordinates
+along edges. The edges of the squares are identified, so that each edge is shared by exactly two
+squares. Additionally, faces sharing a vertex form a loop such that
+each two squares in a sequence share an edge.
+
+In this case, the points of $M$  are identified by a pair $(F,q)$,
+where $q\in [0,1] \times [0,1]$, and $F$ is the index of the face.
+To maintain uniqueness,  the edges and vertices are arbitrarily associated with one of
+the faces they belong to (this is never explicitly used int the code,
+as all surface samples are in the interior of faces).
+
+A patch $P_k \subset M$, consists of all quads $F_i$  sharing a vertex
+$V_k$. The map $\xi_k$ and its inverse are analytically defined on
+each face of $P_k$, as $\xi_k(z) = z^{4/K}|z^{1-4/K}|$, where $K$ is the vertex
+valence, and the  coordinate system $(c,d)$  on $F_i$ is chosen with origin at
+$V_k$,  with $z = c +id$. This is a conformal map rescaled in the radial direction to reduce
+distortion.  $\xi_k(P_k)$ is a curved star-shaped domain in the
+plane; the coordinates in the plane are denoted $(x,y)$ in the code. 
+
+The correspondence between the notation described here and the code is
+$\xi_k$ is \verb@face_point_to_xy@, $\xi_k^{-1}$
+is \verb@xy_to_face_point@, $g^k$ is \verb@xy_to_patch_coords@ (also
+can compute derivatives), $w_k$ is \verb@xy_to_patch_value@ (the last two terms should be
+changed -- these are misleading).
+
+
+\subsection*{Notation}
+
+\begin{itemize}
+\item $d$ is the dimension of the density in the problem, $1$ or $3$ (vector density).
+\item $\delta$  is the target sampling step in 3d;
+per-patch parametric domain sampling step $h_k$  is computed from $\delta$;
+\item $R$ is the refinement factor; for the points in $\Omega_1$, refined
+sampling is used  used with 3d spacing $\delta/R$, $R > 1$.				      
+\item $\rho$ is the radius, in the number of patch-depedent
+parametric domain step sizes, of the floating partition of unity $\eta$ used
+in singular evaluation.
+\item $L$ is the number of sample points used for near evaluation interpolation. 				      
+\item  A star-shaped patch $U_k$ has zero-centered bounding square
+$D_k$ of size $2b_k \times 2b_k$.
+\item \emph{sample points} $s_{k,n}$ are associated with patches and are picked
+from a regular grid on $D_k$; $s_{k,n} = \xi_k^{-1}( -b_k + i h_k,
+-b_k + j h_k)$, for some integers $(i,j)$.  Points of $D_k \setminus U_k$ are
+skipped.  
+\item \emph{collocation points} $c_{k,m}$  are on-the-surface points
+at which the integrals are evaluated  (may or may not be sample
+points: these are sample points in the solve, but can be any for
+solution  evaluation); for a patch $P_k$, the list of collocation points includes both
+points sampled on $D_k$, as well as all points sampled on chart
+bounding boxes $D_\ell$, for which $P_k \cap P_\ell \neq \emptyset$.
+
+\item Each patch $U_k$ is associated with a connected component of the boundary, $m(k)$, which has an
+  interior point $z_m$.
+ 
+\item $\cS, \cD, \cR$ are single-layer, double-layer, and rotlet-type kernel
+for a given equation, the latter beyinf defined only for 
+\item  $ r^\times $ denotes the  linear operator of taking cross product with $r$. 
+\item $\phi$ denotes density values;
+\item $u$ denotes potentials in evaluation (in solve, the output is also a density).
+\end{itemize}
+
+
+\subsection*{Algorithms} 
+
+\paragraph{Setup.}
+
+
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Sampling setup} }
+\STATE\COMMENT{ {\tt DN3dOv::setup()}}
+\FORALL{patches $P_k$}
+\STATE Estimated per-patch scale $\sigma_k :=  max(|g^k_x(0,0)|, |g^k_y(0,0)|)$.
+\STATE Grid resolution $n_k := \lfloor 2 b_k/(\delta/\sigma_k) \rfloor$.
+\STATE Parametric  domain step $h_k := 2b_k/n_k$;
+\STATE Create the set of sample points $s_{k,i}$ on $P_k$, $i=1\ldots N_k$,  which are images of the subset of the  $n_k \times n_k$ grid points on $D_k$ inside $U_k$.   
+\STATE\COMMENT{Each point also has a global index $n$, and denoted $s_n$ when a global index is used.}
+\FORALL{$s_{k,i}$, $i=1\ldots N_k$}
+\STATE Compute: 
+\STATE $p_{k,i} := g_k(s_{k,i})$, 3d position;
+\STATE $n_{k,i}$, unit normal to the surface, pointing in the direction of the domain;
+\STATE $w_{k,i}$, value of the  POU function, supported on  $U_k$; 
+\STATE $J_{k,i}$, determinant of the Jacobian of $g_k$;
+\STATE $q_{k,i} := h_k^2$, integration weight of the point (periodic trapezoidal);
+\STATE $W_{k,i} := w_{k,i}J_{k,i}q_{k_i}$, combined weight for summation.		   
+\ENDFOR
+\ENDFOR
+\end{algorithmic}
+
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Collocation setup}}
+\STATE \COMMENT{{\tt DN3dOv::distribute\_collocation\_points}}
+\STATE Input: list of target surface samples $t_{k,i}$, at which the integrals are evaluated (not necessarily $s_{k,i}$)
+\STATE Output: collocation points $c_{k,m}$
+\FORALL{patches $P_k$}
+\FORALL{patches $P_\ell$ overlapping $P_k$}
+\STATE Add all sample points $s_{\ell,i}$ in  $P_\ell \cap P_k$ to the list $c_{k,j}$.
+\STATE $p^c_{k,j} := g^k(c_{k,j})$;
+\STATE Define $S(k,j) := (\ell,i)$, the map from collocation point on
+patch $k$ to its original sample point on patch $\ell$.
+\ENDFOR
+\ENDFOR
+\end{algorithmic} 
+\newpage
+
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Solver setup} }
+\STATE\COMMENT{ {\tt Bis3dOvGeneric::setup()}}
+\STATE Call sampling setup for spacings $\delta$ and $\delta/R$, to get samples $s_{k,i}$, and $s^r_{k,i}$. 
+\COMMENT{The refined sampling is needed only for near evaluation, not described yet}
+\STATE Call collocation setup for $t_{k,i}$ set to $s_{k,i}$ \COMMENT{This is called in{\tt BE3dRon::setup()}}
+\STATE For bounded-domain problems, $M$ is the number of interior connected components of the boundary;
+\STATE For unbounded-domain problems, $M$ is the total number of boundary components. 
+\IF{$d=1$} 
+\STATE {Define $N \times M$  matrix $B$, $B_{nm} = \cS(z_m, s_n)$,
+corresponding to the pole terms in the equation for mutiply-connected bounded domains and unbounded domains.}
+\STATE Define $N \times M$ constraint matrix $C$, with $C_{nm} = q_n$, the quadrature weight at $n$-th point.
+\ELSE
+\STATE Define $N \times 2M$  block matrix $B$, with $3 \times 3$ blocks $B_{mn} = \cS(z_m,s_n)$, for $m \leq M$, and $B_{nm} = \cR(z_m,s_n)$, $m> M$.
+\STATE Define $N \times 2M$ constraint block matrix $C$ with $3 \times 3$ blocks $C_{nm} = q_n I$, for $m \leq M$,    and $C_{nm} = q_n (p_n -z_m)^\times$.
+\ENDIF
+  \STATE Compute $P := (C^T B)^{-1}$ (Schur complement for preconditioning).
+\end{algorithmic}
+
+Next, we describe the matvec for the GMRES solve, assuming the setup above.  The main component is evaluation of the singular integral
+$\int \cD(x,y) \phi(y) dy$ over the surface.
+
+\paragraph{Solve.}
+The integral equation solved depends on the domain (see paper). The input is the righ-hand side $b$, defined at the sample points
+  $s_{k,i}$, which is passed to the KSP solver. The complete vector we solve for is  $x = [\phi, \gamma]$,  where
+$\phi$ is the double-layer density defined at $s_{k,i}$, and  $\gamma = \alpha$ for $d=1$, and $\gamma = [\alpha,\beta]$ for $d=3$.
+  and $\alpha$ and $\beta$  are vectors of pole charges defined at $z_m$, (``translational'' and ``rotational'' in 3d), of size $dM$. 
+
+\begin{algorithmic}
+\STATE \COMMENT{{\bf  Singular integral evaluation}}
+\STATE Input: $\phi$ at $s_{k,i}$, collocation points $c_{k,j}$.  Output: potential $u$ at target samples $t_{k,i}$. 
+\STATE \COMMENT{{\tt BE3dOvRon::singular\_evaluation}}
+\STATE Set weighted density $\psi_n := W_n \phi_n$;
+\STATE Call FMM to evaluate $u_n = \sum_m \cK(p_m,p_n)\psi_m$ for all sample points $s_n$.
+\COMMENT{subtract the part of the integral FMM computed inaccurately}
+\FORALL{patch $P_k$}
+\FORALL{collocation points $c_{k,j}$}
+\STATE Find all sample points $s_{k,i}$, such that  $|\xi_k(s_{k,i})- \xi_k(c_{k,j})| < h_k\rho$
+\STATE  Here the collocation-to-samples map is used to update correct entries in density 
+\STATE $ u_{S(k,j)} := u_{S(k,j)} - \sum_i \cK(p^c_{k,j},p_{k,i}) W_{k,i} \phi_{k,i} \eta(s_{k,i})$.
+\ENDFOR
+\ENDFOR
+\STATE \COMMENT{Add  an accurate calculation of the same part using polar samples}
+\FORALL{patch $U_k$}
+\FORALL{collocation point $c_{k,m}$}
+\STATE Compute a radial sampling pattern $t_{k,m,i}$  in $U_k$, centered at
+$\xi_k(c_{k,m})$, radius $h_k \rho$, with radial number of samples
+$[\rho]$, and angular $2[\rho]$.
+\STATE Interpolate weights, normals and densities to $t_{k,m,i}$ in $U_k$.
+\STATE $u_{S(k,m)} := u_{S(k,m)} + \sum_i \cK(p^c_{k,m},g^k(t_{k,q})) W_{k,m,i} \phi_{k,m,i} \eta(t_{k,m,i})$.
+\ENDFOR
+\ENDFOR
+\end{algorithmic}
+
+For complete evaluation, the contribution from poles  need to be          
+added (using $B$), and constraint equation part of the matrix
+applied (using $C$). Additionally, for incompressible equations we add an extra
+summation with normal-derived kernel.
+
+\newpage
+											
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Full matvec for the Krylov solver iteration.}}
+\STATE\COMMENT{{\tt Bis3dOvGeneric::mmult()}}
+\STATE Input: $x = [\phi, \gamma]$,  Output: $y= [\phi^y, \gamma^y]$.
+\STATE Compute $\phi^y := \frac{1}{2}\phi + \int \cD(x,y) \phi(y) dy $ using singular evaluation above. 
+\IF{incompressibility constraint is present}
+\STATE $\phi^y_m :=\phi^y_m+  W_m (n_m \dot \phi_m)n_m$
+\ENDIF
+\IF{$M > 0$ }
+\STATE $\phi^y := \phi^y + B\gamma$; $\gamma^y := C^T\phi$.
+\ENDIF
+\end{algorithmic}
+
+The final component of the solve is the preconditioner application,
+which is used only if $M > 0$. 
+
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Preconditioner application.}}
+\STATE\COMMENT{{\tt Bis3dOvGeneric::pcmult()}}
+\STATE\COMMENT{{\tt Supposed to agree with Greengard, Kropinski and Mayo}}
+\STATE 	 $\gamma^y := -\frac{1}{2}P(\gamma - 2 C^T \phi)$
+\STATE   $\phi^y  := 2\phi + B\gamma^y$          
+\end{algorithmic}
+
+\paragraph{Evaluation.}
+Given the extended density $[\phi, \gamma]$, evaluate the solution at
+arbitrary points in the domain, with contribution from $\gamma$ added
+directly. 
+
+The density integral for far points ($\Omega_2$ domain, greater than $C_1
+\delta $ from the boundary), FMM is used.
+
+For on-the-surface samples $t_{k,i}$,  compute collocation points $c_{k,m}$ and call 
+singular integral evaluation above.
+
+The remaining evaluation type is near evaluation
+
+\begin{algorithmic}
+\STATE\COMMENT{{\bf Near evaluation}}
+\STATE Input: list of target 3d positions $p^t_m$ closer than $C\delta$ to the
+surface, list of surface samples  $s^t_m$ with 3d positions $p^{t,c}_m$ closest to $p^t_m$,
+  in-out flags for each target point; 
+  surface density $\phi_n$ at suface samples $s_n$. Output: values $u^t_m$ of the integral of $\phi$ at $p^t_m$.
+  \STATE \COMMENT{ {\tt BE3dOv:setup()} and {\tt eval()}}
+\STATE Separate $p^t$ into $p^{t,0}$, points closer than $\delta$ to the surface ($\Omega_0$), and $p^{t,1}$ being the rest($\Omega_1$).
+\STATE Generate  a set of new target points $p^{t,0}_{m,q}$ for each $p^{t,0}_m$, $p^{t,0}_{m,q} := p^{t,c}_m + q n^{t,c}_m \delta$, $q = 1\ldots L-1$.
+\STATE The union of $p^{t,1}$ and $p^{t,0}_{m,q}$ is $p^{t,int}$														  
+\STATE Create collocation points $c^r_{k,n}$ for refined samples $s^r_{k,n}$
+\STATE \COMMENT{these were initialized in the solver setup -- should probably be moved here}
+\STATE Create collocation points $c^t_{k,n}$ for $p^{t,c}_m$.
+\STATE\COMMENT{Interpolate $\phi$ to finer samples; this is done first by patch to all collocation points in the patch, then for each sample point values obtained on different patches are averaged with blending function as weights}						      
+\STATE Refine $\phi_{k,i}$  to obtain values $\phi^r_{k,i}$ at  $s^r_{k,i}$.
+\FORALL{$P_k$}
+\FORALL{$c^r_{k,j}$}
+\STATE Interpolate $w_{k,i}\phi_{k,i}$ to samples $\xi_k(c^r_{k,j})$ to obtain values $\psi^{r,c}_{k,j}$
+\ENDFOR
+\ENDFOR
+\FORALL{$s^r_{k,j}$}
+\STATE $\phi^r_{k,j} := \sum_{(\ell,m): S(\ell,m) = (k,j)} \psi^{r,c}_{\ell,m}$ \COMMENT{This is done through scatter}
+\ENDFOR
+\STATE Set weighted density $\psi^r_n := W^r_n \phi^r_n$;
+\STATE Call FMM to evaluate $u^{t,int}_\ell := \sum_m \cK(p^r_m,p^{t,int}_\ell)\psi^r_m$ for all targets in $\Omega_1$
+  \STATE \COMMENT{The above yields $u^{t,1}_m$.}
+\STATE $u^{c}_m :=$ singular evaluation with $\phi$ as input at $s^t_m$.
+\STATE $u^{jmp}_m :=$  jump evaluation with $\phi$ as input at $s^t_m$.
+\FORALL{target points $p^{t,0}_m$}
+\STATE $u^{surf}_m := \pm\frac{1}{2} u^{jmp}_m  + u^c_m$ \COMMENT{the sign is set based on in-out flag for the point}
+\STATE interpolate $u^{surf}_m$ and $u^{t,0}_{m,q}$, $q=1 \ldots L-1$ using 1d Lagrangian interpolation to $p^{t,0}_m$, to obtain $u^{t,0}_m$.
+\ENDFOR
+\end{algorithmic}
+
+TODO:  jump evaluation, singularity cancellation in on-the-surface evaluation, parallel aspects. 
+\end{document}
+
+    

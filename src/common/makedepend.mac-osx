@@ -1,0 +1,464 @@
+svdrep.o: svdrep.cpp mobo_blas.h ebi_namespace.hpp \
+ /Users/mmorse/lib/petsc/include/petsc.h \
+ /Users/mmorse/lib/petsc/include/petscbag.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petsctime.h \
+ /Users/mmorse/lib/petsc/include/petscbt.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscctable.h \
+ /Users/mmorse/lib/petsc/include/petscmatlab.h \
+ /Users/mmorse/lib/petsc/include/petscdraw.h \
+ /Users/mmorse/lib/petsc/include/petscdmda.h \
+ /Users/mmorse/lib/petsc/include/petscdm.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfetypes.h \
+ /Users/mmorse/lib/petsc/include/petscdstypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmlabel.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h \
+ /Users/mmorse/lib/petsc/include/petscpf.h \
+ /Users/mmorse/lib/petsc/include/petscao.h \
+ /Users/mmorse/lib/petsc/include/petscfe.h \
+ /Users/mmorse/lib/petsc/include/petscdt.h \
+ /Users/mmorse/lib/petsc/include/petscdmcomposite.h \
+ /Users/mmorse/lib/petsc/include/petscdmpatch.h \
+ /Users/mmorse/lib/petsc/include/petscdmplex.h \
+ /Users/mmorse/lib/petsc/include/petscfv.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmredundant.h \
+ /Users/mmorse/lib/petsc/include/petscdmshell.h \
+ /Users/mmorse/lib/petsc/include/petscdmsliced.h \
+ /Users/mmorse/lib/petsc/include/petscds.h \
+ /Users/mmorse/lib/petsc/include/petsccharacteristic.h \
+ /Users/mmorse/lib/petsc/include/petscts.h \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petsctao.h \
+ /Users/mmorse/lib/petsc/include/petsctaolinesearch.h mobo_lapack.h \
+ svdrep.hpp nummat.hpp numvec.hpp ebi.hpp ebi_include.hpp ebi_petsc.hpp \
+ ebi_petsc_error.hpp ebi_uti.hpp
+vecmatop.o: vecmatop.cpp mobo_blas.h ebi_namespace.hpp \
+ /Users/mmorse/lib/petsc/include/petsc.h \
+ /Users/mmorse/lib/petsc/include/petscbag.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petsctime.h \
+ /Users/mmorse/lib/petsc/include/petscbt.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscctable.h \
+ /Users/mmorse/lib/petsc/include/petscmatlab.h \
+ /Users/mmorse/lib/petsc/include/petscdraw.h \
+ /Users/mmorse/lib/petsc/include/petscdmda.h \
+ /Users/mmorse/lib/petsc/include/petscdm.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfetypes.h \
+ /Users/mmorse/lib/petsc/include/petscdstypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmlabel.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h \
+ /Users/mmorse/lib/petsc/include/petscpf.h \
+ /Users/mmorse/lib/petsc/include/petscao.h \
+ /Users/mmorse/lib/petsc/include/petscfe.h \
+ /Users/mmorse/lib/petsc/include/petscdt.h \
+ /Users/mmorse/lib/petsc/include/petscdmcomposite.h \
+ /Users/mmorse/lib/petsc/include/petscdmpatch.h \
+ /Users/mmorse/lib/petsc/include/petscdmplex.h \
+ /Users/mmorse/lib/petsc/include/petscfv.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmredundant.h \
+ /Users/mmorse/lib/petsc/include/petscdmshell.h \
+ /Users/mmorse/lib/petsc/include/petscdmsliced.h \
+ /Users/mmorse/lib/petsc/include/petscds.h \
+ /Users/mmorse/lib/petsc/include/petsccharacteristic.h \
+ /Users/mmorse/lib/petsc/include/petscts.h \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petsctao.h \
+ /Users/mmorse/lib/petsc/include/petsctaolinesearch.h mobo_lapack.h \
+ svdrep.hpp nummat.hpp numvec.hpp ebi.hpp ebi_include.hpp ebi_petsc.hpp \
+ ebi_petsc_error.hpp ebi_uti.hpp numtns.hpp vecmatop.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec3t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/common.hpp \
+ ngmath/include/ngmath.h
+ebi.o: ebi.cpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_include.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_namespace.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_petsc_error.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_uti.hpp
+ebi_uti.o: ebi_uti.cpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_include.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_namespace.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_petsc_error.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi_uti.hpp
+memAlloc.o: memAlloc.cpp memAlloc.hpp ebi.hpp ebi_include.hpp \
+ ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp
+Dcuhre.o: Dcuhre.cpp mobo_lapack.h ebi_namespace.hpp \
+ /Users/mmorse/lib/petsc/include/petsc.h \
+ /Users/mmorse/lib/petsc/include/petscbag.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petsctime.h \
+ /Users/mmorse/lib/petsc/include/petscbt.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscctable.h \
+ /Users/mmorse/lib/petsc/include/petscmatlab.h \
+ /Users/mmorse/lib/petsc/include/petscdraw.h \
+ /Users/mmorse/lib/petsc/include/petscdmda.h \
+ /Users/mmorse/lib/petsc/include/petscdm.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfetypes.h \
+ /Users/mmorse/lib/petsc/include/petscdstypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmlabel.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h \
+ /Users/mmorse/lib/petsc/include/petscpf.h \
+ /Users/mmorse/lib/petsc/include/petscao.h \
+ /Users/mmorse/lib/petsc/include/petscfe.h \
+ /Users/mmorse/lib/petsc/include/petscdt.h \
+ /Users/mmorse/lib/petsc/include/petscdmcomposite.h \
+ /Users/mmorse/lib/petsc/include/petscdmpatch.h \
+ /Users/mmorse/lib/petsc/include/petscdmplex.h \
+ /Users/mmorse/lib/petsc/include/petscfv.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmredundant.h \
+ /Users/mmorse/lib/petsc/include/petscdmshell.h \
+ /Users/mmorse/lib/petsc/include/petscdmsliced.h \
+ /Users/mmorse/lib/petsc/include/petscds.h \
+ /Users/mmorse/lib/petsc/include/petsccharacteristic.h \
+ /Users/mmorse/lib/petsc/include/petscts.h \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petsctao.h \
+ /Users/mmorse/lib/petsc/include/petsctaolinesearch.h Dcuhre.hpp ebi.hpp \
+ ebi_include.hpp ebi_petsc.hpp ebi_petsc_error.hpp ebi_uti.hpp \
+ ebiobject.hpp ebiobject_inline.hpp memAlloc.hpp
+CmptTbls.o: CmptTbls.cpp CmptTbls.hpp Dcuhre.hpp ebi.hpp ebi_include.hpp \
+ ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp ebiobject.hpp ebiobject_inline.hpp vecmatop.hpp nummat.hpp \
+ numvec.hpp /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec3t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/common.hpp \
+ kernel3d.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/legacy/syms.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/nummat.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/NbrDefs.hpp
+kernel3d.o: kernel3d.cpp vecmatop.hpp nummat.hpp numvec.hpp ebi.hpp \
+ ebi_include.hpp ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec3t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/common.hpp \
+ kernel3d.hpp
+exsol3d.o: exsol3d.cpp vecmatop.hpp nummat.hpp numvec.hpp ebi.hpp \
+ ebi_include.hpp ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec3t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/common.hpp exsol3d.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/kernel3d.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/nummat.hpp
+nummat.o: nummat.cpp nummat.hpp numvec.hpp ebi.hpp ebi_include.hpp \
+ ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp
+interpolate.o: interpolate.cpp interpolate.hpp nummat.hpp numvec.hpp \
+ ebi.hpp ebi_include.hpp ebi_namespace.hpp ebi_petsc.hpp \
+ /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec3t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/common.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/bdry3d/patch_surf.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebiobject.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebi.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/ebiobject_inline.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/blendsurf3/vec2t.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/nummat.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/utils.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/kernel3d.hpp \
+ /Users/mmorse/Code/mercurial/mobo-temp/src/ebi/common/nummat.hpp \
+ vecmatop.hpp
+stats.o: stats.cpp stats.hpp ebi.hpp ebi_include.hpp ebi_namespace.hpp \
+ ebi_petsc.hpp /Users/mmorse/lib/petsc/include/petscsnes.h \
+ /Users/mmorse/lib/petsc/include/petscksp.h \
+ /Users/mmorse/lib/petsc/include/petscpc.h \
+ /Users/mmorse/lib/petsc/include/petscmat.h \
+ /Users/mmorse/lib/petsc/include/petscvec.h \
+ /Users/mmorse/lib/petsc/include/petscis.h \
+ /Users/mmorse/lib/petsc/include/petscsys.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscconf.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/petscfix.h \
+ /Users/mmorse/lib/petsc/include/petscversion.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpio.h \
+ /Users/mmorse/lib/petsc/mac-osx/include/mpi.h \
+ /Users/mmorse/lib/petsc/include/petscmath.h \
+ /Users/mmorse/lib/petsc/include/petscerror.h \
+ /Users/mmorse/lib/petsc/include/petscviewertypes.h \
+ /Users/mmorse/lib/petsc/include/petscoptions.h \
+ /Users/mmorse/lib/petsc/include/petsclog.h \
+ /Users/mmorse/lib/petsc/include/petscsftypes.h \
+ /Users/mmorse/lib/petsc/include/petscistypes.h \
+ /Users/mmorse/lib/petsc/include/petscviewer.h \
+ /Users/mmorse/lib/petsc/include/petscdrawtypes.h \
+ /Users/mmorse/lib/petsc/include/petscpctypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmtypes.h \
+ /Users/mmorse/lib/petsc/include/petscfvtypes.h \
+ /Users/mmorse/lib/petsc/include/petscdmdatypes.h ebi_petsc_error.hpp \
+ ebi_uti.hpp ebiobject.hpp ebiobject_inline.hpp

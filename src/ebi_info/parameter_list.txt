@@ -1,0 +1,61 @@
+In Bis3dOv:
+
+    LL: int
+        use: number of Lagrange interpolation node used during near evaluation
+        option: -LL
+
+    patch_partition: vector<int> of size number of patches
+        use: indicate which MPI group the ith patch is a member of, i.e.
+             patch_partition[i] = k for k = 0, ... , mpi_rank.
+        option: initialized prior to Bis3dOvGeneric instantiation and setup.
+
+    dom: 0/1
+        use: Indicate whether the domain of interest is bounded or unbounded
+             0 - bounded domain
+             1 - unbounded domain
+        option: -dom
+
+    bdtype: 0/1
+        use: Indicate the domain representation scheme
+             0 - indicates domain is represented analytically
+             1 - indicates domain is represented via blended patches.
+        option: -bdtype
+        
+
+    eqcoefs: vector<double>
+        use: 
+        option: initialized prior to Bis3dOvGeneric instantiation and setup.
+
+    spacing: double <= .2 and >= .025
+        use:
+        option: -bis3d_spacing
+
+    refined_spacing: double <= .2 and >= .0125
+        use: 
+        option: -bis3d_rfdspacing
+
+    rootlvl: integer: -1 (or -2 in odd cases)
+        use: needed by  old KIFMM local essential tree implementation.
+             set in the options file
+        option: -bis3d_rootlvl
+
+    bbb:
+
+
+In DN3dOv: see Bis3dOv; copies of spacing, refined_spacing, and LL are
+    contained here as well.
+    
+In Be3dOvNea:
+
+   _alfcoef:
+
+In Be3dOvRon:
+
+    radmult: integer > 2 
+        use:  floating POU function is set to step_size*radmult, in be3dovron.cpp
+            stored in  Be3dOvRon, 
+            set when the Be3dOvRon object is created in Bis3dOvGeneric
+            computed by  radmult_spacing function defined  in common/ebi_uti, as an
+            explicit map from step_size values
+        option: -bis3d_re_radmult, but its value is ignored (call commented out in
+        setFromOptions)

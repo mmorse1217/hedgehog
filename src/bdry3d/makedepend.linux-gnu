@@ -1,0 +1,36 @@
+analytic_surf.o: analytic_surf.cpp analytic_surf.hpp \
+ /code/src/ebi/common/ebi.hpp /code/src/ebi/common/ebi_include.hpp \
+ /code/src/ebi/common/ebi_namespace.hpp \
+ /code/src/ebi/common/ebi_petsc.hpp \
+ /hedgehog-libs/petsc-3.7.2/include/petscsnes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscksp.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscpc.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscmat.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscvec.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscis.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscsys.h \
+ /hedgehog-libs/petsc-3.7.2/linux-gnu/include/petscconf.h \
+ /hedgehog-libs/petsc-3.7.2/linux-gnu/include/petscfix.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscversion.h \
+ /hedgehog-libs/mpich2-1.2.1/include/mpi.h \
+ /hedgehog-libs/mpich2-1.2.1/include/mpio.h \
+ /hedgehog-libs/mpich2-1.2.1/include/mpi.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscmath.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscerror.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscviewertypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscoptions.h \
+ /hedgehog-libs/petsc-3.7.2/include/petsclog.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscsftypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscistypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscviewer.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscdrawtypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscpctypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscdmtypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscfvtypes.h \
+ /hedgehog-libs/petsc-3.7.2/include/petscdmdatypes.h \
+ /code/src/ebi/common/ebi_petsc_error.hpp \
+ /code/src/ebi/common/ebi_uti.hpp /code/src/ebi/common/ebiobject.hpp \
+ /code/src/ebi/common/ebi.hpp /code/src/ebi/common/ebiobject_inline.hpp \
+ /hedgehog-libs/blendsurf3/vec2t.hpp /hedgehog-libs/blendsurf3/common.hpp \
+ /hedgehog-libs/blendsurf3/vec3t.hpp /code/src/ebi/common/vecmatop.hpp \
+ /code/src/ebi/common/nummat.hpp /code/src/ebi/common/numvec.hpp

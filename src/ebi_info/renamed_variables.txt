@@ -1,0 +1,164 @@
+ufpbegvec:      sample_point_starting_index
+ufpbpt:         sample_point_as_face_point
+ufpdat:         sample_point_data
+REF:            refinement_factor
+datprep:        refine_data
+datintp:        interpolate_data
+datpick:        get_sample_point
+szbptdb:        face_point_size_in_doubles
+ufppos:         sample_point_3d_position
+ufpnor:         sample_point_normal
+ufpjac:         sample_point_jacobian
+ufpalf:         sample_point_patch_value
+ufpwgt:         sample_point_quad_weight
+ufpwcb:         sample_point_combined_weight
+ufptag:         sample_point_props
+ufpbpt:         sample_as_face_point
+
+sttintp:        is_interp_xy_valid
+sttpick:        is_sample_point_valid
+geointp:        interp_xy_to_patch_coords
+geopick:        get_sample_on_patch
+prtnvec:        patch_partition
+
+// See comments in dn3dov.hpp for explanation and scary ascii art of these
+// three
+nsplvec:        num_sample_points
+ufpnumvec:      num_sample_points_in_patch
+regordvec:      patch_sampling_index
+stepvec:        step_size
+lclufpnum:      local_num_sample_points
+gblufpnum:      global_num_sample_points
+lclufpran:      local_sample_point_range
+
+bd3dbd.hpp
+
+Pch3dBd:
+Bpt3dBd:        FacePointBlended
+bpt:            face_point
+estjac:         estimate_jacobian
+xy2alf:         xy_to_patch_value
+xy2geo:         xy_to_patch_coords
+xy2bpt:         xy_to_face_point
+xydmt:          is_xy_dominant
+xystt:          is_xy_valid
+bpt2xy:         face_point_xy
+bptstt:         is_face_point_valid
+gid:            group_id
+
+Bd3dBd:
+gctrvec:        boundary_component_center
+pchvec:         patches
+ortvec:         
+bpt2piv:        patches_containing_face_point
+bbox:           bounding_box
+
+dn3dov.cpp/hpp
+t2c:            target_to_colloc
+colis:          colloc_index_set
+trgis:          target_index_set
+lclnum:         num_local_pts
+fnl:            scaled_density
+fnlarr:         scaled_density_ptr
+denarr:         density_ptr
+cst:            constant
+csts:           constant_vecs
+daw:            scaled_density
+
+be3dov.hpp
+colnumvec:      num_colloc_point_in_patch
+colbegvec:      colloc_point_starting_index
+c2tmap:         colloc_point_global_indices
+colpos:         colloc_point_3d_position
+colbpt:         colloc_point_as_face_point
+colnum:         num_collocation_points
+c2tden:         colloc_to_target_density_scatter
+c2tval:         colloc_to_target_value_scatter
+setuptdata:     distribute_collocation_points
+TData:          CollocationPointData
+tdof:           target_dof
+trgpos:         target_3d_position
+plclran:        local_index_range
+plclnum:        num_local_points 
+pglbnum:        num_global_points 
+
+
+
+be3dovnea.hpp
+trgbptcls:      closest_samples_as_face_point_near
+trgposcls:      closest_samples_3d_position_near
+regidt:         eval_distance_closest_to_sample_id
+_region:        _distance_to_closest_sample
+bdybpt:         closest_sample_as_face_point
+bdypos:         closest_sample_3d_position
+_trgposfar:      _target_position_intermediate
+sdof:           source_dof
+tdof:           target_dof
+pdd:            point_position_and_dereivs
+gn:             normal/unit_normal
+coltmp:         density_at_collocs
+trgtmp:         density_at_targets
+odd:            old_density
+ODD:            old_density_mat
+fnd:            final_density
+FND:            final_density_mat
+lagvec:         interpolation_nodes
+collocation_datarfd: refined_collocaation_data
+recls:          on_surface_evaluator
+calwgts:        compute_interpolation_weights
+nbrge:          num_local_surface_points
+nbrg1:          num_local_near_points
+nbrg2:          num_local_intermediate_points
+tparr:          target_3d_position_ptr;
+rgarr:          distance_to_boundary_ptr;
+riarr:          region_label_ptr;
+bparr:          closet_boundary_point_ptr;
+fcnt:           num_points_intermediate
+ccnt:           num_pointer_near
+daw:            scaled_density
+
+
+be3dovron.hpp
+CData:          UnitVectorDensities
+pchsub:         subtract_inaccurate_part
+pchadd:         add_singular_quadrature_part
+sgeval:         singular_evaluation
+evalcmdfy:      apply_singularity_cancellation
+usecstmdfy:     use_singularity_cancellation
+_cdata:         singular_cancellation_data
+trgbpt:         target_as_face_point
+trgpos:         target_3d_position
+sdof:           source_dof
+tdof:           target_dof
+daw:            scaled_density
+cvmfd:          modified_colloc
+tvmfd:          modified_targets
+trgtmp:         density_at_targets
+coltmp:         density_at_collocs
+srcjaw:         source_quadrature_weight
+pdd:            point_position_and_dereivs
+adddat:         corrected_density
+
+be3dovfar.hpp
+be3dovjmp.hpp
+trgios:         target_in_out
+_tdata:         _collocation_data
+
+bis3dov.cpp
+dstz:           patch_samples
+dn:             patch_samples
+
+Other changes:
+alf:            patch_value
+rfd:            refined_
+bpt:            face_point
+lcl:            local
+glb:            global
+ran:            range
+col:            collocation
+trg:            target
+src:            source
+tlclnum:        num_local_targets
+slclnum:        num_local_sources
+
+

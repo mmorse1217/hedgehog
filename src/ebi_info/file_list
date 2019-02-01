@@ -1,0 +1,468 @@
+bdry3d
+bie3d
+bmake
+common
+ebs3d
+file_list
+fmm3d
+geom3d
+harper
+include
+machine_makefiles
+makefile
+mobo_bowery_src
+mobo_src
+vis3d
+
+BDRY3D:
+./bdry3d: Contains code for implementing bulding of patches, sampling,
+and functions for locating points on patches for simple and complex
+surfaces.
+
+bd3dag.hpp/cpp : Subclass of bd3dov.  Provides implementation of setup
+and construction of patches for analytic surface (specifically, the
+sphere).  Pch3dag is the subclass of Pch3dOv patch base class.  All
+patch functions are exexcuted internally (xy->bdry pt, pou, etc.)
+
+bd3dbd.hpp/cpp : Sublcass of bd3dov.  Provides implementation of
+setup and construction of complex blendsurf (see geom3d/bdsurf/hpp)
+surfaces.  Pch3dBd is subclass of Pch3dOv base class here.  All patch
+functions implemented from virtual functions are passed to 
+blendsurf functions (i.e., xy->bdry py, vice versa, pou, etc.)
+
+bd3dov.hpp/cpp : Base class for bd3dag/bdsbd.  Contains the vector of
+patches and vector of orientations of surfaces and vector of group
+centers. Also provides base for Pch3dOV class, class for patches.
+Functions for the patches include ones which go from 3d boundary point
+-> (i,j) on surface and vice versa, and pou functions.
+
+dn3dov.hpp/cpp : Provides sampling functions on each patch from bd3dov.hpp/cpp.
+The Bd3dOv boundary class is controlled through dn3dov.
+
+makefile : bdry3d makefile - in ebi make tree.
+
+
+BIE3D:
+./bie3d:
+be3dov.hpp/cpp : Base class for far/nea/jmp/ron solvers.  Mainly
+contains virtual setup and evaluation functions.  Also contains the
+src and trg position matrices. Intended for parallel (has local and
+global position numbers), but only serial now.
+
+be3dovfar.hpp/cpp : Subclass of BE3dOv for far field solver
+specifically.  Called by bisdov for specifica kernel (e.g.,
+bisdovlapdr) for evaluating bounadry solution at points in the domain
+far from the surface.  Mostly just calls FMM particle solver.
+
+be3dovjmp.hpp/cpp : Subclass of BE3dOv.  Implements evaluation for
+jump condition, used in near evaluation.
+
+be3dovnea.hpp/cpp : Subclass of BE3dOV. Implements near-field
+evaluators for boundary integral solver.
+
+be3dovron.hpp/cpp : Subclass of BE3dOV.  TODO MORE HERE .... Used as matrix
+multiplier operation in KSP as well as in near evaluators.
+
+bie3d_impl.cpp : Implements bie3d classes for template.  As bie3d
+classes often use FMM structures, which have been parameterized by
+octree nodes, have to provide implementation file for
+compiler. Implements all classes with EbiNode class.
+
+bis3dov.hpp/cpp : Base class for different boundary integral solvers
+for different kernels.  Virtual functions for solving for boundary
+density, far/near evaluations and setup.  Full implementation is here
+for marking volume FMM octree nodes as well as all target points as
+interior/exterior, close, etc.
+
+bis3dovlapdr.hpp/cpp : Subclass of Bis3dOV.  Iimplementation of
+boundary integral solver for Laplacian, double layer.  Provides far and near
+evaluators along with solver for density.
+
+bis3dovmodlapdr.hpp/cpp : Modified Helmholtz (not currently working)
+bis3dovnavdr.hpp/cpp : Stokes double layer (currently working)
+bis3dovstkdr.hpp/cpp : Navier double layer (not working)
+
+makefile : bie3d makefile
+
+
+BMAKE:
+./bmake: Additional variables for making code.  Specifically, the
+location of glut libs (for vis3d) and FFTW libs (2 or 3, depending on
+choice - note FFTW3 best for large numerical precision) are stored
+here
+
+./bmake/darwin9.6.0:
+variables : variables file for Harper's Mac OS X 10.6
+
+./bmake/linux-gnu:
+variables : variables for Linux, specifcally CIMS energon
+
+./bmake/linux-gnu-intel:
+variables : variables for Linux Intel servers, spec. NYU HPC servers
+with Intel Compiler
+
+COMMON:
+./common: Common directory (TODO)
+CmptTbls.hpp/cpp : Class which builds the precomputed operators for
+the U,W,X, and S2M operator lists to desired accuracy.  Only builds the minimum number and
+symmetries are used for the rest. Also has ability to build non-level
+restricted interaction matrices if tree is not balanced.  Once tables
+are computed, they are stored in file system.
+
+Dcuhre.hpp/cpp : Interaction class for call to dcuhre, adaptive
+Gaussian quadrature Fortran code f_dcuhre.f.  Desired accuracy and
+other variables set from here.  Also sets the global variables for
+target points, function to be used (set in ffunc.h/c)
+
+NbrDefs.hpp : globally definitions for precomputed, level-restricted
+tables for U,W, and X-lists.  Used in syms.hpp/cpp for simplifying
+symmetry defs.  Also defines NORM, FINE, and CRSE, etc. for code ease.
+
+PerDirMaps.hpp : Periodic and Dirichlet maps for the periodic and
+dirichlet volume FMM code standalone solver.  Could be stored in fmm3d
+directory (and probably should)
+
+dsgrid_modified.c : Modified dsgrid 3d (weighted inverse distance
+interp) solver which allows for use of OpenMP
+
+ebi.hpp/cpp : EBI include files, petsc related files and includes for
+commonly used functions
+
+ebi_include.hpp : EBI includes.  Common headers to be included, STL stuff, etc.  Also,
+assigns which FFTW3 headers (FFTW3 or FFTW2.1.5) are included, based
+on makefie.options
+
+ebi_mainpage.hpp
+ebi_namespace.hpp : EBI namespace.  Everything in the ebi code uses
+this namespace
+
+ebi_petsc.hpp : Includes petsc headers needed and defines some wrapper
+functions for use with ebi functions
+
+ebi_petsc_error.hpp : Error wrappers for use with petsc.  This file
+defines the regularly used ebiFunctinoBegin/End calls, ebiAssert, iA,
+eC, etc.  Descriptions useful when need to do error tracking.  Code
+should use these defs more consistently than currently done.
+
+ebi_uti.hpp/cpp :Small number of utility functinons and defs.  None of
+this really used anymore and could likely be rolled over to ebi.cpp and deleted
+
+ebiobject.hpp : Common object class.  Everything is a subclass of this
+class when petscoptions is called to assign a variable.  Basic
+information for an object used with petsc: prefix, setFromOptions
+vurtual function, etc. EbiObject is a subclass of an MPIObject and
+InfoObject.  Ultimately, ebiobject should be a distributed object
+though code serial for now.
+
+ebiobject_inline.hpp : Implementations of setFromOptions,
+setOptionsPrefix, appendOptionsPrefix functions from ebiobject.hpp.
+Inlcuded by ebiobject.hpp
+
+f_dcuhre.f : Adaptive Gaussian Quadrature code.  Called through
+Dcuhre.cpp and CmptTbls.cpp to build the precomputed interaction
+matrices, or "compute on fly" tables for unbalanced octrees
+
+f_qshep3d.f : Shepard's Interpolation package - not currently used
+
+ffunc.h/c : C function called by Dcuhre.  Pointer to this function is
+passed to fortran code.  Global target positions are set, along with
+the kernel type, number of functions being evaluated, etc.  Basically
+computes K(x,y)*[polynomials_nk] for global x, and y passed by
+f_dcuhre.f for desired K, and the polynomial function vector of order
+k with nk size.
+
+kernel3d.hpp/cpp : Different kernels (Laplace, Stokes, etc.) are
+defined here and discretizations provided.  Used mainly by FMM code,
+but also needed by CmptTbls code, so placed in common directory.
+
+makefile : common directory makefile
+
+mat3t.hpp : TODO
+
+memAlloc.hpp/cpp : Basic C style memory allocation routines.  Used by
+Dcuhre.cpp.  Basically abstracts some calloc calls, though only the
+vecalloc function is used and could probably just be moved over to Dcuhre.hpp/cpp
+
+mobo_blas.h : defines the BLAS functions being used and allows for
+linking to fortran blas libraries.  Defined include DGEMM, DGEMV,
+DAXPY, DGER, DSCAL, DCOPY - all pretty standard
+
+mobo_lapack.h : defines the BLAS functions being used and allows for
+linking to fortran blas libraries.  Defined include DGESVD, DGESDD,
+DGETRF, DGETRI - all pretty standard.  Also defines DCUHRE for
+linkage. QSHEP3 commented out here but can be recovered if needed.
+
+mobo_slatec.h : TODO - not sure if used?
+
+ngmath : ngmath functions
+
+nummat.hpp : Numerical matrix template.  Basic set, assign, resize
+functionality. No overloaded addition, mult, etc, though easily
+implemented if needed.  DEfines Boolean, integer, and double
+(DblNumMat - most used here) matrices.
+
+numtns.hpp : Template for building a NumTns structure which allows for
+storing data based on a 3D index.  For example, for child->parent
+operations in the fmm, can store 8 matrices by index (i,j,k), i,j,k in
+{0,1}. More convenient and efficient than using a map or vector.
+
+numvec.hpp : Numerical vector template.  Basic set, resize,
+etc. operations as in nummat.hpp for matrices. Defines various types
+of numvecs, including ChrNumVec (char), DblNumVec (double), etc.
+
+offmat.hpp : Template for OffMat. Not currently used, so not sure of
+its advantages...  Included by offtns.hpp, but not used there.
+
+offtns.hpp : Template for OffTns.  Data structure can be used
+similarly to numts, but you can have an offset that is negative.  For
+example. with the M2L interactions, can store matrices that are in the
++-x,+-y,+-z directions.  Avoids having to force positive indices.
+
+offvec.hpp : OffVec template.  Not used anywhere apparently.
+
+quaternion.hpp/cpp : quaternion implementations.  Used by vis3d for
+visualizing surfaces.
+
+rotation.hpp : rotation functions.  Use quaternion code.  Used on in
+vis3d, mainly by trackball for vis purposes.
+
+svdrep.hpp/cpp : SVD representation class.  Constructs SVD U,S,V matrices
+from matrix A for diagonal S, normal U,V.  Also builds to a specific
+tolerance, cutting off all singular values < tol specified.
+
+syms.hpp/cpp : Symmetry functions needed by CmpltTbls to build the
+fewest number of level-restricted operators.  Mainly also used in
+volume FMM to compute the symmetries from the small subset of
+matrices precomputed.  Effectively tells which type of
+transform/rotation necessary for each neighbor: NORM = same-level
+neighbor in U-list.  FINE - one-level finer neighbor.  CRSE =
+one-level coarser neighbor. Other functions and arrays describe how to
+rotate points and basis functions from polynomial order 3 to 8.
+
+vec2t.hpp : 2d vector template.  Mainly used to implement double,
+Point2 to store parameterization locations on surface
+
+vec3t.hpp :3d vector template.  Mainly used to store a 3d index of
+ints, Index3 (such as index of child relative to parent in octree) or
+3d point, Point3 (such as the center of a box in the octree)
+
+vecmatop.hpp/cpp : Vector, matrix operations implemented here along
+with some other common functions.  Examples include dscal, dgemm,
+dgemv, pinv (pseudoinverse uses svdrep.hpp/cpp), spline interpolaation
+(1,2,3d), partition of unity (1d) with either spline basis or omptimum
+blend function (both here).
+
+./common/ngmath:
+Copyright : NCL copyright
+csagrid : cubic spline interpolation/extrapolatoin
+dsgrid : weighted inverse distance interpolation/extrapolation
+include : Inlcludes fo csagrid, dsgrid
+makefile : makefile
+ngmathbd.f : utility function for ngmath - not sure if needed.
+
+./common/ngmath/csagrid: Cubic spline interpolation package from NCL.
+Only 3D functions here presently.  All files have good descriptions in
+their heads.  Main thing to know is that csa3(l/x)(s/d) are the called
+routines for list-format/extended format and single/double
+precision. c_csauser is the C interface function.
+Files in this directory include: bascmp.f,bascmpd.f, c_csauser.c,
+cfaerr.f, csa3d.f, csa3ld.f, csa3ls.f, csa3lxd.f, csa3lxs.f, csa3s.f,
+csa3xd.f, csa3xs.f, makefile, splcc.f, splccd.f, splcw.f, splcwd.f,
+splde.f, splded.f, splfe.f, splfed.f, suprld.f, suprls.f)
+
+./common/ngmath/dsgrid:
+dserror.c
+dsgrid3d.c
+dsgrid3s.c
+dssprtd.c
+dssprts.c
+dsuser.c
+dsuser_f.f
+dsuserd.c
+dsusers.c
+makefile
+
+./common/ngmath/include: Includes for csagrid, dsgrid.  All may not be
+needed; will check. Files: c.h, cgm_tools.h, cgmdef.h, ctrans.h,
+dsgvars.h, dsproto.h, dstypes.h, dsuhead.h, gks.h, gksP.h, ncargC.h,
+ncarg_ras.h, ngmath.h)
+
+EBS3D:
+./ebs3d:
+ebs3d.cpp
+ebs3d.hpp
+ebs3d_impl.cpp
+ebs3dlapdr.cpp
+ebs3dlapdr.hpp
+ebs3dmodlapdr.cpp
+ebs3dmodlapdr.hpp
+ebs3dnavdr.cpp
+ebs3dnavdr.hpp
+ebs3dstkdr.cpp
+ebs3dstkdr.hpp
+makefile
+
+FMM3D:
+./fmm3d:
+Efmm3d.cpp
+Efmm3d.hpp
+Vfmm3d.cpp
+Vfmm3d.hpp
+Vfmm3d_Coeffs.cpp
+Vfmm3d_FMM.cpp
+Vfmm3d_FMM.hpp
+Vfmm3d_check.cpp
+Vfmm3d_eval.cpp
+Vfmm3d_impl.cpp
+Vfmm3d_setup.cpp
+Vlet3d.cpp
+Vlet3d.hpp
+dense3d.cpp
+dense3d.hpp
+exsol3d.cpp
+exsol3d.hpp
+fmm3d.cpp
+fmm3d.hpp
+fmm3d_check.cpp
+fmm3d_eval.cpp
+fmm3d_impl.cpp
+fmm3d_setup.cpp
+knlmat3d.cpp
+knlmat3d.hpp
+let3d.cpp
+let3d.hpp
+let3d_impl.cpp
+makefile
+matmgnt3d.cpp
+matmgnt3d.hpp
+
+./geom3d:
+agsurf.cpp
+agsurf.hpp
+bdsurf.cpp
+bdsurf.hpp
+ccsubmatlib.cpp
+ccsubmatlib.hpp
+ccsurf.cpp
+ccsurf.hpp
+ccsurfop.cpp
+ccsurfop.hpp
+gpmesh.cpp
+gpmesh.hpp
+makefile
+
+./harper:
+Makefile
+bdsurf_U_ONE.dat
+bdsurf_U_SVD.dat
+bevtt0.cpp
+bevtt0option
+bis_optfiles
+bistt0.cpp
+bistt0option
+bistt1.cpp
+bistt1option
+ccsubmat_int_boun_v8.dat
+ccsubmat_int_v13.dat
+ebs_scripts.py
+ebstt0_tol.cpp
+ebstt0option
+ebstt1_tol.cpp
+ebstt1option
+options_val.opt
+submat.dat
+test.opt
+vistt0.cpp
+vistt0option
+vistt1.cpp
+vistt1option
+vistt2.cpp
+vistt2option
+vistt3.cpp
+wrl_files
+
+./harper/bis_optfiles:
+bis_ex1.opt
+bis_ex2.opt
+bis_ex3.opt
+bis_ex4.opt
+bis_ex5.opt
+bis_ex6.opt
+bisstk_ex1.opt
+bisstk_ex2.opt
+bisstk_ex3.opt
+bisstk_ex4.opt
+bisstk_ex5.opt
+
+./harper/wrl_files:
+car.wrl
+cube.wrl
+cylinder.wrl
+cylinder5.wrl
+newtorus.wrl
+npp.wrl
+pipe.save.wrl
+pipe.wrl
+pipe2.wrl
+pipe_new.wrl
+pipe_old.wrl
+ppp.wrl
+pppflip.wrl
+prop.wrl
+smpipe.wrl
+sph8flip.wrl
+sphere.wrl
+sphereflip.wrl
+starfish.wrl
+starfish2.wrl
+starfish3.wrl
+starfishflip.wrl
+sub.wrl
+sub2.wrl
+test.wrl
+tmp.wrl
+ttorus.wrl
+ttorus2.wrl
+ttorus3.wrl
+ttorus_small.wrl
+ttorusflip.wrl
+
+./include:
+DIRICHLET
+
+./include/DIRICHLET:
+DwnEquGrdMap_10
+DwnEquGrdMap_11
+DwnEquGrdMap_12
+DwnEquGrdMap_2
+DwnEquGrdMap_3
+DwnEquGrdMap_4
+DwnEquGrdMap_5
+DwnEquGrdMap_6
+DwnEquGrdMap_7
+DwnEquGrdMap_8
+DwnEquGrdMap_9
+
+./machine_makefiles:
+makefile.bowery.in
+makefile.bowery.options
+makefile.in
+makefile.options
+
+./vis3d:
+IImage.cpp
+IImage.hpp
+bdsurfvr.cpp
+bdsurfvr.hpp
+bisgrid3dvr.cpp
+bisgrid3dvr.hpp
+ccsurfvr.cpp
+ccsurfvr.hpp
+dn3dovvr.cpp
+dn3dovvr.hpp
+ebs3dvr.cpp
+ebs3dvr.hpp
+makefile
+trackball.cpp
+trackball.hpp
+vr.hpp

@@ -1,0 +1,21 @@
+Intialization sequence for  solver data
+
+1. create DN3dOv (maintains distributed storage for per sample point quantitities sample_point_*)
+  
+2. DN3dOv->setup() initializes per-patch data local to each partition, and distributed  sample_point_* Vecs
+
+3. create solver object, e.g. Bis3dLapDr
+
+4. Solver setup creates matvec object for evaluation on the surface Be3dOvRon.
+
+5. Be3dOvRon has handles  _trgpos and _trgbpt which are initialized from the corresponding
+sample_point Vecs. 
+
+6. Be3dOvRon setup
+  --  initializes non-distributed _srcPos, _srcNor, _trgPos stored in the base class Be3dOv,
+  which are used to initialize FMM.
+
+  -- calls setuptdata from the base class Be3dOv to initialize a TData structure stored in Be3dOvRon, which contains Vecs colbpt, colpos (collocation point data)
+
+7. Be3dOv->setuptdata calls DN3dOv->tctran to initialize non-distibuted c2tmap, colnumvec, colbegvec, stored in TData, which are needed to initialize colbpt and colpos
+  
