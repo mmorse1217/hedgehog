@@ -277,17 +277,18 @@ double evaluate_error_estimate_expression(double curve_derivative,
     double second_factor = 4./pow(abs(iq*square_root_term), 3)*
         1./pow(abs(tstar + square_root_term), q)*
         pow(abs(iq/square_root_term), m);
-    cout << "Factors in error estimate: " << endl;
+    /*cout << "Factors in error estimate: " << endl;
     cout << curve_derivative << endl;
     cout << first_factor << endl;
     cout << 4./pow(abs(iq*square_root_term), 3)<< endl;
     cout << 1./pow(abs(tstar + square_root_term), q) << endl;
         cout << pow(abs(iq/square_root_term), m) << endl;
         cout << tstar << ", " << square_root_term << ", " << iq << endl;
+    cout << "error: " <<first_factor*second_factor << endl;*/
 
     // recall that \Gamma(n) = (n-1)!
     //return  1./tgamma(m+1)*first_factor*second_factor;
-    return  first_factor*second_factor;
+    return  first_factor*second_factor*1./fabs(t.imag());
 
 }
 

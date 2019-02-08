@@ -1,7 +1,7 @@
 #include "pvfmm_bis_interface.hpp" //interface in fmm3d
 #include <pvfmm_interface.h> //interface in pvfmm/pvfmm_utils/
 #include <vec3t.hpp>
-#include "legacy/syms.hpp"
+//#include "legacy/syms.hpp"
 #include "common/utils.hpp"
 BEGIN_EBI_NAMESPACE
 
