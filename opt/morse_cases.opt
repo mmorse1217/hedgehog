@@ -1,0 +1,231 @@
+-bdtype 2 # 0 - analytic, 1 - blended, 2 - face map
+-bd3d_filename ../wrl_files/cube.wrl # parsed from command line
+-bd3d_meshfile ../wrl_files/cube.wrl
+-poly_coeffs_file ../wrl_files/poly/flat_patch.poly
+
+# "convergence type" for qbkix evaluation, w.r.t. h -> 0.
+# \alpha = boundary_distance_ratio = interpolation_spacing_ratio
+# classic - as h-> 0, qbkix error -> 0, by placing check points with spacing
+#           \alpha*\sqrt(h)
+# adaptive- as h-> 0, qbkix error -> \eps_extrapolate, which is the error
+#           incurred by extrapolation. check points are placed with spacing 
+#           \alpha*h, and boundary is adaptively refined to resolve integral at
+#           check points
+-qbkix_convergence_type adaptive
+#-bd3d_filename wrl_files/.wrl
+-LL 4
+-near_interpolation_num_samples 10
+
+-dump_qbkix_points 0
+# copied from ebs_script.py. keys are -bis3d_spacing
+# rfdhs = {0.192:0.096, 0.096:0.048, 0.048:0.024, 0.024:0.008, 0.012:0.004, 0.006:0.002, 0.003:0.001}
+# hsradmult = {0.192:4, 0.096:7, 0.048:9, 0.024:13, 0.012:17, 0.006:25, 0.003:35} 
+# hsbdspacing = {0.192:0.032, 0.096:0.016, 0.048:0.008, 0.024:0.004, 0.012:0.002, 0.006:0.001, 0.003:0.0005}
+
+#-boundary_distance_ratio .5
+-boundary_distance_ratio .5
+-interpolation_spacing_ratio .5
+-dnref 16
+-bis3d_spacing	0.25
+-bis3d_rfdspacing	0.0625
+-bis3d_re_radmult 7
+-bd3d_spacing 0.016
+-pou_radius_constant 1.1
+#-bd3d_pouctrl 0
+# spacing used to form local cubic interpolant to accelerate blendsurf eval
+-bdsurf_interpolant_spacing 0.1
+# whether to use interpolant to evaluate blendsurf (0 or 1)
+-bdsurf_interpolate 1
+-bd3d_bdsurf_refinement_factor    0
+-direct_eval 0
+-pbname pbname
+
+
+-markgrid_on_surface_threshold 1e-13
+-markgrid_closest_point_opt_threshold 1e-14
+-dirichlet 0 
+-neumann 1
+-results on_surface_eval_test_with_solve_results.csv
+
+-dump_data false
+
+-near_zone_proxy .5
+-target_accuracy 1e-4
+
+# type of upsampling to use in the solver
+# either "uniform" or "adaptive"
+-upsampling_type uniform
+
+# number of levels of uniform upsampling
+-uniform_upsampling_num_levels 2
+
+# Options for -adaptive_upsampling are
+# bbox - patch bounding box based upsampling 
+# bbox_closest_point - patch bounding box + closest point upsampling 
+-adaptive_upsampling bbox
+# iteration when bbox_closest_point code switch from bbox to closest point
+# calculations to determine near
+-adaptive_upsampling_switch_iter 2 
+-adaptive_upsampling_bbox_inflation_factor 1.
+
+-bd3d_facemap_refinement_factor    0
+-bd3d_facemap_patch_order    6
+-bd3d_facemap_fit_accuracy 1e-4 
+-bd3d_spacing 0.016
+-adaptive 0
+
+-bd3d_facemap_adaptive    0
+-dom 0  #0-bounded, 1-unbounded
+-kt 111   #1-lap, ONLY LAPLACE HERE
+#-kt 121   #1-lap, ONLY LAPLACE HERE
+-et 12
+
+#-kt 311
+#-et 31
+#-bis3d_spacing	0.048
+#-bis3d_rfdspacing	0.024
+#-bis3d_spacing	0.192
+#-bis3d_rfdspacing	0.096
+#-bis3d_spacing	0.18 ### for blendsurf v1
+#-bis3d_rfdspacing	0.09  ### for blendsurf v1
+
+# box radius = 2^(-rootlvl)
+############################ FMM Parameters ###################################
+-bis3d_ctr	0.0,0.0,0.0
+-bis3d_rootlvl -40	
+-bis3d_np 10
+-bis3d_ptsmax 100
+-bis3d_maxlevel 12
+
+############################ Petsc Parameters #################################
+-bis3d_pc_type shell
+-bis3d_ksp_rtol 1e-12
+-bis3d_ksp_monitor
+-bis3d_ksp_type gmres
+-bis3d_ksp_gmres_restart 40
+-bis3d_ksp_max_it 200
+########################### leftover parameters  ###########################
+##### MJM TODO remove theses
+#E) FMM options
+# On surface
+-bis3d_re_fmm3d_np 8               
+-bis3d_re_fmm3d_let3d_ptsmax 150  
+-bis3d_re_fmm3d_let3d_maxlevel 15
+
+-bis3d_fmm3d_interp 0
+-bis3d_fmm3d_rval 1
+-bis3d_fmm3d_lambda 1
+-bis3d_fmm3d_vlet3d_kval 5
+-bis3d_fmm3d_vlet3d_rhs 0
+-bis3d_fmm3d_vlet3d_balance 0
+-bis3d_fmm3d_vlet3d_adaptive 0
+-bis3d_fmm3d_vlet3d_maxLevel 12
+-bis3d_fmm3d_vlet3d_ptsmax 3000
+-bis3d_fmm3d_vlet3d_kval 6 
+#-options_table
+#-log_summary
+
+
+-ebs3d_vfmm3d_vlet3d_maxLevel 16
+-ebs3d_vfmm3d_np 6
+
+-ebs3d_vfmm3d_vlet3d_ksrcval 6
+-ebs3d_vfmm3d_vlet3d_ktrgval 6
+
+-ebs3d_vfmm3d_vlet3d_periodic 0
+-ebs3d_vfmm3d_vlet3d_dirichlet 0
+
+-ebs3d_vfmm3d_vlet3d_adaptive 0
+-ebs3d_vfmm3d_vlet3d_rhs 4
+-ebs3d_vfmm3d_vlet3d_balance 1
+-ebs3d_vfmm3d_vlet3d_kval 6
+-ebs3d_vfmm3d_interp 0
+-ebs3d_vfmm3d_et 85
+-ebs3d_vfmm3d_kt 111
+
+-ebs3d_vfmm3d_lambda VAR_LAMBDA
+-ebs3d_vfmm3d_rval VAR_RVAL
+-ebs3d_vfmm3d_et 85
+-ebs3d_vfmm3d_kt 111
+-ebs3d_bis3d_pc_type shell
+-ebs3d_bis3d_ksp_rtol 1e-12
+-ebs3d_bis3d_ksp_monitor
+-ebs3d_bis3d_ksp_type gmres
+-ebs3d_bis3d_ksp_gmres_restart 200
+
+-ebs3d_bis3d_re_radmult 4
+-ebs3d_bis3d_re_fmm3d_np 6
+-ebs3d_bis3d_re_fmm3d_let3d_ptsmax 150
+-ebs3d_bis3d_re_fmm3d_let3d_maxlevel 10
+
+-ebs3d_bis3d_fe_fmm3d_np 6
+-ebs3d_bis3d_fe_fmm3d_let3d_ptsmax 150
+-ebs3d_bis3d_fe_fmm3d_let3d_maxlevel 12
+-ebs3d_bis3d_ctr	0.0,0.0,0.0
+-ebs3d_bis3d_rootlvl	-1
+-ebs3d_bis3d_dnref 8
+-ebs3d_bis3d_np 6
+-ebs3d_bis3d_maxlevel 12
+-ebs3d_bis3d_ptsmax 150
+-ebs3d_bis3d_spacing	0.192
+-ebs3d_bis3d_rfdspacing	0.096
+-ebs3d_posfilename sphere_64.pos
+-ebs3d_fromfile 1
+-ebs3d_LL 8
+
+
+#------------------------------------------------------------------------------------
+-objtype			1	#0--ccsurf, 1--bdsurf
+#------------------------------------------------------------------------------------
+#BASIC CONTROLS(CATMULL-CLARK)
+
+-ccsurf_submatlibfile		blendsurf3/ccsubmatall.dat #ccsubmat_int_boun_v8.dat
+-ccsurf_renderlvl		5
+-ccsurf_flats			-1		#flatness parameter, -1 is the default val
+						#given in paper (Biermann, Zorin)
+#------------------------------------------------------------------------------------
+#BASIC CONTROLS(BLEND SURFACE)
+
+-bd3d_bdsurf_submatlibfile		blendsurf3/ccsubmatall.dat # ccsubmat_intboun13_corner8.dat # ccsubmat_int_v13.dat #	
+-bd3d_bdsurf_bdulibfile		blendsurf3/bdsurf_U_ONE.dat
+-bdsurf_renderlvl		5
+-bdsurf_rendergen		0		# 0 = render full mesh, 
+						# 1 = render 1/2 charts,
+						# 2 = render extraordinary full charts
+-bd3d_bdsurf_ctrllvl			2		# nr of subdivision steps 
+-bd3d_bdsurf_chttyp			2               # 0 = fully complex
+						# 1 = characteristic map
+						# 2 = isodistance
+-bd3d_bdsurf_bsstyp			0		# 0 =poly
+						# 1 =spline
+-bd3d_bdsurf_stpppg			0		# preprocessing, 0 = turned off
+-bd3d_bdsurf_lb			0 #0.03125	       #lower and upper bounds for pou
+-bd3d_bdsurf_ub			1 #0.96875 
+-bdsurf_alt			0		# 1 = high order derivative evaluation mode(slow)
+-bd3d_bdsurf_loadw		0
+-bd3d_bdsurf_matdir			blendsurf3/dat/rescaled_1e-8_bnd10_cv10_cc_1000/
+-bd3d_bdsurf_activevert		0
+
+#------------------------------------------------------------------------------------
+#POU
+-bd3d_bdsurf_pouctrl			1		# 0 = analytic pou, 1=spline basis func as pou , 2=optimal pou
+-bd3d_bdsurf_poubsdeg		6	        # degree of spline basis func used for pou
+#------------------------------------------------------------------------------------
+#BOUNDARIES/CORNERS
+-bd3d_bdsurf_indepboun		1		#  0 = global case (boun), 1 =indep boun
+-bd3d_bdsurf_flats			-1		# -1=default (or replace with any val 0<=f<=1)
+#------------------------------------------------------------------------------------
+#POLY-RELATED
+-bd3d_bdsurf_concat			12		# for val>=12, deg = this value+2f
+#------------------------------------------------------------------------------------
+#SPLINE-RELATED
+-bd3d_bdsurf_spdeg			6  	# degree of spline used
+-bd3d_bdsurf_g			3       # g = num patches+1
+#------------------------------------------------------------------------------------
+#VIEWER RELATED
+-bdsurfobj_texfile		texfiles/circle.ppm
+-vrname				NYU
+-surfrendertype		1
+-rendertype		1
+#-options_table
+#------------------------------------------------------------------------------------

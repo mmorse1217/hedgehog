@@ -1,0 +1,66 @@
+#CC = g++-4.8
+#CXX = gcc-4.8
+CC = ${HEDGEHOG_CC}
+CXX = ${HEDGEHOG_CXX}
+AR = /usr/bin/ar
+RANLIB = /usr/bin/ranlib 
+SYM = dsymutils
+OS = $(shell uname)
+
+ifeq ($(OS), Darwin)
+RANLIB_FLAGS = -c
+AR_FLAGS = -rcs
+else
+RANLIB_FLAGS = 
+AR_FLAGS = rcs
+endif
+#initialize include and lib paths
+
+SURFACE_DIR = ${BLENDSURF_DIR} ${FACEMAP_DIR}
+SURFACE_INC = ${SURFACE_DIR} ${FACEMAP_DIR}/src
+SURFACE_LIB = ${SURFACE_DIR} ${FACEMAP_DIR}/lib
+
+#p4est
+P4EST_INC = ${P4EST_DIR}/include 
+SC_INC = ${P4EST_DIR}/sc/include
+P4EST_LIB = ${P4EST_DIR}/lib 
+SC_LIB = ${P4EST_DIR}/lib
+
+#FFTW
+FFTW_INC = ${FFTW_DIR}/include
+FFTW_LIB = ${FFTW_DIR}/lib
+
+#Petsc
+PETSC_BUILD_INC = ${PETSC_DIR}/include ${PETSC_DIR}/${PETSC_ARCH}/include
+PETSC_LIB = ${PETSC_DIR}/${PETSC_ARCH}/lib
+
+#PvFMM
+PVFMM_INC = ${PVFMM_DIR}/include utils/pvfmm-utils/
+PVFMM_LIB = ${PVFMM_DIR}/lib/pvfmm utils/pvfmm-utils/
+
+MPI_INC = ${MPI_HOME}/include
+MPI_LIB = ${MPI_HOME}/lib
+
+VTK_INC = ${VTK_DIR}/${VTK_INC_DIR}
+VTK_LIB = ${VTK_DIR}/lib
+
+# geogram
+GEOGRAM_INC = ${GEOGRAM_DIR}/src/lib
+GEOGRAM_LIB = ${GEOGRAM_DIR}/build/lib
+
+VTK_LIBS_TO_LINK = -lvtkIOXML-7.1 -lvtkChartsCore-7.1 -lvtkCommonDataModel-7.1 -lvtkCommonCore-7.1 -lvtkFiltersCore-7.1 -lvtkCommonExecutionModel-7.1
+#aggregate
+DEPS_INC = ${SURFACE_INC} ${SC_INC} ${P4EST_INC} ${FFTW_INC} ${PETSC_BUILD_INC} ${PVFMM_INC} ${MPI_INC} ${VTK_INC} ${GEOGRAM_INC}
+DEPS_LIB = ${SURFACE_LIB} ${SC_LIB} ${P4EST_LIB} ${FFTW_LIB} ${PETSC_LIB} ${PVFMM_LIB} ${MPI_LIB} ${FORTRAN_LIB} ${VTK_LIB} ${GEOGRAM_LIB}
+DEPS_LIB_FLAGS = -lpatchwork -lblend -lsc -lp4est -lfftw3 -lpvfmmwrap -lpvfmm -lpetsc -lgfortran -lexpat -lblas -llapack -fopenmp -lmpi -lm ${VTK_LIBS_TO_LINK} -lgeogram
+#DEPS_LIB_FLAGS = -lfacemap -lblend -lsc -lp4est -lfftw3 -lpvfmm -lpvfmmwrap -lpetsc -lgfortran -lexpat -lblas -llapack -lgomp -lmpi -lm ${VTK_LIBS_TO_LINK}
+HEDGEHOG_INC = -I/usr/include -Isrc/ ${DEPS_INC:%=-I%}
+HEDGEHOG_LIB =   ${DEPS_LIB:%=-L%} ${DEPS_LIB_FLAGS}
+ifeq ($(OS), Linux)
+DEPS_LIB_FLAGS += -lmpi_cxx -pthread
+HEDGEHOG_LIB := -L/usr/lib64 -L${BLAS_LAPACK_DIR}/lib ${HEDGEHOG_LIB}
+endif
+
+#DEPS_DIRS =  ${FFTW_DIR} ${P4EST_DIR} ${PVFMM_DIR} ${SURFACE_DIR} 
+#DEPS_INC = ${DEPS_DIRS:%=-I%}
+#DEPS_LIB = ${DEPS_DIRS:%=-L%}
