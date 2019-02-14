@@ -1,0 +1,60 @@
+set(Hedgehog_common_src
+    Dcuhre.cpp
+    numvec.cpp
+    boundary_data.cpp
+    results_writer.cpp
+    ebi.cpp
+    stats.cpp
+    ebi_uti.cpp
+    svdrep.cpp
+    exsol3d.cpp
+    utils.cpp
+    interpolate.cpp
+    vecmatop.cpp
+    kernel3d.cpp
+    vecmatop.edits.cpp
+    memAlloc.cpp
+    vtk_writer.cpp
+    nummat.cpp
+    write_latex.cpp
+)
+set(Hedgehog_common_header
+    Dcuhre.hpp
+    mobo_blas.h
+    NbrDefs.hpp
+    mobo_lapack.h
+    PerDirMaps.hpp
+    mobo_slatec.h
+    ebi.hpp
+    nummat.hpp
+    ebi_include.hpp
+    numtns.hpp
+    ebi_namespace.hpp
+    numvec.hpp
+    ebi_petsc.hpp
+    offmat.hpp
+    ebi_petsc_error.hpp
+    offtns.hpp
+    ebi_uti.hpp
+    offvec.hpp
+    ebiobject.hpp
+    results_writer.hpp
+    ebiobject_inline.hpp
+    rotation.hpp
+    exsol3d.hpp
+    stats.hpp
+    ffunc.h
+    svdrep.hpp
+    interpolate.hpp
+    utils.hpp
+    kernel3d.hpp
+    vecmatop.hpp
+    mat3t.hpp
+    vtk_writer.hpp
+    memAlloc.hpp
+    write_latex.hpp
+)
+PREPEND(Hedgehog_common_src)
+PREPEND(Hedgehog_common_header)
+set(Hedgehog_common ${Hedgehog_common_src} 
+    ${Hedgehog_common_header} PARENT_SCOPE)
