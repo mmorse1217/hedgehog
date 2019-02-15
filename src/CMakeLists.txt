@@ -17,5 +17,7 @@ set(Hedgehog_dirs
     )
 
 add_library(Hedgehog STATIC ${Hedgehog_dirs})
-target_link_libraries(Hedgehog PUBLIC ${BLENDSURF_LIB} ${P4EST_LIB} ${SC_LIB}
-    ${PVFMM_INTERFACE_LIB} ${PVFMM_DIR} ${GEOGRAM_LIB} ${FACEMAP_LIB} ${MPI_LIB}  lapack blas )
+target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES} ${FACEMAP_LIB} ${BLENDSURF_LIB} 
+    ${P4EST_LIB} ${SC_LIB} ${PVFMM_INTERFACE_LIB} ${PVFMM_LIB} ${GEOGRAM_LIB} 
+    ${FFTW_LIB}  ${PETSC_LIB} ${MPI_LIB}  lapack blas expat)
+target_compile_options(Hedgehog PUBLIC "-DFFTW3")

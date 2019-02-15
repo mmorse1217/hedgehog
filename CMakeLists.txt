@@ -49,7 +49,7 @@ find_library(FACEMAP_LIB
 find_library(PVFMM_LIB
     NAMES  libpvfmm.a 
     PATHS $ENV{PVFMM_DIR}
-    PATH_SUFFIXES lib
+    PATH_SUFFIXES lib/pvfmm
     STATIC
     )
 find_library(PVFMM_INTERFACE_LIB
@@ -64,8 +64,20 @@ find_library(GEOGRAM_LIB
     PATH_SUFFIXES build/lib
     STATIC
     )
+find_library(FFTW_LIB
+    NAMES  libfftw3.a 
+    PATHS $ENV{FFTW_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+
+
 
 find_package(OpenMP REQUIRED)
+set(VTK_DIR $ENV{VTK_DIR})
+find_package(VTK REQUIRED)
+#message(STATUS "fuck " ${VTK_LIBRARIES})
+include(${VTK_USE_FILE})
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -73,6 +85,8 @@ if (OPENMP_FOUND)
 endif()
 find_package(lapack REQUIRED)
 find_package(blas REQUIRED)
+find_package(expat REQUIRED)
+find_package(jpeg REQUIRED)
 
 include_directories($ENV{BLENDSURF_DIR})
 # export MPI_DIR=$PETSC_DIR/$PETSC_ARCH
@@ -82,9 +96,12 @@ include_directories($ENV{P4EST_DIR}/include)
 #include_directories($ENV{OPENGL_DIR})
 include_directories($ENV{PETSC_DIR}/include)
 include_directories($ENV{PVFMM_DIR}/include)
-include_directories($ENV{GEOGRAM_DIR}/include)
+include_directories($ENV{HEDGEHOG_DIR}/utils/pvfmm-utils)
+include_directories($ENV{FFTW_DIR}/include)
+include_directories($ENV{GEOGRAM_DIR}/src/lib)
 include_directories($ENV{HEDGEHOG_DIR}/utils/pvfmm-utils)
 include_directories($ENV{FACEMAP_DIR}/src) #TODO fix to point to /include/
+include_directories($ENV{VTK_DIR}/$ENV{VTK_INC_DIR}) #TODO fix to point to /include/
 include_directories(${Hedgehog_SOURCE_DIR}/src)
 
 

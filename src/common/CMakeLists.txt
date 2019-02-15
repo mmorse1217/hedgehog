@@ -12,7 +12,6 @@ set(Hedgehog_common_src
     interpolate.cpp
     vecmatop.cpp
     kernel3d.cpp
-    vecmatop.edits.cpp
     memAlloc.cpp
     vtk_writer.cpp
     nummat.cpp
