@@ -17,6 +17,9 @@ set(Hedgehog_dirs
     )
 
 add_library(Hedgehog STATIC ${Hedgehog_dirs})
+
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 link_directories($ENV{VTK_DIR}/lib)
 target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES} ${FACEMAP_LIB} ${BLENDSURF_LIB} 
     ${P4EST_LIB} ${SC_LIB} ${PVFMM_INTERFACE_LIB} ${PVFMM_LIB} ${GEOGRAM_LIB} 
