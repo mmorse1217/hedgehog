@@ -2,6 +2,7 @@
 #include <sampling.hpp>
 #include <common/interpolate.hpp>
 #include <common/vtk_writer.hpp>
+#include "bie3d/error_estimate.hpp"
 using Sampling::sample_2d;
 using Sampling::chebyshev1;
 using Sampling::chebyshev2;
@@ -86,7 +87,26 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
         for(int si = 0; si < num_samples; si++)
             (*_quadrature_weights)(si) *=pow(2.,_level);
     }
+    _near_zone_distance = compute_near_zone_distance();
+    cout << "_near_zone_distance: " << _near_zone_distance << endl;
 
+}
+
+double FaceMapSubPatch::compute_near_zone_distance(){
+
+    Point2 uv(.5, .5);
+    double k1, k2;
+    this->principal_curvatures(uv, k1,k2);
+
+    double target_accuracy = Options::get_double_from_petsc_opts("-target_accuracy");
+    double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
+    double L = _characteristic_length;
+    int n = int(floor(1./spacing))+1;
+    double near_zone_distance1 = 
+        ErrorEstimate::evaluate_near_zone_distance(k1*L, 1., target_accuracy, n);
+    double near_zone_distance2 = 
+        ErrorEstimate::evaluate_near_zone_distance(k2*L, 1., target_accuracy, n);
+    return max(near_zone_distance1, near_zone_distance2)*L/pow(2., _level);
 
 }
 

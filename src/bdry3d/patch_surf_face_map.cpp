@@ -28,7 +28,8 @@ using Sampling::chebyshev2;
 BEGIN_EBI_NAMESPACE
 
 PatchSurfFaceMap::PatchSurfFaceMap(const string& n, const string& p):
-  PatchSurf(n,p), _surface_type(NOT_SET), _coarse(false) {;} 
+  PatchSurf(n,p), _surface_type(NOT_SET), _coarse(false) {
+      } 
 PatchSurfFaceMap::~PatchSurfFaceMap() {
     delete _face_map;
 }

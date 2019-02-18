@@ -36,7 +36,7 @@ TEST_CASE("Test laplace solver convergence with qbkix: cube", "[results][qbkix-s
     string domain = "cube.wrl"; // domain mesh
     string polynomial_patch_filename = "";
     string output_folder = "output/test_qbkix_eval_convergence/";
-    int num_iters = 5;
+    int num_iters = 3;
 
     setup_and_run_face_map_convergence_test(
             patch_order, 

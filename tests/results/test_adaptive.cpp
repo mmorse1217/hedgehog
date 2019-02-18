@@ -18,6 +18,8 @@ void adaptive_test_base_options(){
     Options::set_value_petsc_opts("-qbkix_convergence_type","adaptive");
     //Options::set_value_petsc_opts("-bis3d_spacing", ".076923");
     //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".076923");
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".0625");
     Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".0625");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
@@ -310,8 +312,12 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "12");
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
     Options::set_value_petsc_opts("-kt", "111");
-    Options::set_value_petsc_opts("-target_accuracy", "1e-5");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-8");
     adaptive_test_base_options();
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
+    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
 
     Options::set_value_petsc_opts("-adaptive", "1");
     Options::set_value_petsc_opts("-upsampling_type", "adaptive");
@@ -327,7 +333,7 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     surface->setFromOptions();
     surface->setup();
     surface->refine();
-    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-5 );
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-8 );
     write_face_map_patches_to_vtk(DblNumMat(0,0), 
             vector<int>(surface->num_patches(), 0) ,
             surface.get(), 0, "output/");
@@ -338,7 +344,7 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     // point charges
     test.bc_type = BoundaryDataType::HARMONIC;
     test.singularity_type= SingularityType::SINGLE;
-    test.single_singularity_location = Point3(0., 0., .9);
+    test.single_singularity_location = Point3(0., 0., 1.1);
     //test.single_singularity_location = Point3(-.05, .85, .45);
     //test.single_singularity_location = Point3(0., 0., 1.);
 
@@ -347,7 +353,7 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     //test.target_plane_point= Point3(-.05,0., .45);
     //test.target_plane_vec1 = Point3(1.,0.,0.);
     //test.target_plane_vec2 = Point3(0.,1.,0.);
-    test.num_targets = 50;
+    test.num_targets = 10;
     test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
     //test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
     test.solution_scheme   = SolutionScheme::GMRES_SOLVE;

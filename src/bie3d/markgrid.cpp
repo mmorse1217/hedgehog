@@ -5,7 +5,8 @@
 #include <ctime>
 #include <set>
 #include "bdry3d/geogram_interface.hpp"
-
+#include <sampling.hpp>
+#include "bie3d/error_estimate.hpp"
 // 3/27/18 MJM - geogram defines the FAR macro; when including into markgrid, it
 // explodes, so we need to undefine it. hopefully i'll remove the enums
 // someday...
@@ -968,6 +969,7 @@ Markgrid::NearFieldMap Markgrid::compute_closest_points_on_patches(
     return near_patches_to_point;
 }
 
+
 void Markgrid::populate_closest_point_data(
         int target_index,
         Point3 target_point,
@@ -999,9 +1001,16 @@ void Markgrid::populate_closest_point_data(
     double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
     double mean_curvature = patch->mean_curvature(closest_point.parametric_coordinates);
     int n = int(floor(1./spacing))+1;
+    DblNumMat density(1, n*n);
+    setvalue(density, 1.);
+        DblNumMat uv_values(2, n*n, true, 
+                Sampling::sample_2d<Sampling::chebyshev2>(n, Sampling::base_domain).data());
     // mark near/far
-    if(!is_quad_accurate_at_target_fit(n, closest_point.distance_from_target,
-            1., mean_curvature, target_accuracy)){
+    double error_estimate = ErrorEstimate::evaluate_error_estimate(  
+            patch, target_point, closest_point, n, uv_values, density);
+    /*if(!is_quad_accurate_at_target_fit(n, closest_point.distance_from_target,
+            1., mean_curvature, target_accuracy)){*/
+    if(error_estimate > target_accuracy){
         // We've found a near point; we need to know if it's inside or
         // outside; NOTE need more robust in/out test here
 
@@ -1011,6 +1020,8 @@ void Markgrid::populate_closest_point_data(
     }
 
 }
+
+
 
 
 

@@ -28,6 +28,7 @@ class FaceMapSubPatch: public Patch{
         int _coarse_parent_patch;
         int _quad_id_within_p4est_tree;
         p4est_quadrant_t* _quadrant;
+        double _near_zone_distance;
 
         FaceMapSubPatch(FaceMapPatch* face_map_patch, 
                 Interval x_interval, 
@@ -69,7 +70,8 @@ bool is_patch_valid(Vec function_values_at_children,
         double gaussian_curvature(Point2 xy);
         double mean_curvature(Point2 xy);
         void principal_curvatures(Point2 xy, double& k1, double& k2);
-Point3 normal(double* xy);
+        Point3 normal(double* xy);
+        double compute_near_zone_distance();
 };
 
 END_EBI_NAMESPACE

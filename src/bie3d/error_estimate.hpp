@@ -102,10 +102,10 @@ namespace ErrorEstimate {
      *                                          values
      * @return double               error estimate at target point 
      */
-double evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
-        CurvatureDirection curvature_direction, Point3 target, 
-        OnSurfacePoint closest_point,
-        int quadrature_order, DblNumMat density_values);
+    double evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
+            CurvatureDirection curvature_direction, Point3 target, 
+            OnSurfacePoint closest_point,
+            int quadrature_order, DblNumMat density_values);
     /*
      * Compute the error estimate at target due to patch and density_values.
      * @param FaceMapSubPatch* patch            patch to integrate
@@ -124,6 +124,10 @@ double evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
     double evaluate_error_estimate( FaceMapSubPatch* patch, Point3 target, 
             OnSurfacePoint closest_point, int quadrature_order, 
             DblNumMat uv_values, DblNumMat density_values);
+    
+    double evaluate_near_zone_distance(double curvature,
+            double density_magnitude, double target_error,
+            int quadrature_order, int m=1, double eps=1e-5);
 }
 
 END_EBI_NAMESPACE

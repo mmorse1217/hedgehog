@@ -1783,7 +1783,7 @@ void laplace_singluarity_propeller(Vec samples, int dof,Vec& potential){
 #pragma omp parallel for
     for (int i = 0; i < potential_local.n(); i++) {
         //Point3 x(-.05, .85, .45);
-        Point3 x(0., 0., .9);
+        Point3 x(0., 0., 1.1);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);
         

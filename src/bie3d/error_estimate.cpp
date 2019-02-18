@@ -207,7 +207,6 @@ imaginary ErrorEstimate::compute_pullback_under_patch(
     /*if(closest_point.inside_domain == OUTSIDE){
         distance_from_target *= -1.;
     }*/
-
     return pullback_newton(k*L, distance_from_target/L, 1e-7);
 }
 
@@ -277,20 +276,50 @@ double evaluate_error_estimate_expression(double curve_derivative,
     double second_factor = 4./pow(abs(iq*square_root_term), 3)*
         1./pow(abs(tstar + square_root_term), q)*
         pow(abs(iq/square_root_term), m);
-    /*cout << "Factors in error estimate: " << endl;
-    cout << curve_derivative << endl;
-    cout << first_factor << endl;
-    cout << 4./pow(abs(iq*square_root_term), 3)<< endl;
-    cout << 1./pow(abs(tstar + square_root_term), q) << endl;
-        cout << pow(abs(iq/square_root_term), m) << endl;
-        cout << tstar << ", " << square_root_term << ", " << iq << endl;
-    cout << "error: " <<first_factor*second_factor << endl;*/
 
     // recall that \Gamma(n) = (n-1)!
     //return  1./tgamma(m+1)*first_factor*second_factor;
-    return  first_factor*second_factor*1./fabs(t.imag());
+    return  first_factor*second_factor*1./(2*fabs(t.imag()));
 
 }
+
+double ErrorEstimate::evaluate_near_zone_distance(double curvature,
+        double density_magnitude, double target_error,
+        int quadrature_order, int m, double eps){
+
+    ErrorEstimate::CircleArc c(curvature);
+    // objective function to minimize
+    auto error = [&c, density_magnitude, target_error, 
+                     quadrature_order, m] (double t)-> double {
+            imaginary imag_t(0., t);
+            double curve_deriv = fabs(c.derivative(imag_t));
+            return evaluate_error_estimate_expression(curve_deriv, 
+                    density_magnitude, imag_t, quadrature_order, m);
+        };
+    // note that derivative of objective function matches the derivative of c
+    // because z_0 drops out
+    
+    // TODO refactor newton out of objective function set up somehow
+    // issue is how to wrap function pointer to CircleArc and lambdas
+    // consistently.
+    double upper_bound = 1.;
+    double lower_bound = 0.;
+    
+    for (int i = 0; i < 10; i++) {
+        double midpoint = (upper_bound + lower_bound)/2.;
+        double error_at_mipoint = error(midpoint);
+        if(error_at_mipoint < target_error){
+            upper_bound = midpoint;
+        } else {
+            lower_bound = midpoint;
+        }
+
+    }
+    return (lower_bound+ upper_bound)/2.;
+    
+}
+
+
 
 
 double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
@@ -301,7 +330,8 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
 
     imaginary target_pullback= ErrorEstimate::compute_pullback_under_patch(
             target, closest_point, curvature_direction, patch);
-    cout << "target_pullback: " << target_pullback << endl;
+    
+    //cout << "target:" << target << ", target_pullback: " << target_pullback << endl;
 
     int density_dof = density_values.m();
     ComplexNumMat complex_densities(density_dof, quadrature_order);
@@ -343,12 +373,14 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
     cout << "complex_densities: " << complex_densities << endl;
     cout << "density_at_target(i,0): " << density_at_target(0,0) << endl;
     cout << "target_pullback: " << target_pullback << endl;*/
+    //cout << "curvature: " << k<< endl;
     double max_error_estimate = 0.;
     for (int i = 0; i < density_dof; i++) {
         double ith_error_estimate = evaluate_error_estimate_expression(
             abs(curve_deriv_at_target), 
             abs(density_at_target(i,0)), 
             target_pullback, quadrature_order);
+        //ith_error_estimate /= closest_point.distance_from_target/L;
         max_error_estimate = max(max_error_estimate, ith_error_estimate);
     }
     return max_error_estimate;

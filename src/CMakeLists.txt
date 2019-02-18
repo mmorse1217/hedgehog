@@ -17,6 +17,7 @@ set(Hedgehog_dirs
     )
 
 add_library(Hedgehog STATIC ${Hedgehog_dirs})
+link_directories($ENV{VTK_DIR}/lib)
 target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES} ${FACEMAP_LIB} ${BLENDSURF_LIB} 
     ${P4EST_LIB} ${SC_LIB} ${PVFMM_INTERFACE_LIB} ${PVFMM_LIB} ${GEOGRAM_LIB} 
     ${FFTW_LIB}  ${PETSC_LIB} ${MPI_LIB}  lapack blas expat)

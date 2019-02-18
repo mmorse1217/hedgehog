@@ -71,13 +71,10 @@ find_library(FFTW_LIB
     STATIC
     )
 
-
-
 find_package(OpenMP REQUIRED)
 set(VTK_DIR $ENV{VTK_DIR})
-find_package(VTK REQUIRED)
-#message(STATUS "fuck " ${VTK_LIBRARIES})
-include(${VTK_USE_FILE})
+#find_package(VTK REQUIRED)
+#include(${VTK_USE_FILE})
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
@@ -86,7 +83,6 @@ endif()
 find_package(lapack REQUIRED)
 find_package(blas REQUIRED)
 find_package(expat REQUIRED)
-find_package(jpeg REQUIRED)
 
 include_directories($ENV{BLENDSURF_DIR})
 # export MPI_DIR=$PETSC_DIR/$PETSC_ARCH
@@ -112,7 +108,46 @@ FUNCTION(PREPEND var )
    ENDFOREACH(f)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
+# idiotic find_libraries for vtk libs.
 
+find_library(VTK_LIB1
+    NAMES  libvtkIOXML-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+find_library(VTK_LIB2
+    NAMES  libvtkChartsCore-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+find_library(VTK_LIB3
+    NAMES  libvtkCommonDataModel-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+find_library(VTK_LIB4
+    NAMES  libvtkCommonCore-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+find_library(VTK_LIB5
+    NAMES  libvtkFiltersCore-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+find_library(VTK_LIB6
+    NAMES  libvtkCommonExecutionModel-7.1.dylib
+    PATHS $ENV{VTK_DIR}
+    PATH_SUFFIXES lib
+    STATIC
+    )
+set(VTK_LIBRARIES ${VTK_LIB1} ${VTK_LIB2} ${VTK_LIB3} ${VTK_LIB4} ${VTK_LIB5}
+    ${VTK_LIB6})
 add_subdirectory(src)
 add_subdirectory(tests)
 

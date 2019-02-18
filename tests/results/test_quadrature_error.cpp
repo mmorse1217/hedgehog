@@ -154,12 +154,14 @@ void run_quad_estimate_test(string domain, Point3 target_point, int num_steps){
     refined_face_map->_coarse = true;
 
     refined_face_map->setFromOptions();
+    int dx =+2.;
+    int dy =-.5;
     refined_face_map->setup();
+    perturb_flat_patch(refined_face_map, dx, dy);
+
     //refined_face_map->refine_test();
     refined_face_map->refine_uniform(3);
     auto f = refined_face_map.get();
-    //resolve_function(refined_face_map->_p4est, f, &laplace_dl_potential, 1, 1e-11);
-
     double true_integral = compute_integral(refined_face_map.get(),target_point);
 
     // setup single patch surface
@@ -168,6 +170,7 @@ void run_quad_estimate_test(string domain, Point3 target_point, int num_steps){
     face_map->_coarse = true;
     face_map->setFromOptions();
     face_map->setup();
+    perturb_flat_patch(face_map, dx, dy);
     face_map->refine_test();
     
     Markgrid::NearFieldMap closest_points = 
@@ -176,6 +179,7 @@ void run_quad_estimate_test(string domain, Point3 target_point, int num_steps){
                 face_map.get(),
                 vector<uint>(1,0));
     auto closest_point = closest_points[0][0];
+    cout << "distance from patch to point:" << closest_point.distance_from_target << endl;
 
 
     auto patch = face_map->subpatch(0);
@@ -455,12 +459,12 @@ void test_bie_quad(string domain, Point3 target_point, int num_steps){
 
 }
 
-TEST_CASE("Test quadrature error estimate", "[results][quad-error][flat-patch]"){
-    Point3 target(0., 0., .2);
-    //run_quad_estimate_test("flat_patch",.25, 6);
-    run_quad_estimate_test("flat_patch", target, 15);
+TEST_CASE("Test quadrature error estimate", "[flat-patch][quad-error][results]"){
+    Point3 target(0., 0., .25);
+    run_quad_estimate_test("flat_patch",target, 15);
+    //run_quad_estimate_test("flat_patch", target, 25);
     //target.z() = .0275;
-    //run_quad_estimate_test("parabaloid", target, 25);
+    //run_quad_estimate_test("parabaloid", target, 15);
     //run_quad_estimate_test("parabaloid_flip", target, 25);
 }
 TEST_CASE("Test quadrature error w.r.t curvature", "[results][quad-error][curvature]"){
