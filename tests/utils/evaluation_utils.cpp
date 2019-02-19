@@ -88,6 +88,11 @@ void tear_down(Vec targets, Vec true_potential, Vec computed_potential, TestConf
         stats.add_result("max relative error", max_error/max_potential);
         cout << "print to file : " << test.error_filename << endl;
         write_general_points_to_vtk(targets, target_dof, test.error_filename, error);
+        if(test.target_type == TargetType::PLANE){
+            mesh_and_save_points(DblNumMat(DIM, targets), DblNumMat(target_dof, computed_potential), stats._file_prefix +"_solution");
+            mesh_and_save_points(DblNumMat(DIM, targets), DblNumMat(1, error), stats._file_prefix +"_error");
+
+        }
         VecDestroy(&error);
         VecDestroy(&potential_abs);
         // MJM LAST EPISODE: added point sheet to target to evaluate. 

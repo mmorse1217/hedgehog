@@ -115,9 +115,9 @@ TEST_CASE("Test marking a plane of targets", "[debug][sheet]"){
     test.target_type   = TargetType::PLANE;
     //test.target_plane_point= Point3(-.05,0., .45);
     test.target_plane_point= Point3(0., 0., 0.);
-    test.target_plane_vec1 = Point3(1.,0.,0.);
-    test.target_plane_vec2 = Point3(0.,1.,0.);
-    test.num_targets = 250;
+    test.target_plane_vec1 = Point3(1., 0., 0.);
+    test.target_plane_vec2 = Point3(0., 1., 0.);
+    test.num_targets = 50;
     
     test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
     //test.evaluation_scheme = EvaluationScheme::ON_QBKIX;

@@ -68,6 +68,63 @@ string build_filename(int iteration, Filetype filetype, string prefix){
     return file_name;
 }
 
+void mesh_and_save_points(DblNumMat points, DblNumMat values, string name){
+    int root_n = int(sqrt(points.n()));
+
+
+    IntNumMat faces;
+    const int num_verts_per_tri = 3;
+    int n = root_n;
+    int num_triangles = 2*(n-1)*(n-1);
+    faces.resize(num_verts_per_tri, num_triangles);
+    cout << "num_triangles "<<  num_triangles << endl;
+    cout << "n "<<  n << endl;
+    
+    // compute triangles. assume they are of the shape:
+    // 6---7---8
+    // | / | / |
+    // 3---4---5
+    // | / | / |
+    // 0---1---2
+    int findex = 0;
+    for(int i = 0; i < n-1; i++){
+        for (int j = 0; j < n-1; j++) {
+            //int stride = 2*(n-1);
+            int vindex= (n)*i + j;
+            
+            // for triangle
+            // 2---3
+            // | / |
+            // 0---1
+            // lower triangle = (0,1,3)
+            // upper triangle = (0,3,2)
+            // for general triangle
+            //
+            // k+n---k+n+1
+            // |   /    |
+            // k  ---  k+1
+            // lower triangle = (k,k+1,k+n+1)
+            // upper triangle = (k,k+n+1,k+n)
+            
+            // lower triangle
+            faces(0,findex)   = vindex;
+            faces(1,findex)   = vindex+1;
+            faces(2,findex)   = vindex+n+1;
+            findex++;
+
+            // upper triangle
+            faces(0,findex) = vindex;
+            faces(1,findex) = vindex+n+1;
+            faces(2,findex) = vindex+n;
+            findex++;
+            
+        }
+    }
+
+    write_triangle_mesh_to_vtk(points, faces, 0, name, vector<int>(), values);
+}
+
+
 void write_structured_data_to_vtk(vector<Vec> data_vecs, 
         int n, 
         vector<int> degrees_of_freedom, 
@@ -195,7 +252,7 @@ void write_qbkix_points_to_vtk(DblNumMat qbkix_points,
 
 void write_triangle_mesh_to_vtk(
         DblNumMat vertices, IntNumMat faces, int iteration, string file_prefix,
-        vector<int> corresponding_patches){
+        vector<int> corresponding_patches, DblNumMat values){
 
 
     // list of vtkQuads to view 
@@ -214,7 +271,7 @@ void write_triangle_mesh_to_vtk(
     vtkSmartPointer<vtkDoubleArray> point_position = 
         vtkSmartPointer<vtkDoubleArray>::New();
     point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_faces*3);
+    point_position->SetNumberOfTuples(num_vertices);
 
     vtkSmartPointer<vtkCellArray> triangle_ids = 
         vtkSmartPointer<vtkCellArray>::New();
@@ -223,14 +280,22 @@ void write_triangle_mesh_to_vtk(
         vtkSmartPointer<vtkIntArray>::New();
     patch_ids->SetNumberOfComponents(1);
     patch_ids->SetName("Triangle Id");
+    
     vtkSmartPointer<vtkIntArray> corr_patch_ids= 
         vtkSmartPointer<vtkIntArray>::New();
     corr_patch_ids->SetNumberOfComponents(1);
     corr_patch_ids->SetName("Patch Id");
 
+    vtkSmartPointer<vtkDoubleArray> values_vtk= 
+        vtkSmartPointer<vtkDoubleArray>::New();
+    values_vtk->SetNumberOfComponents(values.m());
+    values_vtk->SetName("Values");
     for (int i = 0; i < num_vertices; i++) {
         Point3 vertex_position(vertices.clmdata(i));
         point_position->SetTuple(i, vertex_position.array());
+        if(values.n() == num_vertices){
+            values_vtk->InsertNextTuple(values.clmdata(i));
+        }
     }
     for (int f = 0; f < num_faces; f++) {
         vector<long long> face_ids(3);
@@ -259,9 +324,13 @@ void write_triangle_mesh_to_vtk(
     polydata->GetCellData()->AddArray(patch_ids);
     if(corresponding_patches.size() == num_faces){
         polydata->GetCellData()->AddArray(corr_patch_ids);
-    polydata->GetCellData()->SetActiveScalars("Patch Id");
+        polydata->GetCellData()->SetActiveScalars("Patch Id");
     }
     polydata->GetCellData()->SetActiveScalars("Triangle Id");
+
+    if(values.n() == num_vertices){
+        polydata->GetPointData()->AddArray(values_vtk);
+    }
     
     
     // save

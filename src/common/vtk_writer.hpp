@@ -39,8 +39,10 @@ void write_lines_from_qbkix_to_closest_point(DblNumMat qbkix_points,
         string file_prefix=string());
 void write_triangle_mesh_to_vtk(
         DblNumMat vertices, IntNumMat faces, int iteration, string file_prefix,
-        vector<int> corresponding_patches=vector<int>());
+        vector<int> corresponding_patches=vector<int>(),
+        DblNumMat values=DblNumMat(0,0));
 
+void mesh_and_save_points(DblNumMat points, DblNumMat values, string name);
 END_EBI_NAMESPACE
 
 #endif
