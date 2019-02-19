@@ -90,6 +90,9 @@ void tear_down(Vec targets, Vec true_potential, Vec computed_potential, TestConf
         write_general_points_to_vtk(targets, target_dof, test.error_filename, error);
         VecDestroy(&error);
         VecDestroy(&potential_abs);
+        // MJM LAST EPISODE: added point sheet to target to evaluate. 
+        // add code to mesh the points and save them here
+
     }
     
 
@@ -254,6 +257,35 @@ unique_ptr<SolverGMRESDoubleLayer> setup_solver(PatchSurf* surface,
     solver->setup(); // memory leak <<==========!!!!!
     return solver;
 }
+
+Vec setup_plane_targets(TestConfig test, MPI_Comm comm){
+    Vec targets;
+    int n = test.num_targets;
+    // Sample a plane centered at point p spanned by vectors v1 and v2
+    // parameter values are sampled from [-1,1]^2. only handle "square" sampling
+    // of plane; for [-a, a], rescale vectors: v1 *= a, v2 *= b
+    Petsc::create_mpi_vec(comm, n*n*DIM, targets);
+    DblNumMat targets_local(DIM, targets);
+    Point3 p = test.target_plane_point;
+    Point3 v1 = test.target_plane_vec1;
+    Point3 v2 = test.target_plane_vec2;
+    double step = 2./double(n-1);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            double ti = i*step-1;
+            double tj = j*step-1;
+
+            Point3 t = p + ti*v1 + tj*v2;
+            for(int d =0; d < DIM; d++) {
+                targets_local(d,i*n+j) = t(d);
+            }
+        }
+    }
+
+    targets_local.restore_local_vector();
+    return targets;
+}
+
 Vec setup_line_targets(TestConfig test, MPI_Comm comm){
     Vec targets;
     int num_targets =200;
@@ -408,6 +440,9 @@ void set_target_positions(unique_ptr<SolverGMRESDoubleLayer>& solver,
         case TargetType::ON_SURFACE_NON_COLLOCATION:
             targets = setup_on_surface_targets(solver);
             break;
+        case TargetType::PLANE:
+            targets = setup_plane_targets(test, solver->mpiComm());
+            break;
         default:
             assert(0);
             break;
@@ -429,8 +464,9 @@ void set_target_potential(unique_ptr<SolverGMRESDoubleLayer>& solver,
     int target_dof= kernel.get_tdof();
 
     Petsc::create_mpi_vec(solver->mpiComm(),
-            //target_dof*num_target_points,
-            solver->local_total_dof(),
+            target_dof*num_target_points, //MJM NOTE this was commented out
+            //and it's not clear why
+            //solver->local_total_dof(),
             potential);
 
     DblNumMat potential_local = get_local_vector(
@@ -1788,7 +1824,7 @@ void laplace_singluarity_propeller(Vec samples, int dof,Vec& potential){
 #pragma omp parallel for
     for (int i = 0; i < potential_local.n(); i++) {
         //Point3 x(-.05, .85, .45);
-        Point3 x(0., 0., .4);
+        Point3 x(0., 0., 1.);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);
         
