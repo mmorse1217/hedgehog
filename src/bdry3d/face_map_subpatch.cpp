@@ -88,7 +88,6 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
             (*_quadrature_weights)(si) *=pow(2.,_level);
     }
     _near_zone_distance = compute_near_zone_distance();
-    cout << "_near_zone_distance: " << _near_zone_distance << endl;
 
 }
 
@@ -230,7 +229,8 @@ void FaceMapSubPatch::inflated_bounding_box(Point3& bounding_box_min, Point3& bo
     int n = int(floor(1./spacing))+1;
     double mean_curvature = this->mean_curvature(Point2(.5, .5));
     double L = this->_characteristic_length;
-    double inflation_factor = near_zone_approx_size_fit(n,1.,-L*mean_curvature, target_accuracy);
+    //double inflation_factor = near_zone_approx_size_fit(n,1.,-L*mean_curvature, target_accuracy);
+    double inflation_factor = .5;
     //double inflation_factor = 0.;
 //3*near_zone_approx_size(n, 1., -mean_curvature, target_accuracy);
     bounding_box_max += Point3(inflation_factor*L);

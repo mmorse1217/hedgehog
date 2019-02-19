@@ -1656,6 +1656,11 @@ void solver_test_base_options(){
     Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
+    Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+
+
 }
 
 
@@ -1783,7 +1788,7 @@ void laplace_singluarity_propeller(Vec samples, int dof,Vec& potential){
 #pragma omp parallel for
     for (int i = 0; i < potential_local.n(); i++) {
         //Point3 x(-.05, .85, .45);
-        Point3 x(0., 0., 1.1);
+        Point3 x(0., 0., .4);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);
         

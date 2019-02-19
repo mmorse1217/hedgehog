@@ -295,7 +295,7 @@ TEST_CASE("Test adaptive octopus", "[adaptive][results][octopus]"){
             "adaptive");
 }
 
-TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
+TEST_CASE("Cube eye candy", "[eye-candy][results][cube]"){
 /*
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/new_ppp.wrl");
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/new_ppp.wrl");
@@ -309,13 +309,197 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
 
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
-    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "12");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
     Options::set_value_petsc_opts("-kt", "111");
     Options::set_value_petsc_opts("-target_accuracy", "1e-8");
     adaptive_test_base_options();
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
+    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
+
+    Options::set_value_petsc_opts("-adaptive", "1");
+    Options::set_value_petsc_opts("-upsampling_type", "adaptive");
+
+    stats._file_prefix = "data/";
+    string output_folder= "output/test_adaptive/eye_candy/";
+    output_folder += Test::get_domain() + "/" + Test::get_kernel() + "/";
+
+
+    unique_ptr<PatchSurfFaceMap> surface(new PatchSurfFaceMap("BD3D_", "bd3d_"));
+    surface->_surface_type =  PatchSurfFaceMap::BLENDED;
+    surface->_coarse = true;
+    surface->setFromOptions();
+    surface->setup();
+    surface->refine();
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-10 );
+    write_face_map_patches_to_vtk(DblNumMat(0,0), 
+            vector<int>(surface->num_patches(), 0) ,
+            surface.get(), 0, "output/");
+    
+    // Set up test case
+    TestConfig test;
+    // Singularity configuration defining boundary condition; sphere radius 2 of
+    // point charges
+    test.bc_type = BoundaryDataType::HARMONIC;
+    test.singularity_type= SingularityType::SINGLE;
+    test.single_singularity_location = Point3(0., 0., 1.1);
+    //test.single_singularity_location = Point3(-.05, .85, .45);
+    //test.single_singularity_location = Point3(0., 0., 1.);
+
+    test.target_type   = TargetType::ON_SURFACE_NON_COLLOCATION;
+    
+    //test.target_type   = TargetType::GRID;
+    //test.target_plane_point= Point3(-.05,0., .45);
+    //test.target_plane_vec1 = Point3(1.,0.,0.);
+    //test.target_plane_vec2 = Point3(0.,1.,0.);
+    //test.num_targets = 10;
+    
+    //test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
+    test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
+    test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
+    test.solver_matvec_type = EXTRAPOLATION_AVERAGE;
+    test.dump_values = true;
+
+    string filename = string("qbx_adaptive_rhs_solution");
+    string full_path= output_folder + filename + string(".vtp");
+
+
+    stats._file_prefix = output_folder + filename;
+    test.error_filename = full_path;
+    run_test(surface.get(), test);
+
+    int num_coarse_patches = surface->patches().size();
+    stats.add_result("num coarse patches", num_coarse_patches);
+    stats.add_result("dist to boundary", Options::get_double_from_petsc_opts("-boundary_distance_ratio"));
+    stats.add_result("check pt spacing", Options::get_double_from_petsc_opts("-interpolation_spacing_ratio"));
+    stats.add_result("coarse spacing", Options::get_double_from_petsc_opts("-bis3d_spacing"));
+    stats.add_result("upsampled spacing", Options::get_double_from_petsc_opts("-bis3d_rfdspacing"));
+    stats.add_result("num check points", Options::get_double_from_petsc_opts("-near_interpolation_num_samples"));
+    stats.add_result("fft refinement factor", Options::get_double_from_petsc_opts("-dnref"));
+    stats.dump_key_values("", stats._file_prefix);
+    stats.print_results(); 
+    stats.clear();
+
+}
+TEST_CASE("Propeller eye candy", "[eye-candy][results][propeller]"){
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/new_ppp.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/new_ppp.wrl");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "0");
+    Options::set_value_petsc_opts("-upsampling_type", "adaptive");
+    Options::set_value_petsc_opts("-adaptive_upsampling", "bbox_closest_point");
+    Options::set_value_petsc_opts("-adaptive_upsampling_switch_iter", "2");
+    Options::set_value_petsc_opts("-adaptive_upsampling_bbox_inflation_factor",".75");
+
+/*
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
+*/
+    Options::set_value_petsc_opts("-kt", "111");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-8");
+    adaptive_test_base_options();
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
+    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
+
+    Options::set_value_petsc_opts("-adaptive", "1");
+    Options::set_value_petsc_opts("-upsampling_type", "adaptive");
+
+    stats._file_prefix = "data/";
+    string output_folder= "output/test_adaptive/eye_candy/";
+    output_folder += Test::get_domain() + "/" + Test::get_kernel() + "/";
+
+
+    unique_ptr<PatchSurfFaceMap> surface(new PatchSurfFaceMap("BD3D_", "bd3d_"));
+    surface->_surface_type =  PatchSurfFaceMap::BLENDED;
+    surface->_coarse = true;
+    surface->setFromOptions();
+    surface->setup();
+    surface->refine();
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-10 );
+    write_face_map_patches_to_vtk(DblNumMat(0,0), 
+            vector<int>(surface->num_patches(), 0) ,
+            surface.get(), 0, "output/");
+    
+    // Set up test case
+    TestConfig test;
+    // Singularity configuration defining boundary condition; sphere radius 2 of
+    // point charges
+    test.bc_type = BoundaryDataType::HARMONIC;
+    test.singularity_type= SingularityType::SINGLE;
+    test.single_singularity_location = Point3(0., 0., 1.);
+    //test.single_singularity_location = Point3(-.05, .85, .45);
+    //test.single_singularity_location = Point3(0., 0., 1.);
+
+    test.target_type   = TargetType::ON_SURFACE_NON_COLLOCATION;
+    
+    //test.target_type   = TargetType::GRID;
+    //test.target_plane_point= Point3(-.05,0., .45);
+    //test.target_plane_vec1 = Point3(1.,0.,0.);
+    //test.target_plane_vec2 = Point3(0.,1.,0.);
+    //test.num_targets = 10;
+    
+    //test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
+    test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
+    test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
+    test.solver_matvec_type = EXTRAPOLATION_AVERAGE;
+    test.dump_values = true;
+
+    string filename = string("qbx_adaptive_rhs_solution");
+    string full_path= output_folder + filename + string(".vtp");
+
+
+    stats._file_prefix = output_folder + filename;
+    test.error_filename = full_path;
+    run_test(surface.get(), test);
+
+    int num_coarse_patches = surface->patches().size();
+    stats.add_result("num coarse patches", num_coarse_patches);
+    stats.add_result("dist to boundary", Options::get_double_from_petsc_opts("-boundary_distance_ratio"));
+    stats.add_result("check pt spacing", Options::get_double_from_petsc_opts("-interpolation_spacing_ratio"));
+    stats.add_result("coarse spacing", Options::get_double_from_petsc_opts("-bis3d_spacing"));
+    stats.add_result("upsampled spacing", Options::get_double_from_petsc_opts("-bis3d_rfdspacing"));
+    stats.add_result("num check points", Options::get_double_from_petsc_opts("-near_interpolation_num_samples"));
+    stats.add_result("fft refinement factor", Options::get_double_from_petsc_opts("-dnref"));
+    stats.dump_key_values("", stats._file_prefix);
+    stats.print_results(); 
+    stats.clear();
+
+}
+
+
+TEST_CASE("Octopus eye candy", "[eye-candy][results][octopus]"){
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/closed_octopus.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/closed_octopus.wrl");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "0");
+    Options::set_value_petsc_opts("-upsampling_type", "adaptive");
+    Options::set_value_petsc_opts("-adaptive_upsampling", "bbox_closest_point");
+    Options::set_value_petsc_opts("-adaptive_upsampling_switch_iter", "2");
+    Options::set_value_petsc_opts("-adaptive_upsampling_bbox_inflation_factor",".75");
+
+/*
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
+*/
+    Options::set_value_petsc_opts("-kt", "111");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-6");
+    adaptive_test_base_options();
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
     Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
 
@@ -344,18 +528,20 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     // point charges
     test.bc_type = BoundaryDataType::HARMONIC;
     test.singularity_type= SingularityType::SINGLE;
-    test.single_singularity_location = Point3(0., 0., 1.1);
+    test.single_singularity_location = Point3(0., 0., .4);
     //test.single_singularity_location = Point3(-.05, .85, .45);
     //test.single_singularity_location = Point3(0., 0., 1.);
 
     test.target_type   = TargetType::ON_SURFACE_NON_COLLOCATION;
-    test.target_type   = TargetType::GRID;
+    
+    //test.target_type   = TargetType::GRID;
     //test.target_plane_point= Point3(-.05,0., .45);
     //test.target_plane_vec1 = Point3(1.,0.,0.);
     //test.target_plane_vec2 = Point3(0.,1.,0.);
-    test.num_targets = 10;
-    test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
-    //test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
+    //test.num_targets = 10;
+    
+    //test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
+    test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
     test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
     test.solver_matvec_type = EXTRAPOLATION_AVERAGE;
     test.dump_values = true;
@@ -381,3 +567,4 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results]"){
     stats.clear();
 
 }
+

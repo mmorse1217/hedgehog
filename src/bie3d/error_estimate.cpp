@@ -328,6 +328,16 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
         int quadrature_order, DblNumMat density_values){
     assert(quadrature_order == density_values.n());
 
+    double k1, k2;
+    patch->principal_curvatures(closest_point.parametric_coordinates,k1,k2);
+    double k = curvature_direction == CurvatureDirection::FIRST ? k1 : k2;
+    //cout << "rad of curvature: " << k << ", " << closest_point.distance_from_target<< endl;
+    if(closest_point.distance_from_target >.85/fabs(k) && k < 0){
+        // assume point is far if it's near the radius of curvature where the
+        // pullback breaks down.
+        return 1e-12;
+    }
+
     imaginary target_pullback= ErrorEstimate::compute_pullback_under_patch(
             target, closest_point, curvature_direction, patch);
     
@@ -363,9 +373,6 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
     assert(density_at_target.n() == 1); 
     
     double L = patch->characteristic_length();
-    double k1, k2;
-    patch->principal_curvatures(closest_point.parametric_coordinates,k1,k2);
-    double k = curvature_direction == CurvatureDirection::FIRST ? k1 : k2;
     CircleArc arc(k*L);
     imaginary curve_deriv_at_target = arc.derivative(target_pullback);
 
@@ -426,14 +433,14 @@ double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 ta
 
         
         //cout << "eval principal curvatures" << endl;
-        double k1, k2;
+        /*double k1, k2;
         patch->principal_curvatures(closest_point.parametric_coordinates,k1,k2);
         double k = dir_type == CurvatureDirection::FIRST ? k1 : k2;
 
         // rescale by patch size
         double L = patch->characteristic_length();
         imaginary target_imag(0., closest_point.distance_from_target/L);
-        CircleArc arc(k*L);
+        CircleArc arc(k*L);*/
         //cout << "compute error estimate on arc" << endl;
         double error_estimate = ErrorEstimate::evaluate_error_estimate_on_patch(
                 patch, dir_type, target, closest_point, quadrature_order, density_values_along_line);
