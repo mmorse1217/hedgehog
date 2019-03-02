@@ -1,0 +1,11 @@
+petsc-2.2.1/**/*
+fftw-3.3.4/**/*
+pvfmm/**/*
+pvfmm/share/pvfmm/*
+!pvfmm/pvfmm-utils/
+.hg/**/*
+output/**/*
+*.vtu
+*.pvtu
+*.vtp
+*.visit
