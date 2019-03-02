@@ -1,0 +1,21 @@
+Get the latest code:
+$ git clone https://github.com/dmalhotra/pvfmm.git
+$ cd pvfmm
+
+Configure::
+$ module load automake
+$ module load fftw/openmpi/intel/3.3.4
+$ ./configure --with-fftw=${FFTW_ROOT} --prefix=${PWD}
+
+on mercer
+$ env CXXFLAGS="-no-offload -DNDEBUG" ./configure --with-fftw=${FFTW_ROOT} --prefix=${PWD}
+
+$ make
+$ make install
+$ export PVFMM_DIR=${PWD}/share/pvfmm #or whatever path the prompt says
+
+add the export to your ~/.bashrc
+echo PVFMM_DIR=${PWD}/share/pvfmm >> ~/.bashrc #or whatever path the prompt says
+
+$ cd examples
+$ make

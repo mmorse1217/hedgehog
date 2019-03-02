@@ -1,0 +1,247 @@
+This documentation is for particle FMM. (see examples/src/example1.cpp)
+The library is defined in the namespace pvfmm.
+
+
+
+
+Kernel Functions
+================
+The kernel functions are defined in kernel.hpp
+For Stokes, we have the following kernels:
+
+ker_stokes_vel      3x3 kernel, computes velocity vector
+ker_stokes_grad     3x9 kernel, computes gradient of velocity vector
+ker_stokes_press    3x1 kernel, computes pressure
+ker_stokes_stress   3x9 kernel, computes stress tensor
+
+
+
+Simple Interface
+================
+The header file pvfmm.hpp must be included. It  defines the following types:
+
+PtFMM;      This manages all the precomputed matrices and implements all the translation operations in FMM.
+PtFMM_Tree; The FMM tree data structure.
+PtFMM_Node; (Advanced) The node data structure used in the tree.
+PtFMM_Data; (Advanced) The data used to initialize the tree.
+
+
+
+Initializing Matrices:
+----------------------
+An instance of PtFMM must be created and initialized with the kernel function to be used:
+PtFMM::Initialize(int mult_order, const MPI_Comm& comm, const Kernel<Real_t>* kernel, const Kernel<Real_t>* aux_kernel=NULL);
+
+mult_order    [in]: the multipole order to be used (even number 2,4,6,8,10,12)
+comm          [in]: MPI communicator.
+kernel_fn     [in]: the kernel function pointer to be used.
+kernel_fn_aux [in]: (optional) Used for V-list translations.
+
+
+Single- and Double-Layer Potentials
+-----------------------------------
+It's worth noting that whether you would like to evaluate single layer
+potential or double layer potential is dependent on the size, order and type of
+arguments passed to these PvFMM functions (PtFMM_CreateTree and
+PtFMM_Evaluate). 
+
+To evaluate single layer potential, one should call 
+
+vector<double> empty;
+PtFMM_Tree* tree = PtFMM_CreateTree(source_coords, source_densities,
+                                    empty, empty, target_coords, comm,
+                                    max_pts, bndry, init_depth);
+...
+PtFMM_Evaluate(tree, target_potential, num_targets, source_densities, NULL);
+
+(Equivalently, leaving off the NULL and the "empty, empty" parameters in
+Evaluate and CreateTree functions respectively will evaluate single layer by
+defualt.)
+
+To evaluate double layer potentials, one should call 
+
+vector<double> empty;
+PtFMM_Tree* tree = PtFMM_CreateTree(empty, empty, source_coords, 
+                                    source_normals_and_densities,
+                                    target_coords, comm,
+                                    max_pts, bndry, init_depth);
+...
+PtFMM_Evaluate(tree, target_potential, num_targets,  NULL,
+                source_normals_and_densities);
+
+The empty's and NULL's are required. Passing valid data in their place will 
+indicate to PvFMM to evaluate both single layer and double layer potentials 
+and add the results together.
+
+Moreover, note that source_normals_and_densities should be a vector of size
+num_source * (DIM * source_dof), where DIM =3 (ambient space dimension) and
+source_dof = kernel.ker_dim[0] (# of degrees of freedom of the source densities,
+i.e. 1 for Laplace, 3 for Stokes). The data should be stored in the order 
+( case of source_dof = 3):
+    [ nx_0, ny_0, nz_0, fx_0, fy_0, f_z_0, nx_1, ny_1, nz_1, fx_1, fy_1, f_z_1,
+        ... ]
+where nx_i, ny_i, nz_i are the x-, y-, and z- components of the ith source
+point, and fx_i, fy_i, fz_i are the x-, y-, and z- components of the ith source
+density. 
+
+
+Initialize Tree:
+----------------
+The following simplified interface for particle FMM is defined in pvfmm.hpp
+
+PtFMM_Tree* PtFMM_CreateTree(std::vector<double>& src_coord, std::vector<double>& src_value,
+                             std::vector<double>& trg_coord, MPI_Comm& comm, int max_pts=100, 
+                             BoundaryType bndry=FreeSpace, int init_depth=0)
+
+This function creates a new instance of the tree and returns a pointer:
+src_coord  [in]: the source coordinate vector with values: [x1 y1 z1 ... xn yn zn] where (x1 y1 z1) are the coordinates of the first source point.
+src_value  [in]: the source density vector with values: [u1 v1 w1 u2 ... un vn wn] where (u1 v1 w1) is the density vector for the first particle.
+trg_coord  [in]: the target coordinate vector with values: [x1 y1 z1 ... xn yn zn] where (x1 y1 z1) are the coordinates of the first target point.
+comm       [in]: the MPI communicator.
+max_pts    [in]: maximum number of source points per octant.
+bndry      [in]: the boundary type (FreeSpace or Periodic)
+init_depth [in]: minimum depth for any octant
+
+
+Setup Tree for FMM:
+-------------------
+This must be done before evaluating FMM for the first time with a tree, or when a tree has changed.
+
+PtFMM_Tree::SetupFMM(PtFMM_Tree* fmm_mat);
+
+fmm_mat [in]: pointer to PtFMM_Tree data structure initialized as explained in (Initializing Matrices).
+
+
+
+Evaluate FMM:
+-------------
+This function computes FMM on the input octree and returns the potential at the target points:
+
+void PtFMM_Evaluate(PtFMM_Tree* tree, std::vector<double>& trg_val, size_t loc_size=0, std::vector<double>* src_val=NULL);
+
+tree       [in]: the input octree pointer
+trg_val   [out]: the target coordinate vector with values: [p1 q1 r1 ... pn qn rn] where (p1 q1 r1) is the potential vector at the first target point.
+loc_size   [in]: the number of local target points.
+src_val    [in]: (optional) to specify new source density values.
+
+
+
+Deleting the Tree:
+------------------
+The tree data structure must be destroyed using delete.
+
+PtFMM_Tree* tree=PtFMM_CreateTree(...);
+<Compute>
+delete tree;
+
+
+
+
+
+
+
+
+
+
+
+Advanced Interface
+==================
+
+More advanced operations require a deeper understanding the tree data structures:
+
+typedef FMM_Node<MPI_Node<double> > PtFMM_Node;
+typedef FMM_Tree<PtFMM>             PtFMM_Tree;
+
+We have the following inheritance hierarchy for these classes:
+
+TreeNode          --->  MPI_Node<double>      --->  FMM_Node<MPI_Node<double>> =: PtFMM_Node
+Tree<PtFMM_Node>  --->  MPI_Tree<PtFMM_Node>  --->  FMM_Tree<PtFMM>            =: PtFMM_Tree
+
+
+For an octree (of type PtFMM_Tree), the list of all local Morton sorted nodes can be accessed through the following the function:
+std::vector<PtFMM_Node*>& PtFMM_Tree::GetNodeList();
+
+
+
+For a tree node (of type PtFMM_Node), some important functions are as follows:
+
+int PtFMM_Node::Depth();                    // Returns the depth of the tree node.
+
+bool PtFMM_Node::IsLeaf();                  // Returns true if this is a leaf node.
+
+PtFMM_Node* PtFMM_Node::Child(int i);       // Returns the i-th child.
+
+PtFMM_Node* PtFMM_Node::Parent();           // Returns the parent node.
+
+bool PtFMM_Node::SubdivCond();              // Subdivide a leaf node.
+
+void PtFMM_Node::Truncate();                // Truncate the sub-tree and turn a non-leaf node to a leaf node.
+
+double* Coord();                            // Returns the node coordinates.
+
+bool IsGhost();                             // Returns true for ghost nodes.
+
+MPI_Node<double>* PtFMM_Node::Colleague(int i)  // Returns the i-th colleague of the node
+// Must call: PtFMM_Tree::SetColleagues(BoundaryType); before using the above function.
+
+
+
+In addition, the following variables are defined for each node:
+
+Vector<double> src_coord;   // Source particle coordinate vector.
+Vector<double> src_value;   // Source particle density vector.
+Vector<size_t> src_scatter; // Source particle index in the global array.
+
+Vector<double> trg_coord;   // Target particle coordinate vector.
+Vector<double> trg_value;   // Target particle potential vector.
+Vector<size_t> trg_scatter; // Target particle index in the global array.
+
+The values of these vector can be modified to update the target coordinates and source coordinates and density.
+If these vectors need to be resized, use the Vector<double>::ReInit(...) function (original data will be lost).
+
+If the tree is refined/coarsened, or the size of above vectors is modified for any octant,
+the function PtFMM_Tree::SetupFMM(PtFMM_Tree* fmm_mat) must be called before evaluating FMM again. 
+
+
+
+
+
+
+
+
+
+Updating Source/Target Points:
+==============================
+If the number of source or target points changes, the tree must be deleted and
+constructed again.
+
+Alternatively, the data can be modified in the existing tree using the advanced
+interface by accessing the node list and modifying the source and target
+vectors for each non-ghost, leaf octant.
+
+
+
+
+
+
+
+
+Colleagues and Interaction Lists:
+=================================
+To build colleague and interaction lists for all octants in a tree, use:
+
+PtFMM_Tree::SetColleagues(BoundaryType); // BoundaryType = FreeSpace or Periodic
+PtFMM_Tree::BuildInteracLists();
+
+Then for each tree node, colleague nodes (adjacent nodes at the same level) may
+be accessed using the following function.
+MPI_Node<double>* PtFMM_Node::Colleague(int i)  // Returns the i-th colleague of the node
+
+The interaction list for each interaction type (U0_Type, U1_Type, U2_Type,
+V_Type, W_Type, X_Type) may be accessed as follows:
+std::vector<PtFMM_Node*>& node_list=node->interac_list[U0_Type];
+
+(Trees are 2:1 balanced, U0, U1, U2 interaction lists are the near interaction
+octants at the coarser level, same level and at the finer level respectively.)
+
+
