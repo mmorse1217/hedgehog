@@ -79,6 +79,8 @@ ENV FFTW_DIR ${HEDGEHOG_LIBS}/fftw-3.3.4
 WORKDIR ${HEDGEHOG_LIBS}
 RUN git clone https://github.com/dmalhotra/pvfmm
 WORKDIR ${HEDGEHOG_LIBS}/pvfmm
+# last working version
+RUN git checkout 7ee406618aa7e6d17480658ac462fb2c88fe427d
 RUN autoreconf --install
 RUN ./configure --with-fftw=${FFTW_DIR} CC=gcc-4.7 MPICC=mpicc F77=gfortran-4.7 --prefix=`pwd`
 RUN make
@@ -106,62 +108,67 @@ RUN make -C ${HEDGEHOG_LIBS}/blendsurf3
 
 ENV BLENDSURF_DIR ${HEDGEHOG_LIBS}/blendsurf3
 ENV FACEMAP_DIR ${HEDGEHOG_LIBS}/face_map
-RUN apt-get install --reinstall -y libpng-dev
+RUN apt-get update
+RUN apt-get install -y libpng-dev
 
 
 # Build Face-map...
-ENV P4EST_DIR ${HEDGEHOG_LIBS}/p4est-1.1
+#ENV P4EST_DIR ${HEDGEHOG_LIBS}/p4est-1.1
 ENV PETSC_ARCH linux-gnu
 ENV PETSC_DIR ${HEDGEHOG_LIBS}/petsc-3.7.2
-ENV DOCKER 1
-ENV MACHINE_NAME docker 
-
-RUN mkdir -p ${HEDGEHOG_LIBS}/face_map
-COPY face_map/ ${HEDGEHOG_LIBS}/face_map 
-WORKDIR ${HEDGEHOG_LIBS}/face_map
-RUN make clean -C ${HEDGEHOG_LIBS}/face_map
-RUN make clean -C ${HEDGEHOG_LIBS}/face_map/tests
-ENV PATH /usr/lib:$PATH
+#ENV DOCKER 1
+#ENV MACHINE_NAME docker 
+#
+#RUN mkdir -p ${HEDGEHOG_LIBS}/face_map
+#COPY face_map/ ${HEDGEHOG_LIBS}/face_map 
+#WORKDIR ${HEDGEHOG_LIBS}/face_map
+#RUN make clean -C ${HEDGEHOG_LIBS}/face_map
+#RUN make clean -C ${HEDGEHOG_LIBS}/face_map/tests
+#ENV PATH /usr/lib:$PATH
+RUN ls ${PETSC_DIR}/${PETSC_ARCH}/include
 RUN ls ${PETSC_DIR}/${PETSC_ARCH}/lib
-RUN ls ${MPI_HOME}/lib
-RUN ls ${MPI_HOME}/include
-RUN make -j2 -C ${HEDGEHOG_LIBS}/face_map lib
-RUN make -j2 -C ${HEDGEHOG_LIBS}/face_map/tests 
+#RUN ls ${MPI_HOME}/lib
+#RUN ls ${MPI_HOME}/include
+#RUN make -j2 -C ${HEDGEHOG_LIBS}/face_map lib
+#RUN make -j2 -C ${HEDGEHOG_LIBS}/face_map/tests 
 
-# TODO fix linking order in Face-map
+## TODO fix linking order in Face-map
 # set some Mobo-related environment variables
-ENV MOBO_DIR /hedgehog
-ENV MACHINE_NAME energon
+#ENV MOBO_DIR /hedgehog
+#ENV MACHINE_NAME energon
 
 #TEST try compiling ebi 
-RUN mkdir -p ${MOBO_DIR}/pvfmm/pvfmm-utils
-RUN mkdir -p ${MOBO_DIR}/src/ebi
-#ADD pvfmm/pvfmm-utils ${MOBO_DIR}/pvfmm/pvfmm-utils
-ADD src ${MOBO_DIR}/src
-RUN ls ${MOBO_DIR}
-RUN ls ${MOBO_DIR}/pvfmm/pvfmm-utils
-RUN ls ${MOBO_DIR}/src/ebi
-
+RUN mkdir -p ${HEDGEHOG_LIBS}/utils/pvfmm-utils
+#RUN mkdir -p ${MOBO_DIR}/src/
+ADD utils/pvfmm-utils ${HEDGEHOG_LIBS}/utils/pvfmm-utils
+#ADD src ${MOBO_DIR}/src
+#RUN ls ${MOBO_DIR}
+#RUN ls ${MOBO_DIR}/pvfmm/pvfmm-utils
+#RUN ls ${MOBO_DIR}/src/ebi
+# install CMake
+WORKDIR /
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh 
+RUN yes Y | sh cmake-3.13.4-Linux-x86_64.sh --prefix /usr/local --exclude-subdir
 # Compile pvfmm wrapper
 #ENV PETSC_ROOT ${PETSC_DIR} 
-WORKDIR ${MOBO_DIR}/src/ebi/pvfmm-utils
-RUN make clean
-RUN make -j2 lib 
+#WORKDIR ${HEDGEHOG_LIBS}/utils/pvfmm-utils
+#RUN make clean
+#RUN make -j2 lib 
 #RUN make -j2 pvfmm_test 
 
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 #WORKDIR ${MOBO_DIR}/src/ebi/
 #
-ENV PVFMM_INC ${PVFMM_DIR}/include
-ENV PVFMM_LIB ${PVFMM_DIR}/lib
+#ENV PVFMM_INC ${PVFMM_DIR}/include
+#ENV PVFMM_LIB ${PVFMM_DIR}/lib
 #ENV DOCKER 1
-WORKDIR ${MOBO_DIR}/src/ebi
+#WORKDIR ${MOBO_DIR}/src/ebi
 #ENV PVFMM_INC ${PVFMM_DIR}/include
 #ENV PVFMM_LIB ${PVFMM_DIR}/lib 
 RUN rm -f ${HEDGEHOG_LIBS}/fftw-3.3.4.tar.gz ${HEDGEHOG_LIBS}/mpich2-1.2.1.tar.gz ${HEDGEHOG_LIBS}/petsc-3.7.2.tar.gz ${HEDGEHOG_LIBS}/p4est-1.1.tar.gz
 #RUN apt-get install -y vim
-ENV FORTRAN_LIB /usr/lib/gcc/x86_64-linux-gnu/4.7/
-RUN echo 'alias mobo_makegrep="make -j 4 BOPT=O 2>&1 >/dev/null | grep -i"' >> ~/.bashrc
+##ENV FORTRAN_LIB /usr/lib/gcc/x86_64-linux-gnu/4.7/
+#RUN echo 'alias mobo_makegrep="make -j 4 BOPT=O 2>&1 >/dev/null | grep -i"' >> ~/.bashrc
 CMD ["bash"]
 
