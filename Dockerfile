@@ -106,7 +106,7 @@ RUN make -C ${HEDGEHOG_LIBS}/blendsurf3
 
 ENV BLENDSURF_DIR ${HEDGEHOG_LIBS}/blendsurf3
 ENV FACEMAP_DIR ${HEDGEHOG_LIBS}/face_map
-RUN apt-get install -y libpng-dev
+RUN apt-get install --reinstall -y libpng-dev
 
 
 # Build Face-map...

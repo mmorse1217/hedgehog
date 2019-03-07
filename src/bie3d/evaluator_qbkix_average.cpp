@@ -211,16 +211,17 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
     DblNumMat exterior_check_potential_local = get_local_vector(
             target_dof(), num_check_points_one_side, exterior_check_potential);
 
-    assert(target_dof()==1);
+    //assert(target_dof()==1);
     for(int i =0; i < num_check_points_one_side; i++){
-        double subvec_int_p = interior_check_potential_local(0,i);
-        double subvec_ext_p = exterior_check_potential_local(0,i);
+        for(int d = 0; d < target_dof(); d++){
+            double subvec_int_p = interior_check_potential_local(d,i);
+            double subvec_ext_p = exterior_check_potential_local(d,i);
 
-        double realvec_int_p = temp_check_potential_local(0,i);
-        double realvec_ext_p = temp_check_potential_local(0,i+num_check_points_one_side);
-        assert(realvec_ext_p == subvec_ext_p);
-        assert(realvec_int_p == subvec_int_p);
-
+            double realvec_int_p = temp_check_potential_local(d,i);
+            double realvec_ext_p = temp_check_potential_local(d,i+num_check_points_one_side);
+            assert(realvec_ext_p == subvec_ext_p);
+            assert(realvec_int_p == subvec_int_p);
+        }
 
     }
     VecDestroy(&temp_check_potential);

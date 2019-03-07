@@ -309,17 +309,23 @@ TEST_CASE("Cube eye candy", "[eye-candy][results][cube]"){
 
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
-    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "20");
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
     Options::set_value_petsc_opts("-kt", "111");
-    Options::set_value_petsc_opts("-target_accuracy", "1e-8");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-7");
     adaptive_test_base_options();
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".22");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".044");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0166666");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".25");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".05");
     Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".05882350");
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".05882350");
 
     Options::set_value_petsc_opts("-adaptive", "1");
     Options::set_value_petsc_opts("-upsampling_type", "adaptive");
@@ -335,7 +341,7 @@ TEST_CASE("Cube eye candy", "[eye-candy][results][cube]"){
     surface->setFromOptions();
     surface->setup();
     surface->refine();
-    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-10 );
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-9 );
     write_face_map_patches_to_vtk(DblNumMat(0,0), 
             vector<int>(surface->num_patches(), 0) ,
             surface.get(), 0, "output/");
@@ -346,7 +352,7 @@ TEST_CASE("Cube eye candy", "[eye-candy][results][cube]"){
     // point charges
     test.bc_type = BoundaryDataType::HARMONIC;
     test.singularity_type= SingularityType::SINGLE;
-    test.single_singularity_location = Point3(0., 0., 1.1);
+    test.single_singularity_location = Point3(0., 0., 1.);
     //test.single_singularity_location = Point3(-.05, .85, .45);
     //test.single_singularity_location = Point3(0., 0., 1.);
 
@@ -388,8 +394,8 @@ TEST_CASE("Cube eye candy", "[eye-candy][results][cube]"){
 TEST_CASE("Propeller eye candy", "[eye-candy][results][propeller]"){
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/new_ppp.wrl");
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/new_ppp.wrl");
-    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "16");
-    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "0");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "20");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "1");
     Options::set_value_petsc_opts("-upsampling_type", "adaptive");
     Options::set_value_petsc_opts("-adaptive_upsampling", "bbox_closest_point");
     Options::set_value_petsc_opts("-adaptive_upsampling_switch_iter", "2");
@@ -402,12 +408,12 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results][propeller]"){
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
 */
     Options::set_value_petsc_opts("-kt", "111");
-    Options::set_value_petsc_opts("-target_accuracy", "1e-8");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-6");
     adaptive_test_base_options();
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0166666");
     Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
 
@@ -425,7 +431,7 @@ TEST_CASE("Propeller eye candy", "[eye-candy][results][propeller]"){
     surface->setFromOptions();
     surface->setup();
     surface->refine();
-    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-10 );
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-8 );
     write_face_map_patches_to_vtk(DblNumMat(0,0), 
             vector<int>(surface->num_patches(), 0) ,
             surface.get(), 0, "output/");
@@ -494,14 +500,17 @@ TEST_CASE("Octopus eye candy", "[eye-candy][results][octopus]"){
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "2");
 */
     Options::set_value_petsc_opts("-kt", "111");
-    Options::set_value_petsc_opts("-target_accuracy", "1e-6");
+    Options::set_value_petsc_opts("-target_accuracy", "1e-4");
     adaptive_test_base_options();
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".08");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".013333");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".12");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
     Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "50000");
 
     Options::set_value_petsc_opts("-adaptive", "1");
     Options::set_value_petsc_opts("-upsampling_type", "adaptive");
@@ -517,7 +526,7 @@ TEST_CASE("Octopus eye candy", "[eye-candy][results][octopus]"){
     surface->setFromOptions();
     surface->setup();
     surface->refine();
-    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-8 );
+    surface->resolve_rhs(&laplace_singluarity_propeller, 1, 1e-6 );
     write_face_map_patches_to_vtk(DblNumMat(0,0), 
             vector<int>(surface->num_patches(), 0) ,
             surface.get(), 0, "output/");

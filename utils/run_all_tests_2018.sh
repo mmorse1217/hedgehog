@@ -14,10 +14,11 @@ submit_job (){
 
 
 # pushing for 1e-8 error; only reason we need so much memory
-submit_job "eye_candy_octopus" "[eye-candy][results][octopus]" 12h 128 28
-if [ ]; then
 submit_job "eye_candy_cube" "[eye-candy][results][cube]" 12h 128 28
 submit_job "eye_candy_propeller" "[eye-candy][results][propeller]" 12h 128 28
+submit_job "stokes_qbx_eval_conv_pipe" "[results][qbkix-solver-conv][stokes][pipe]" 24h 250 28
+submit_job "eye_candy_octopus" "[eye-candy][results][octopus]" 20h 250 28
+if [ ]; then
 
 
 submit_job "laplace_qbx_eval_conv_cube" "[results][qbkix-solver-conv][laplace][cube]" 12h 72 20
@@ -46,7 +47,6 @@ submit_job "stokes_qbx_eval_conv_cube" "[results][qbkix-solver-conv][stokes][cub
 
 submit_job "laplace_qbx_eval_conv_pipe" "[results][qbkix-solver-conv][laplace][pipe]" 12h 72 20
 submit_job "navier_qbx_eval_conv_pipe" "[results][qbkix-solver-conv][navier][pipe]" 12h 84 20 
-submit_job "stokes_qbx_eval_conv_pipe" "[results][qbkix-solver-conv][stokes][pipe]" 12h 84 20 
 
 submit_job "laplace_qbx_eval_conv_ttorus" "[results][qbkix-solver-conv][laplace][ttorus]" 12h 72 20 
 submit_job "navier_qbx_eval_conv_ttorus" "[results][qbkix-solver-conv][navier][ttorus]" 24h 84 20 
