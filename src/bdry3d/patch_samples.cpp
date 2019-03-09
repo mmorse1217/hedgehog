@@ -9,6 +9,7 @@
 #include "common/stats.hpp"
 #include <unordered_map>
 #include <sampling.hpp>
+#include <pvfmm/profile.hpp>
 BEGIN_EBI_NAMESPACE
 
 using std::min;
@@ -150,7 +151,7 @@ int PatchSamples::setup(bool refined)
         int num_samples = _num_sample_points[0];
         // tensor-product chebyshev for face-map
         parametric_samples = DblNumMat(2, num_samples*num_samples, true, 
-                sample_2d<chebyshev2>(num_samples, Sampling::base_domain).data());
+                sample_2d<chebyshev1>(num_samples, Sampling::base_domain).data());
     }
 
     for(int pi=0; pi<num_patches; pi++)	 
@@ -337,6 +338,26 @@ int PatchSamples::setup(bool refined)
     // initialize per sample point quantities: face_point representations, 
     // 3d positions, normals, jacobians, blending func values, quad weights, 
     // combined weights, dominant tags
+    
+    // Precompute density barycentric interpolation weights 
+    // Pre-compute interpolation weights
+    if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
+        _interpolation_nodes_x=DblNumVec(num_samples);
+        _interpolation_nodes_y=DblNumVec(num_samples);
+        for(int i =0; i < num_samples; i++){
+            _interpolation_nodes_x(i) = parametric_samples(0,i);
+            _interpolation_nodes_y(i) = parametric_samples(1,i*num_samples); 
+        }
+        cout << "PatchSamples init barycentric_weights 1d" << endl;
+
+        _barycentric_weights_x = 
+            Interpolate::compute_barycentric_weights_1d<double>(_interpolation_nodes_x);
+        _barycentric_weights_y = 
+            Interpolate::compute_barycentric_weights_1d<double>(_interpolation_nodes_y);
+        cout << "PatchSamples inited barycentric_weights 1d" << endl;
+    }
+    
+    
     double max_patch_size = -DBL_MAX;
 #pragma omp parallel for
     for(int pi=0; pi<num_patches; pi++) {
@@ -640,8 +661,6 @@ Vec PatchSamples::refine_density(int dof, int ref_factor, Vec density,
                 sample_point_parametric_preimage, 
                 sample_point_density, 
                 num_samples,
-                refinement_factor,
-                0,
                 refined_sample_point_parametric_preimage, 
                 refined_sample_point_density);
      }
@@ -723,8 +742,6 @@ Vec interpolate_and_resample(int dof, Vec function,
                 interp_sample_uv_coords, 
                 interp_function_values, 
                 num_interp_samples_1d,
-                1, // TODO remove
-                0, // TODO remove
                 eval_sample_uv_coords, 
                 eval_function_values);
         
@@ -757,6 +774,7 @@ Vec refine_function(int dof, Vec function,
             coarse_samples->mpiComm(),
             num_samples_per_patch*num_refined_patches*dof,
             refined_func);
+
 
     // for each refined patch, interpolate values from parent patch values 
     // TODO vectorize somehow to do a single interpolation per coarse patch
@@ -807,16 +825,30 @@ Vec refine_function(int dof, Vec function,
             }
         }
         // interpolate values 
-        
         Interpolate::evaluate_barycentric_interpolant_2d(dof, 
                 coarse_sample_uv_coords_scaled, 
                 coarse_function_values, 
                 num_samples_per_patch_1d,
-                1, // TODO remove
-                0, // TODO remove
+                /*coarse_samples->interpolation_nodes_x(),
+                coarse_samples->interpolation_nodes_y(),
+                coarse_samples->barycentric_weights_x(),
+                coarse_samples->barycentric_weights_y(),*/
+
                 fine_sample_uv_coords_scaled, 
                 fine_function_values);
-        
+        /*
+        void Interpolate::evaluate_barycentric_interpolant_2d(
+                int dof,
+                DblNumMat xy_coordinates, 
+                DblNumMat function_values,
+                int num_samples_1d,
+                DblNumVec interpolation_nodes_x,
+                DblNumVec interpolation_nodes_y,
+                DblNumVec barycentric_weights_x,
+                DblNumVec barycentric_weights_y,
+                DblNumMat refined_xy_coordinates,
+                DblNumMat& refined_function_values){
+         */
     }
 
     return refined_func; 
@@ -1234,7 +1266,7 @@ void generate_samples_on_child_patches(MPI_Comm comm,
 
             DblNumMat parametric_samples = 
                 DblNumMat(2, num_samples_per_patch, true, 
-                    sample_2d<chebyshev2>(num_samples_1d, child_domain).data());
+                    sample_2d<chebyshev1>(num_samples_1d, child_domain).data());
             //cout << i << ", " << j << endl;
             //cout << parametric_samples << endl;
             // copy

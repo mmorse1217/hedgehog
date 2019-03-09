@@ -88,6 +88,7 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
             (*_quadrature_weights)(si) *=pow(2.,_level);
     }
     _near_zone_distance = compute_near_zone_distance();
+    
 
 }
 
@@ -376,8 +377,6 @@ bool FaceMapSubPatch::is_patch_valid(Vec function_values_at_parent,
             interp_nodes, 
             function_values_at_parent_local, 
             num_samples_per_patch_1d,
-            1, // TODO remove
-            0, // TODO remove
             uv_coordinates_single_patch_local, 
             interpolated_values);
     Vec error;

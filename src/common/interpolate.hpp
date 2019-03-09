@@ -11,6 +11,7 @@ BEGIN_EBI_NAMESPACE
 namespace Interpolate{
     template<typename T>
     NumVec<T> compute_barycentric_weights_1d(NumVec<T> interpolation_nodes);
+    DblNumVec compute_barycentric_weights_chebyshev_first_kind(int n);
     
     template<typename T>
     NumVec<T> evaluate_barycentric_interpolant_1d(NumVec<T> interpolation_nodes,
@@ -53,13 +54,22 @@ namespace Interpolate{
 
     void evaluate_barycentric_interpolant_2d(
             int dof,
-            DblNumMat xy_coordindates, 
-            DblNumMat function_values,
+            DblNumMat& xy_coordindates, 
+            DblNumMat& function_values,
             int num_samples_1d,
-            int refinement_factor,
-            int axis,
-            DblNumMat refined_xy_coordinates,
+            DblNumMat& refined_xy_coordinates,
             DblNumMat& refined_function_values);
+void evaluate_barycentric_interpolant_2d(
+        int dof,
+        DblNumMat& xy_coordinates, 
+        DblNumMat& function_values,
+        int num_samples_1d,
+        DblNumVec& interpolation_nodes_x,
+        DblNumVec& interpolation_nodes_y,
+        DblNumVec& barycentric_weights_x,
+        DblNumVec& barycentric_weights_y,
+        DblNumMat& refined_xy_coordinates,
+        DblNumMat& refined_function_values);
 
 
 }

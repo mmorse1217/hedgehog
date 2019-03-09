@@ -2,6 +2,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "common/vtk_writer.hpp"
 #include "common/stats.hpp"
+#include "pvfmm/profile.hpp"
 BEGIN_EBI_NAMESPACE
 
 int EvaluatorQBKIX::setup(){
@@ -74,6 +75,7 @@ Vec EvaluatorQBKIX::compute_refined_density(Vec density){
 
 
         Vec extra_scaled_density;
+        //VecView(refined_density, PETSC_VIEWER_STDOUT_SELF);
         VecDuplicate(refined_density, &extra_scaled_density);
 
         denscale(source_dof(), 
@@ -102,6 +104,7 @@ Vec EvaluatorQBKIX::compute_refined_density(Vec density){
     int64_t temp; 
     VecGetLocalSize(refined_density, &temp);
 
+        cout << "refined2" << endl;
     ebiAssert(temp == _refined_patch_samples->local_num_sample_points()*source_dof());
     VecDestroy(&scaled_density);
     return refined_density;
@@ -199,6 +202,7 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
        VecView(_aux_interpolation_points, PETSC_VIEWER_STDOUT_SELF);
        */
     double matvec_start = omp_get_wtime();
+    pvfmm::Profile::Tic("QBX Evaluation", &PETSC_COMM_WORLD, true,2);{
 
     double h;
     PetscBool err = PETSC_FALSE;
@@ -209,13 +213,17 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
 
     double start = omp_get_wtime();
 
+    pvfmm::Profile::Tic("Density interpolation", &PETSC_COMM_WORLD, true,2);
     Vec refined_density = compute_refined_density(density);
+    pvfmm::Profile::Toc();
 
 
     stats.result_plus_equals("total density interp time", (omp_get_wtime() - start) );
     string s= "total fmm";
     start = omp_get_wtime();
+    pvfmm::Profile::Tic("Eval potential at checks", &PETSC_COMM_WORLD, true,2);
     Vec interpolation_point_potential = compute_interpolation_target_potential(refined_density);
+    pvfmm::Profile::Toc();
     stats.result_plus_equals("total fmm time", (omp_get_wtime() - start) );
     
     
@@ -225,6 +233,7 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
 
     int num_local_targets = num_local_points(_target_3d_position);
     
+    pvfmm::Profile::Tic("Extrap to target", &PETSC_COMM_WORLD, true,2);
     vector<double> interpolation_nodes; 
     int L;
     if(_expansion_type == EXTRAPOLATE_ONE_SIDE_CHEBYSHEV){
@@ -293,7 +302,8 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
     stats.result_plus_equals("total qbx time", (omp_get_wtime() - start) );
     stats.result_plus_equals("total matvec time", (omp_get_wtime() - matvec_start) );
     stats.result_plus_equals("num. matvecs", 1 );
-
+    pvfmm::Profile::Toc();
+    }pvfmm::Profile::Toc();
 
     return 0;
 }

@@ -129,9 +129,21 @@ void greens_identity_base_options(){
     //Options::set_value_petsc_opts("-bis3d_spacing", ".033333");
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0075");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".02941");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    
+    // last options
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".02941");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+    // 1e-1, 1e-2 4e-4
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+    Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
+    Options::set_value_petsc_opts("-bis3d_np", "12");
 
 }
 

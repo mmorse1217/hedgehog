@@ -402,8 +402,6 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
                     sample_points, 
                     function_values, 
                     num_samples,
-                    refinement_factor,
-                    0,
                     refined_sample_points,
                     refined_function_values);
 
@@ -486,8 +484,6 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
                 sample_points, 
                 function_values, 
                 num_samples,
-                4,
-                0,
                 refined_sample_points,
                 refined_function_values);
 

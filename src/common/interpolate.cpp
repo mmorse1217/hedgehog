@@ -5,6 +5,14 @@ BEGIN_EBI_NAMESPACE
 using namespace Interpolate;
 
 
+DblNumVec Interpolate::compute_barycentric_weights_chebyshev_first_kind(int n){
+    DblNumVec weights(n);
+    setvalue(weights, 1.0);
+    for(int i = 0; i < n; i++){
+        weights(i) = pow(1., i)*sin((2*i+1)*M_PI/(2*n));
+    }
+    return weights;
+}
 
 
 
@@ -292,12 +300,10 @@ function_values(i) = 1.*jacobian;
 
 void Interpolate::evaluate_barycentric_interpolant_2d(
         int dof,
-        DblNumMat xy_coordinates, 
-        DblNumMat function_values,
+        DblNumMat& xy_coordinates, 
+        DblNumMat& function_values,
         int num_samples_1d,
-        int refinement_factor, // TODO remove 
-        int axis, // TODO holy shit remove
-        DblNumMat refined_xy_coordinates,
+        DblNumMat& refined_xy_coordinates,
         DblNumMat& refined_function_values){
     ebiAssert(refined_xy_coordinates.n() == refined_function_values.n());
     ebiAssert(xy_coordinates.n() == function_values.n());
@@ -324,9 +330,22 @@ void Interpolate::evaluate_barycentric_interpolant_2d(
     // O(n^2) precomputation of weights; we assume that the x and y
     // interpolation nodes are the same.
     DblNumVec barycentric_weights_x = 
-        compute_barycentric_weights_1d(interpolation_nodes_x);
+        compute_barycentric_weights_1d<double>(interpolation_nodes_x);
     DblNumVec barycentric_weights_y = 
-        compute_barycentric_weights_1d(interpolation_nodes_y);
+        compute_barycentric_weights_1d<double>(interpolation_nodes_y);
+    evaluate_barycentric_interpolant_2d(dof, xy_coordinates, function_values, num_samples_1d, interpolation_nodes_x, interpolation_nodes_y, barycentric_weights_x, barycentric_weights_y, refined_xy_coordinates, refined_function_values);    
+}
+void Interpolate::evaluate_barycentric_interpolant_2d(
+        int dof,
+        DblNumMat& xy_coordinates, 
+        DblNumMat& function_values,
+        int num_samples_1d,
+        DblNumVec& interpolation_nodes_x,
+        DblNumVec& interpolation_nodes_y,
+        DblNumVec& barycentric_weights_x,
+        DblNumVec& barycentric_weights_y,
+        DblNumMat& refined_xy_coordinates,
+        DblNumMat& refined_function_values){
 
     // iterate  over coefficients of function values.... TODO bring inside loop
     // iteration over desired samples of interpolant
@@ -378,7 +397,5 @@ void Interpolate::evaluate_barycentric_interpolant_2d(
         }
     }
 }
-
-
 
 END_EBI_NAMESPACE

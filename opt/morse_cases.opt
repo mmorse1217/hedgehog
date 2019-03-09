@@ -17,6 +17,7 @@
 -near_interpolation_num_samples 10
 
 -dump_qbkix_points 0
+-profile 1
 # copied from ebs_script.py. keys are -bis3d_spacing
 # rfdhs = {0.192:0.096, 0.096:0.048, 0.048:0.024, 0.024:0.008, 0.012:0.004, 0.006:0.002, 0.003:0.001}
 # hsradmult = {0.192:4, 0.096:7, 0.048:9, 0.024:13, 0.012:17, 0.006:25, 0.003:35} 

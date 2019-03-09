@@ -1693,13 +1693,25 @@ void solver_test_base_options(){
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-dom", "0");
     Options::set_value_petsc_opts("-bdtype", "2");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
+    Options::set_value_petsc_opts("-bis3d_np", "12");
     Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
     Options::set_value_petsc_opts("-bis3d_spacing", ".04");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".05");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01");
+    
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+    // For 7 digits but stagnating
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01333");
+   
+   
+    
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".05");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
 

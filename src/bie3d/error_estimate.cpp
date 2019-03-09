@@ -428,7 +428,7 @@ double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 ta
         int density_dof = density_values.m();
         DblNumMat density_values_along_line(density_dof, quadrature_order);
         Interpolate::evaluate_barycentric_interpolant_2d( density_dof,
-                uv_values, density_values, quadrature_order, 0, 0,
+                uv_values, density_values, quadrature_order, 
                 uv_values_line, density_values_along_line);
 
         

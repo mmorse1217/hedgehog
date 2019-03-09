@@ -185,6 +185,10 @@ protected:
   // patches[i] has center boundary_component_center[i] and orientation ortvec[i]
   //LEXING: DOUBLE CHECK THE FOLLOWING  vector<DblNumMat> _refined_datvec;
   //temporary data  Vec _sample_point_data; //used to store temporary data  int _dof;
+  DblNumVec _barycentric_weights_x;
+  DblNumVec _barycentric_weights_y;
+  DblNumVec _interpolation_nodes_x;
+  DblNumVec _interpolation_nodes_y;
 public:
     PatchSamples(const string& n, const string& p);
     ~PatchSamples();  
@@ -218,6 +222,18 @@ public:
     Vec sample_point_far_field() {        return _sample_point_far_field; }
     Vec sample_point_interpolant_spacing() {        return _sample_point_interpolant_spacing; }
     NumVec<OnSurfacePoint> sample_point_as_on_surface_point(){ return _sample_point_as_on_surface_point; }
+    DblNumVec& barycentric_weights_x(){
+        return _barycentric_weights_x;
+    }
+    DblNumVec& barycentric_weights_y(){
+        return _barycentric_weights_y;
+    }
+    DblNumVec& interpolation_nodes_x(){
+        return _interpolation_nodes_x;
+    }
+    DblNumVec& interpolation_nodes_y(){
+        return _interpolation_nodes_y;
+    }
 
 
     //! Collocation point on a patch P is a sample point of this patch, or a

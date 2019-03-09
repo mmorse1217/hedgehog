@@ -9,8 +9,9 @@ NumVec<T> Interpolate::compute_barycentric_weights_1d(NumVec<T> interpolation_no
     for(int i = 0; i < n; i++){
 
         for(int j = 0; j < n; j++){
-            if(j != i)
-                weights(i) *= 1./(interpolation_nodes(j) - interpolation_nodes(i));
+            if(j != i){
+                weights(i) *= T(1.)/(interpolation_nodes(j) - interpolation_nodes(i));
+            }
         }
         /*for(int j = 0; j < i; j++){
             weights(i) *= 1./(interpolation_nodes(j) - interpolation_nodes(i));
@@ -20,6 +21,7 @@ NumVec<T> Interpolate::compute_barycentric_weights_1d(NumVec<T> interpolation_no
             weights(i) *= 1./(interpolation_nodes(j) - interpolation_nodes(i));
         }*/
     }
+
     return weights;
 
 }
