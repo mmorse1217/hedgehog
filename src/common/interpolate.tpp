@@ -2,6 +2,8 @@ BEGIN_EBI_NAMESPACE
 template<typename T>
 NumVec<T> Interpolate::compute_barycentric_weights_1d(NumVec<T> interpolation_nodes){
     int n = interpolation_nodes.m();
+    //pvfmm::Profile::Add_FLOP();
+  //pvfmm::Profile::Add_FLOP((long long)(n-1)*(long long)(n-1)*(26*dof));
     NumVec<T> weights(n);
     setvalue(weights, T(1.0));
 

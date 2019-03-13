@@ -264,6 +264,7 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
     DblNumMat potential_local = get_local_vector(target_dof(), num_targets, potential);
     DblNumMat density_local = get_local_vector(source_dof(), num_targets, density);
     // Average interior and exterior potentials
+#pragma omp parallel for
     for (int i = 0; i < num_targets; i++) {
         for (int d = 0; d < target_dof(); d++) {
             double interior_potential = interior_target_potential(d,i);

@@ -332,7 +332,7 @@ def plot_comparison_timing(path_to_tests, out_dir):
         return plots, props_indep_names
     figure_size = (12,4) 
     # plot timing comparision
-    for test_name, test_data in test_paths.items()[:-2]:
+    for test_name, test_data in test_paths.items():
 
         f, ax = pl.subplots(ncols=3, nrows=1, sharex=True, sharey=True, figsize=figure_size)
         test_output_path = path_to_tests + test_name + '/output/test_qbkix_vs_singular_quad/' + test_data['dir']
@@ -389,10 +389,10 @@ def plot_comparison_timing(path_to_tests, out_dir):
     f.savefig(out_dir+'comparison_face_map_vs_blendsurf_'+test_data['domain']+'_'+test_data['kernel']+'_timing',  bbox_inches='tight',dpi=150)
 
 
-test_results_dir = 'data/results14/'
-out_dir = 'output/plots_final12/'
-#plot_greens_identity(test_results_dir, out_dir)
+test_results_dir = 'data/results16/'
+out_dir = 'output/plots_final14/'
+plot_greens_identity(test_results_dir, out_dir)
 plot_solver_convergence(test_results_dir, out_dir)
-#plot_comparison_error(test_results_dir, out_dir)
-#plot_comparison_timing(test_results_dir, out_dir)
+plot_comparison_error(test_results_dir, out_dir)
+plot_comparison_timing(test_results_dir, out_dir)
 

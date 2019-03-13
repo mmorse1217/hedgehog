@@ -13,20 +13,22 @@ submit_job (){
 }
 
 
-# pushing for 1e-8 error; only reason we need so much memory
+submit_job "face_map_qbx_vs_singular_quad_navier" "[results][qbx-vs-singular-quad][mixed-bdry-navier]" 10h 120 20
+submit_job "navier_qbx_vs_singular_quad_const_den" "[results][qbx-vs-singular-quad][navier-const-den]" 6h 120 20 
+submit_job "laplace_qbx_vs_singular_quad_solve" "[results][qbx-vs-singular-quad][laplace-solve]" 6h 120 20
+submit_job "face_map_qbx_vs_singular_quad" "[results][qbx-vs-singular-quad][mixed-bdry]" 10h 120 20
+
+
+if [ ]; then
+
+submit_job "laplace_greens_identity_newtorus" "[results][gid][laplace][newtorus]" 3h 130 20 
+submit_job "navier_greens_identity_newtorus"  "[results][gid][navier][newtorus]" 6h 130 20 
+submit_job "stokes_greens_identity_newtorus"  "[results][gid][stokes][newtorus]" 6h 130 20
+
 submit_job "laplace_greens_identity_cube"  "[results][gid][laplace][cube]" 12h 84 20
 submit_job "navier_greens_identity_cube"  "[results][gid][navier][cube]" 12h 100 20 
 submit_job "stokes_greens_identity_cube"  "[results][gid][stokes][cube]" 12h 100 20
 
-submit_job "laplace_greens_identity_newtorus" "[results][gid][laplace][newtorus]" 3h 120 20 
-submit_job "navier_greens_identity_newtorus"  "[results][gid][navier][newtorus]" 6h 130 20 
-submit_job "stokes_greens_identity_newtorus"  "[results][gid][stokes][newtorus]" 6h 130 20
-
-
-submit_job "face_map_qbx_vs_singular_quad_navier" "[results][qbx-vs-singular-quad][mixed-bdry-navier]" 10h 80 20
-submit_job "face_map_qbx_vs_singular_quad" "[results][qbx-vs-singular-quad][mixed-bdry]" 10h 80 20
-submit_job "laplace_qbx_vs_singular_quad_solve" "[results][qbx-vs-singular-quad][laplace-solve]" 6h 72 20
-submit_job "navier_qbx_vs_singular_quad_const_den" "[results][qbx-vs-singular-quad][navier-const-den]" 6h 72 20 
 
 submit_job "navier_qbx_eval_conv_cube" "[results][qbkix-solver-conv][navier][cube]" 12h 84 20 
 submit_job "laplace_qbx_eval_conv_cube" "[results][qbkix-solver-conv][laplace][cube]" 12h 72 20
@@ -42,7 +44,14 @@ submit_job "stokes_qbx_eval_conv_ttorus" "[results][qbkix-solver-conv][stokes][t
 
 
 
-if [ ]; then
+
+
+# pushing for 1e-8 error; only reason we need so much memory
+
+
+
+
+
 submit_job "eye_candy_cube" "[eye-candy][results][cube]" 12h 128 28
 submit_job "eye_candy_propeller" "[eye-candy][results][propeller]" 12h 128 28
 submit_job "eye_candy_octopus" "[eye-candy][results][octopus]" 20h 250 28

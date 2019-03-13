@@ -437,6 +437,7 @@ void lagrange_extrapolation_bary(DblNumMat target_3d_position,
     // check point c_i = -n*L*i, where n in the outward normal at the closest
     // point on-surface.
     DblNumVec interp_nodes(L, false, interpolation_nodes.data());
+#pragma omp parallel for
     for(int i = 0; i < num_local_targets; i++){
         Point3 target(target_3d_position.clmdata(i));
         Point3 point_on_boundary(closest_sample_3d_position.clmdata(i));

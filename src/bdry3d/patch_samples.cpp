@@ -778,8 +778,10 @@ Vec refine_function(int dof, Vec function,
 
     // for each refined patch, interpolate values from parent patch values 
     // TODO vectorize somehow to do a single interpolation per coarse patch
-    for(auto patch : fine_surf->patches()){
-        auto subpatch = FaceMapSubPatch::as_subpatch(patch);
+#pragma omp parallel for
+    for(int pi = 0; pi < fine_surf->num_patches(); pi++){
+        auto subpatch = fine_surf->subpatch(pi);
+        //auto subpatch = FaceMapSubPatch::as_subpatch(patch);
         int child_id = subpatch->V();
         int parent_id = subpatch->_coarse_parent_patch;
 

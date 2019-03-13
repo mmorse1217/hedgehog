@@ -1121,9 +1121,13 @@ void run_coarse_fmm(unique_ptr<SolverGMRESDoubleLayer>& solver,
     fmm->initialize_fmm(solver->patch_samples()->sample_point_3d_position(),
             solver->patch_samples()->sample_point_normal(),
             solver->patch_samples()->sample_point_3d_position(), k);
+    int64_t n;
+    VecGetSize(solver->patch_samples()->sample_point_3d_position(), &n);
+    n /= DIM;
     double fmm_benchmark_time = omp_get_wtime();
     fmm->evaluate(boundary_data, computed_potential);
     stats.add_result("FMM benchmark time", omp_get_wtime() - fmm_benchmark_time);
+    cout << "Reference FMM size: " << n << " sources, " << n << "targets: time " << omp_get_wtime() - fmm_benchmark_time  << endl;
     VecDestroy(&computed_potential);
 
 }
@@ -1693,15 +1697,16 @@ void solver_test_base_options(){
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-dom", "0");
     Options::set_value_petsc_opts("-bdtype", "2");
-    Options::set_value_petsc_opts("-bis3d_np", "12");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
+    Options::set_value_petsc_opts("-bis3d_np", "16");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "8000");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
     Options::set_value_petsc_opts("-bis3d_spacing", ".04");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".05");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01");
     
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".05");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
     // For 7 digits but stagnating
     //Options::set_value_petsc_opts("-bis3d_spacing", ".04");
@@ -1715,6 +1720,13 @@ void solver_test_base_options(){
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
 
+    // 3/7/19: stagnating at 7 digits with one level upsample: need two with
+    // lower quad order
+    Options::set_value_petsc_opts("-upsampling_type", "uniform");
+    Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
 
 }
 

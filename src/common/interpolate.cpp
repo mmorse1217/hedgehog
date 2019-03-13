@@ -1,6 +1,6 @@
 #include "interpolate.hpp"
 #include "vecmatop.hpp"
-
+#include <pvfmm/profile.hpp>
 BEGIN_EBI_NAMESPACE
 using namespace Interpolate;
 
