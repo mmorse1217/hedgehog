@@ -324,19 +324,36 @@ void laplace_sldl_pvfmm(
   vec trgv(trg,trg + DIM*ntrg);
   vec potv(target_dof*ntrg);
   vec empty;
-
+    std::cout << "dense_eval: " << ctx->dense_eval << ", " << 
+     "rebuild_tree: " << rebuild_tree << ", " << int(ctx->tree == NULL) <<std::endl;
   if(ctx->dense_eval){
     int omp_p=omp_get_max_threads();
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(int i=0;i<omp_p;i++){
       size_t a=( i   *ntrg)/omp_p;
       size_t b=((i+1)*ntrg)/omp_p;
 
-
-      ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
-              dl_denv.data(), 1,
-              trgv.data() + a*3, b-a,
-              potv.data()+a*ctx->ker->ker_dim[1],NULL);
+      if( ctx->sl ){
+          /*ctx->ker->ker_poten(sl_srcv.data(), sl_nsrc,
+                  sl_denv.data(), 1,
+                  trgv.data(), ntrg,
+                  potv.data()+ctx->ker->ker_dim[1],NULL);*/
+          ctx->ker->ker_poten(sl_srcv.data(), sl_nsrc,
+                  sl_denv.data(), 1,
+                  trgv.data() + a*3, b-a,
+                  potv.data()+a*ctx->ker->ker_dim[1],NULL);
+      }else { 
+          /*
+          ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
+                  dl_denv.data(), 1,
+                  trgv.data(), ntrg,
+                  potv.data(),NULL);
+                      */
+          ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
+                  dl_denv.data(), 1,
+                  trgv.data() + a*3, b-a,
+                  potv.data()+a*ctx->ker->ker_dim[1],NULL);
+      }
     }/*
       ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
               dl_denv.data(), 1,

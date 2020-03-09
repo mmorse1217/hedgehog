@@ -48,7 +48,7 @@
 -neumann 1
 -results on_surface_eval_test_with_solve_results.csv
 
--dump_data false
+-dump_data true
 
 -near_zone_proxy .5
 -target_accuracy 1e-4

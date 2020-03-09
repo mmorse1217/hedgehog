@@ -7,7 +7,7 @@
 #include "deps/petsc/petsc.hpp"
 #include <geogram/basic/common.h>
 #include "bdry3d/geogram_interface.hpp"
-#include <pvfmm/profile.hpp>
+#include <profile.hpp>
 using namespace std;
 using namespace Ebi;
 
@@ -32,7 +32,7 @@ int main( int argc, char**  argv ) {
     int result = Catch::Session().run( argc, argv );
     cerr << "finished tests! " << endl;
     if(profile){
-        pvfmm::Profile::print(&PETSC_COMM_WORLD);
+        //pvfmm::Profile::print(&PETSC_COMM_WORLD);
     }
 
     return result;

@@ -343,3 +343,70 @@ TEST_CASE("Debug evaluation memory leak", "[eval][debug][memory]"){
 
 }
  
+TEST_CASE("stampede test", "[solver][stampede]"){
+    PatchSurfFaceMap* surface;
+    SolverGMRESDoubleLayer* solver;
+    MPI_Comm comm;
+    Vec solved_density;
+    Vec boundary_data;
+
+    comm = MPI_COMM_WORLD;
+    //PetscOptionsInsertFile(comm, NULL, "opt/morse_cases_vessel_debug.opt", PETSC_TRUE);
+    Options::set_value_petsc_opts("-kt","311");
+    Options::set_value_petsc_opts("-dom", "0"); // 1 exterior problem, 0 interior problem
+    Options::set_value_petsc_opts("-bdtype", "2"); // blended surface
+    //Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/vessel_section_scaling_debug.wrl"); // small vessel
+    //Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/vessel_section_scaling_debug.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/two_cube.wrl"); // single cube
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/two_cube.wrl");
+    //Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/pipe.wrl"); // small vessel
+    //Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/pipe.wrl");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".2"); // for test
+    Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "2");
+    Options::set_value_petsc_opts("-bd3d_facemap_adaptive", "0");
+    Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "1");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01666");
+    //Options::set_value_petsc_opts("-bis3d_ptsmax", "1000000000");
+    
+    surface = new PatchSurfFaceMap("BD3D_", "bd3d_");
+    surface->_surface_type = PatchSurfFaceMap::BLENDED;
+    surface->setFromOptions();
+    surface->setup();
+    surface->_coarse = true;
+    surface->refine_test();
+    //surface->refine_uniform(2);
+    Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
+    
+    solver = new SolverGMRESDoubleLayer(surface);
+    solver->set_evaluation_type(EXTRAPOLATION_AVERAGE);
+    solver->_compute_refined_surface = true;
+    solver->eqcoefs() = vector<double>(2,1.0);
+    solver->eqcoefs()[1] = .4;
+    solver->setFromOptions();
+    solver->setup();
+    //std::cout<<"solver setup\n";
+
+    // boundary data
+    int sample_dof, pole_dof, total_num_dof;
+    solver->localSize(sample_dof,pole_dof,total_num_dof);
+    Petsc::create_mpi_vec(solver->mpiComm(),
+            total_num_dof,
+            boundary_data);
+    VecSet(boundary_data, 1.);
+    
+    Petsc::create_mpi_vec(solver->mpiComm(),
+            total_num_dof,
+            solved_density);
+    VecSet(solved_density, 0.);
+
+    solver->solve(boundary_data, solved_density);
+
+    // clean
+    if(surface)
+        delete surface;
+    if(solver)
+        delete solver;
+    Petsc::destroy_vec(boundary_data);
+    Petsc::destroy_vec(solved_density);
+}

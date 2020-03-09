@@ -7,7 +7,7 @@ declare -a test_cases=("test_solver_convergence_qbkix"
                 "test_adaptive"
                 )
 declare -a domains=("solve/cube" "const_density/cube" "cube" "sphere" "pipe" "ttorus2" "new_ppp" "newtorus" 
-                "half_donut" "hourglass" "nearly_touching" "comb2" "closed_octopus")
+                "half_donut" "larger_vessel_section2" "nearly_touching" "comb2" "closed_octopus")
                 
 declare -a kernels=("laplace" "stokes" "navier")
 
@@ -24,3 +24,4 @@ do
     done
 done
 mkdir -p "output/plots"
+mkdir -p "output/quadrature_data"

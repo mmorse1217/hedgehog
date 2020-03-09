@@ -51,16 +51,19 @@ double PvFMM::scale_sources_and_targets(vec sources, vec targets){
             bbox_half_width = fabs(x) > bbox_half_width ? fabs(x) : bbox_half_width;
         }
    }
-
+    double help;
     MPI_Allreduce(&bbox_half_width, //send
-            &bbox_half_width, //recieve
+            &help, //recieve
             1,
             MPI_DOUBLE,
             MPI_MAX,
             MPI_COMM_WORLD);
+    int r;
+    MPI_Comm_rank(PETSC_COMM_WORLD, &r);
+    cout << "bbox_half_width rank " << r << ", " << help<< endl;
     // increase scaling by a small amount to ensure points are strictly
     // contained in [0,1)^3 instead of [0,1]^3
-    bbox_half_width = bbox_half_width +  eps;
+    bbox_half_width = help+  eps;
     // Now rescale all sources and targets to by  twice this value (half-width
     // *2 = width) and translate by (min_x, min_y, min_z) to bring points 
     // within in the box [-.5,.5]^3, and translate by (.5, .5, .5) to move unit

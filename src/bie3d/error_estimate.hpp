@@ -41,7 +41,8 @@ namespace ErrorEstimate {
         imaginary operator()(imaginary t){
             imaginary I(0., 1.);
             imaginary theta_t = theta(t);
-            return I*_r*(cos(theta_t) + I*sin(theta_t)-1.);
+            //return I*_r*(cos(theta_t) + I*sin(theta_t)-1.);
+            return I*_r*(exp(I*theta_t)-1.);
         }
 
         imaginary derivative(imaginary t){
@@ -49,7 +50,8 @@ namespace ErrorEstimate {
             double a = .5;
             imaginary I(0., 1.);
             imaginary theta_t = a*t/_r;
-            return I*a*(-sin(theta_t) + I*cos(theta_t));
+            //return I*a*(-sin(theta_t) + I*cos(theta_t));
+            return -a*exp(I*theta_t);
         }
 
         imaginary second_derivative(imaginary t){
@@ -125,9 +127,11 @@ namespace ErrorEstimate {
             OnSurfacePoint closest_point, int quadrature_order, 
             DblNumMat uv_values, DblNumMat density_values);
     
-    double evaluate_near_zone_distance(double curvature,
+    double evaluate_near_zone_distance_legacy(double curvature,
             double density_magnitude, double target_error,
             int quadrature_order, int m=1, double eps=1e-5);
+    
+    double evaluate_near_zone_distance(FaceMapSubPatch* patch);
 }
 
 END_EBI_NAMESPACE

@@ -487,16 +487,27 @@ void set_target_potential(unique_ptr<SolverGMRESDoubleLayer>& solver,
 
             if(Options::get_int_from_petsc_opts("-bdtype") == 2){
                 assert(closest_on_surface_points.m() == num_target_points);
+                bool is_interior_problem = Options::get_int_from_petsc_opts("-dom") == 0;
                 for(int i =0 ; i <closest_on_surface_points.m(); i++){
                     OnSurfacePoint on_surface_point = closest_on_surface_points(i);
                     if(on_surface_point.region == NEAR)
                     assert(i == on_surface_point.target_index);
-                    if(on_surface_point.inside_domain == INSIDE || on_surface_point.inside_domain == ON_SURFACE){
-                        true_potential_value = 1.;
-                    } else if (on_surface_point.inside_domain == OUTSIDE){
-                        true_potential_value = 0.;
-                    } else {
-                        assert(0);
+                    if(is_interior_problem){
+                        if(on_surface_point.inside_domain == INSIDE || on_surface_point.inside_domain == ON_SURFACE){
+                            true_potential_value = 1.;
+                        } else if (on_surface_point.inside_domain == OUTSIDE){
+                            true_potential_value = 0.;
+                        } else {
+                            assert(0);
+                        }
+                    } else{
+                        if(on_surface_point.inside_domain == INSIDE|| on_surface_point.inside_domain == ON_SURFACE){
+                            true_potential_value = 0.;
+                        } else if (on_surface_point.inside_domain == OUTSIDE){
+                            true_potential_value = -1.;
+                        } else {
+                            assert(0);
+                        }
                     }
 
                     for(int d =0; d < target_dof; d++){
@@ -995,7 +1006,7 @@ Vec interpolated_density;
         case EvaluationScheme::SMOOTH_QUAD:
 
             solver->fareval(targets, VAR_U, solved_density, computed_potential);
-            VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
+            //VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
             break;
 
             //  - near-singular quadrature
@@ -1014,11 +1025,11 @@ Vec interpolated_density;
             solver->roneval(targets,
                     target_as_face_point, // wrong for general targets!
                     VAR_U, solved_density, computed_potential);
-            { // dump potential values for debugging
+            /*{ // dump potential values for debugging
                 string s = string("explicit_eval_potential.vtp");
                 write_general_points_to_vtk(solver->patch_samples()->sample_point_3d_position(), 1, 
                         s, computed_potential, "output/");
-            }
+            }*/
 
             // compute interior value
            VecAXPY(computed_potential, .5, solved_density);
@@ -1124,6 +1135,7 @@ void run_coarse_fmm(unique_ptr<SolverGMRESDoubleLayer>& solver,
     int64_t n;
     VecGetSize(solver->patch_samples()->sample_point_3d_position(), &n);
     n /= DIM;
+    fmm->evaluate(boundary_data, computed_potential);
     double fmm_benchmark_time = omp_get_wtime();
     fmm->evaluate(boundary_data, computed_potential);
     stats.add_result("FMM benchmark time", omp_get_wtime() - fmm_benchmark_time);
@@ -1141,6 +1153,10 @@ void run_test(PatchSurf* surface,
     Vec solved_density;
 
     auto solver = setup_solver(surface, test_type.solver_matvec_type);
+    /*{
+    write_general_points_to_vtk(solver->patch_samples()->sample_point_3d_position(), DIM, 
+        "_points_and_normals", solver->patch_samples()->sample_point_normal(), "data/");
+    }*/
 
     NumVec<OnSurfacePoint> closest_points;
     setup_target_data(solver, test_type, targets, closest_points, 
@@ -1525,11 +1541,11 @@ void test_gmres_solve_near_eval(
     }
     int is_adaptive = Options::get_int_from_petsc_opts("-adaptive");
     if(is_adaptive){
-        if (Test::get_domain() == "new_ppp"){
-            test.bc_type = BoundaryDataType::HARMONIC;
-            test.singularity_type= SingularityType::SINGLE;
-            test.single_singularity_location= Point3(0.,0.,0.);
-            Options::set_value_petsc_opts("-upsampling_type", "adaptive");
+        if (Test::get_domain() == "interlocking_torii_flip"){
+            test.bc_type = BoundaryDataType::CONSTANT_DENSITY;
+//test.singularity_type= SingularityType::SINGLE;
+            //test.single_singularity_location= Point3(0.,0.,.85);
+            //Options::set_value_petsc_opts("-upsampling_type", "adaptive");
         }
         
     }
@@ -1652,7 +1668,8 @@ void gmres_test_base_options(){
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".045");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".045");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".006666");
     Options::set_value_petsc_opts("-upsampling_type", "uniform");
     Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
@@ -1665,10 +1682,13 @@ void gmres_test_base_options(){
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-dom", "0");
     Options::set_value_petsc_opts("-bdtype", "2");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
+    Options::set_value_petsc_opts("-bis3d_np", "20");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "10000");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
+    Options::set_value_petsc_opts("-bis3d_spacing", "0.05");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
 }
 
 void solver_test_base_options(){
@@ -1697,8 +1717,8 @@ void solver_test_base_options(){
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-dom", "0");
     Options::set_value_petsc_opts("-bdtype", "2");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "8000");
+    Options::set_value_petsc_opts("-bis3d_np", "20");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "20000");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
     Options::set_value_petsc_opts("-bis3d_spacing", ".04");
@@ -1723,11 +1743,33 @@ void solver_test_base_options(){
     // 3/7/19: stagnating at 7 digits with one level upsample: need two with
     // lower quad order
     Options::set_value_petsc_opts("-upsampling_type", "uniform");
-    Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".0333");
     Options::set_value_petsc_opts("-bis3d_spacing", ".04");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00666");
+    
+    
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    if(Options::get_int_from_petsc_opts("-kt") == 111)
+    Options::set_value_petsc_opts("-bis3d_np", "20");
+    else
+    Options::set_value_petsc_opts("-bis3d_np", "16");
+    Options::set_value_petsc_opts("-bis3d_spacing", "0.05");
+    Options::set_value_petsc_opts("-bis3d_spacing", "0.0454545");
+    //Options::set_value_petsc_opts("-bis3d_spacing", "0.09090909");
+    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "2");
+    //Options::set_value_petsc_opts("-bis3d_spacing", "0.0588");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".066");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0111");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
 
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".015");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0025");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
 }
 
 
@@ -1779,6 +1821,12 @@ void setup_and_run_face_map_convergence_test(
     output_folder += Test::get_domain() + "/" + Test::get_kernel() + "/";
     for(int i = 0; i < num_iterations; i++){
         Options::set_value_petsc_opts("-debug_test_iter", to_string(i));
+        if(num_iterations == 1 && 
+                domain == "ttorus2.wrl" &&
+                kernel_enum == 311
+          ){
+            i = 3;
+        }
             unique_ptr<PatchSurfFaceMap> surface = setup_face_map(surface_type, i, ref_type);
             /*if(//output_folder == "output/test_greens_identity/" &&
                     domain == "cube.wrl" && kernel_enum == 111 && i > 3
@@ -1803,7 +1851,7 @@ void laplace_singluarity_cube(Vec samples, int dof,Vec& potential){
     for (int i = 0; i < potential_local.n(); i++) {
         //Point3 x(.05,.8,.05);
         //Point3 x(0., 2.,.0);
-        Point3 x(.7,0.,0.);
+        Point3 x(20.,0.,0.);
         //Point3 x( 0.0169549, 0.80484258, 0.00534813);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);

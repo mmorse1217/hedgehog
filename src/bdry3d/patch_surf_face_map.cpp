@@ -568,23 +568,22 @@ int FaceMapPatch::xy_to_patch_coords(double* xy, int flag, double* ret)
       // need to flip
           normal_flip = true;
        }
-      if(normal_flip){
+      /*if(normal_flip){
       // flip the normals by interchanging derivative order
      Point3* point_ret = (Point3*) ret;
      // flip the normals by interchanging derivative order
      Point3 temp = point_ret[1];
      point_ret[1] = point_ret[2];
      point_ret[2] = temp;
-      }
+      }*/
+      /*if(flag & EVAL_2ND_DERIV){
+     Point3* point_ret = (Point3*) ret;
+     Point3 temp = point_ret[3];
+     point_ret[3] = point_ret[5];
+     point_ret[5] = temp;
+
+      }*/
  
-  /*if(Options::get_int_from_petsc_opts("dom") == 1 &&// is exterior problem
-          flag & EVAL_FD // we're evaluating 1st derivatives
-          ){ 
-      // flip the normals by interchanging derivative order
-      Point3 temp = ret[1];
-      ret[1] = ret[2];
-      ret[2] = temp;
-  }*/
   }
   // MJM NOTE 4/18 this breaks for second derivatives, I think
 
@@ -667,8 +666,12 @@ PatchChildrenMap PatchSurfFaceMap::find_subpatches(
 void FaceMapPatch::principal_curvatures(Point2 xy, double& k1, double& k2){
     double H = mean_curvature(xy);
     double K = gaussian_curvature(xy);
-    k1 = H + sqrt(H*H-K);
-    k2 = H - sqrt(H*H-K);
+    double discriminant = H*H-K;
+    if(fabs(discriminant) <= 1e-5){
+        discriminant = fabs(discriminant);
+    }
+    k1 = H + sqrt(discriminant);
+    k2 = H - sqrt(discriminant);
 }
 
 END_EBI_NAMESPACE

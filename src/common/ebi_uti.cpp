@@ -145,6 +145,7 @@ bool is_quad_accurate_at_target(int q, double delta, double phi,
     //return delta > near_zone_approx_size(q, phi, max_jacobian, target_accuracy);
 }
 
+
 //Tale surface discretization and return radmult - this is optimum setup
 #undef __FUNCT__
 #define __FUNCT__ "radmult_spacing"

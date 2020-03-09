@@ -71,7 +71,7 @@ bool is_patch_valid(Vec function_values_at_children,
         double mean_curvature(Point2 xy);
         void principal_curvatures(Point2 xy, double& k1, double& k2);
         Point3 normal(double* xy);
-        double compute_near_zone_distance();
+        void compute_near_zone_distance();
 };
 
 END_EBI_NAMESPACE

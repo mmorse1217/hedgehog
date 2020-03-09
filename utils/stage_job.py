@@ -49,6 +49,9 @@ class Job(object):
 
         if self.epilogue is not None:
             self.epilogue     = os.path.abspath(self.epilogue)
+        
+        if self.prologue is not None:
+            self.prologue     = os.path.abspath(self.prologue)
 
     def __getattr__(self,name):
         return self._opts[name]
@@ -88,6 +91,7 @@ class Job(object):
         clp.add_argument('--memory'    , '-m' , help='Memory per node (GB if no unit)')
         clp.add_argument('--resources' , '-l' , help='Extra resources (copied verbatim)')
         clp.add_argument('--epilogue'  ,        help='Epilogue script to run after code')
+        clp.add_argument('--prologue'  ,        help='Prologue script to run before code')
 
         #setup (not for the queue manager)
         clp.add_argument('--no-bin'       , help='Skip copying binary file and symlink', action='store_true')
@@ -183,6 +187,11 @@ class Job(object):
                 self.epilogue = 'utils/epilogue.%s.sh' % self._qm
         else:
             if len(self.epilogue)==0: self.epilogue=None
+        
+        if self.prologue is not None:
+            if len(self.prologue) == 0:
+                # TODO determine sane default prologue when one is not specified?
+                self.prologue=None
 
     def pbs_args(self,files):
         args = []
@@ -204,6 +213,7 @@ class Job(object):
         epilogue = files.get('epilogue', None)
         if  epilogue is not None:
             args.append(('-l epilogue=', os.path.basename(epilogue)))
+        # TODO add pbs epilogue handling
 
         exe       = [('vars','-v ')]
         append_args(exe)
@@ -235,6 +245,11 @@ class Job(object):
         epilogue = files.get('epilogue', None)
         if  epilogue is not None:
             args.append(('--epilog ', os.path.basename(epilogue)))
+
+        prologue = files.get('prologue', None)
+        if  prologue is not None:
+            args.append(('--prolog ', os.path.basename(prologue)))
+
         if self.exclusive:
             args.append(('--exclusive', ''))
 
@@ -370,7 +385,7 @@ class Job(object):
                 'echo Environment variables:\nenv\n\n',
                 'CMD="%s"'%cmd,
                 'echo running ${CMD}',
-                '${CMD}',
+                'mpirun --mca btl self,sm,tcp ${CMD}',
                 ]
 
         else:
@@ -470,6 +485,14 @@ class Job(object):
             sp.call(['cp',self.epilogue,epilogue])
             os.chmod(epilogue,0755)
             files['epilogue'] = epilogue
+        
+        #prologue file
+        if self.prologue is not None:
+            prologue = os.path.basename(self.prologue)
+            prologue = os.path.join(self.init_dir,prologue)
+            sp.call(['cp',self.prologue,prologue])
+            os.chmod(prologue,0755)
+            files['prologue'] = prologue
         return files
 
     def prepare(self):

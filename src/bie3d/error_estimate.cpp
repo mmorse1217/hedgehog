@@ -3,6 +3,46 @@
 #include <sampling.hpp>
 BEGIN_EBI_NAMESPACE
 
+imaginary characteristic_function(imaginary z, int quadrature_order){
+    imaginary zstar(fabs(real(z)), fabs(imag(z)));
+    auto square_root_term = sqrt(zstar*zstar -1.);
+    auto square_root_term_qth_pow = pow(zstar + square_root_term, quadrature_order-1);
+    return 2./square_root_term_qth_pow*(1./square_root_term_qth_pow + 
+            4./pow(double(quadrature_order-1)*square_root_term,3));
+}
+
+
+
+imaginary singularity(double d, double k){
+    return imaginary(0., acosh(k*k*d*d + 2*k*d + 1/(2*k*d)));
+}
+
+imaginary evaluate_error_estimate_expression_single_term(imaginary curve_derivative, 
+        imaginary density_magnitude, imaginary t, 
+        int quadrature_order, double curvature, double distance_from_target, double L){
+    double phi = atan2(2./(curvature*curvature), 2.*distance_from_target/curvature);
+    imaginary pole = curvature/2.*t + phi; // OFF BY A FACTOR OF TWO
+    imaginary value = characteristic_function(t, quadrature_order)*fabs(curve_derivative)*fabs(density_magnitude)/sin(pole);
+    return value;
+}
+double evaluate_error_estimate_expression(double L, double distance_from_target, int quadrature_order,
+        double curvature,
+        imaginary t, imaginary curve_derivative, imaginary density_magnitude, 
+        imaginary t_conj, imaginary curve_derivative_conj, imaginary density_magnitude_conj){
+    double norm_z = abs(distance_from_target)/L;
+    distance_from_target /= L;
+    curvature *= L;
+
+    return 1./(4.*M_PI*M_PI*norm_z)*(
+            abs( evaluate_error_estimate_expression_single_term(curve_derivative_conj, 
+                density_magnitude_conj, t_conj, quadrature_order, curvature, distance_from_target, L) ) + 
+            abs( evaluate_error_estimate_expression_single_term(curve_derivative, 
+                density_magnitude, t, quadrature_order, curvature, distance_from_target, L)  )
+            );
+
+}
+
+
 ComplexNumVec ErrorEstimate::compute_pullback(
         DblNumMat target_points,
         NumVec<OnSurfacePoint> closest_points,
@@ -58,18 +98,24 @@ void sample_patch_along_direction(int num_samples, Point2 uv_direction,
     
     // TODO add check for divisions by zero.
     vector<double> parameter_domain_intercepts;
-    if (fabs(u_star) < 1e-12){
-        // vertical vector
-        parameter_domain_intercepts = {
-            -v_0/v_star, (1.-v_0)/v_star
-        };
+    bool is_vertical = fabs(u_star) < 1e-12;
+    bool is_horizontal = fabs(v_star) < 1e-12;
+    if (is_vertical || is_horizontal){ 
+        // note only one should be zero for a given direction
+        if (is_vertical){
+            parameter_domain_intercepts = {
+                -v_0/v_star, (1.-v_0)/v_star
+            };
 
-    } else if (fabs(v_star) < 1e-12){
-        // horizontal vector
-        parameter_domain_intercepts = {
-            -u_0/u_star, (1.-u_0)/u_star
-        };
+        } else {
+            // horizontal vector
+            parameter_domain_intercepts = {
+                -u_0/u_star, (1.-u_0)/u_star
+            };
+        }
     } else {
+        // check all four possible end points to see which lands in [0,1]^2
+        // only keep the ones that do
         vector<double> test_values = {
             -u_0/u_star, (1.-u_0)/u_star, 
             -v_0/v_star, (1.-v_0)/v_star
@@ -83,8 +129,8 @@ void sample_patch_along_direction(int num_samples, Point2 uv_direction,
             }
         }
         // edge case: diagonal line, all points inside the domain
-        // solution: choose any two unique points from either end
         if(parameter_domain_intercepts.size() == 4){
+            // solution: choose any two unique points from either end
             vector<double> temp;
             set<double> value_set(parameter_domain_intercepts.begin(), 
                     parameter_domain_intercepts.end());
@@ -113,9 +159,6 @@ void sample_patch_along_direction(int num_samples, Point2 uv_direction,
     // actually sample along line over specified interval
     double step_size = (sampling_interval.y() - sampling_interval.x())/double(num_samples-1);
 
-    //DblNumMat samples_along_line(3, num_samples);
-    // TODO sampling is incorrect; need to start sampling at
-    // parameter_domain_intercepts[0] i think
     for (int i = 0; i < num_samples; i++) {
         double t = i*step_size;
         Point2 uv_along_line = point_preimage + (sampling_interval.x() + t)*uv_direction;
@@ -164,6 +207,12 @@ imaginary pullback_newton(double curvature, // unneeded, assumed to be on [-1,1]
     return ti_plus_one;
     
 }
+
+imaginary pullback_exact(double curvature, // unneeded, assumed to be on [-1,1]
+        double distance_to_target){
+    return singularity(curvature, distance_to_target);
+}
+
 imaginary ErrorEstimate::compute_pullback_under_patch(
         Point3 target,
         OnSurfacePoint closest_point,
@@ -208,6 +257,7 @@ imaginary ErrorEstimate::compute_pullback_under_patch(
         distance_from_target *= -1.;
     }*/
     return pullback_newton(k*L, distance_from_target/L, 1e-7);
+    //return pullback_exact(k*L, distance_from_target/L);
 }
 
 DblNumMat ErrorEstimate::push_forward(
@@ -262,8 +312,35 @@ DblNumMat ErrorEstimate::push_forward(
     return points;
 }
 
+ComplexNumMat density_to_complex(DblNumMat density_values, int quadrature_order){
+    int density_dof = density_values.m();
+    ComplexNumMat complex_densities(density_dof, quadrature_order);
+    imaginary r(1., 0.);
+    for (int i = 0; i < quadrature_order; i++) {
+        for (int k = 0; k < density_dof; k++) {
+            complex_densities(k,i) = r*density_values(k,i);
+        }
+    }
+    return complex_densities;
+}
 
-double evaluate_error_estimate_expression(double curve_derivative, 
+ComplexNumVec imaginary_chebyshev_sampling(int quadrature_order){
+
+    DblNumVec uv_float(quadrature_order, true, 
+            Sampling::sample_1d<Sampling::chebyshev1>(quadrature_order, 
+                Rectangle(Interval(0.,1.), Interval(0., 1.))).data() );
+            
+    //      ii. convert to complex (data type are different size so no memcpy)
+    ComplexNumVec uv(quadrature_order);
+    for (int i = 0; i < quadrature_order; i++) {
+        uv(i) = imaginary(uv_float(i), 0.);
+    }
+    return uv;
+}
+
+
+
+double evaluate_error_estimate_expression_legacy(double curve_derivative, 
         double density_magnitude, imaginary t, 
         int quadrature_order, int m=1){
     
@@ -283,7 +360,65 @@ double evaluate_error_estimate_expression(double curve_derivative,
 
 }
 
-double ErrorEstimate::evaluate_near_zone_distance(double curvature,
+
+//double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 target, 
+//        OnSurfacePoint closest_point, int quadrature_order, 
+//       DblNumMat uv_values, DblNumMat density_values){
+double ErrorEstimate::evaluate_near_zone_distance( FaceMapSubPatch* patch){
+    OnSurfacePoint closest_point(patch->V(), DBL_MAX, Point2(.5, .5), UNMARKED,  0);
+    closest_point.inside_domain = INSIDE;
+
+    double target_accuracy = Options::get_double_from_petsc_opts("-target_accuracy");
+    
+    double L = patch->characteristic_length();
+    double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
+    int quadrature_order = int(floor(1./spacing))+1;
+    
+    DblNumMat density_values(1, quadrature_order*quadrature_order);
+    setvalue(density_values, 1.);
+    DblNumMat uv_values(2, quadrature_order*quadrature_order, true, 
+            Sampling::sample_2d<Sampling::chebyshev2>(quadrature_order, Sampling::base_domain).data());
+    auto error = [&patch, &closest_point, &uv_values, &density_values, 
+                     quadrature_order, L] (double distance)-> double {
+            Point3 sample;
+            patch->xy_to_patch_coords(closest_point.parametric_coordinates.array(), 
+                PatchSamples::EVAL_VL, sample.array());
+            Point3 normal = patch->normal(closest_point.parametric_coordinates.array());
+            Point3 target = sample - distance*normal;
+            closest_point.distance_from_target = distance;
+            return evaluate_error_estimate(patch, target,
+                    closest_point, quadrature_order, uv_values, density_values);
+        };
+
+    // assumes target_error > 1e-11 and that 1e-11 is achieved two patch lengths
+    // away. therefore error(0.) - target_error \approx 1 and 
+    // error(2.) - target_error < 0. Root is between, so we apply bisection
+    double upper_bound = 2.;
+    double lower_bound = 0.;
+
+    int i =0; 
+    
+    // random initialization to get in the while loop...
+    double midpoint_prev = 10.;
+    double midpoint = 3.;
+    while( i < 30  && fabs(midpoint - midpoint_prev)/fabs(midpoint_prev) >= target_accuracy){
+        midpoint_prev = midpoint;
+        midpoint = (upper_bound + lower_bound)/2.;
+        double error_at_mipoint = error(midpoint);
+        if(fabs(error_at_mipoint -target_accuracy)/fabs(target_accuracy) < 1e-2){
+            return midpoint;
+        } else if(error_at_mipoint - target_accuracy > 0){
+            lower_bound = midpoint;
+        } else {
+            upper_bound = midpoint;
+        }
+        i++;
+    }
+    return (lower_bound+ upper_bound)/2.;
+    
+
+}
+double ErrorEstimate::evaluate_near_zone_distance_legacy(double curvature,
         double density_magnitude, double target_error,
         int quadrature_order, int m, double eps){
 
@@ -293,7 +428,7 @@ double ErrorEstimate::evaluate_near_zone_distance(double curvature,
                      quadrature_order, m] (double t)-> double {
             imaginary imag_t(0., t);
             double curve_deriv = fabs(c.derivative(imag_t));
-            return evaluate_error_estimate_expression(curve_deriv, 
+            return evaluate_error_estimate_expression_legacy(curve_deriv, 
                     density_magnitude, imag_t, quadrature_order, m);
         };
     // note that derivative of objective function matches the derivative of c
@@ -302,6 +437,7 @@ double ErrorEstimate::evaluate_near_zone_distance(double curvature,
     // TODO refactor newton out of objective function set up somehow
     // issue is how to wrap function pointer to CircleArc and lambdas
     // consistently.
+    // TODO searhc in log space
     double upper_bound = 1.;
     double lower_bound = 0.;
     
@@ -319,9 +455,6 @@ double ErrorEstimate::evaluate_near_zone_distance(double curvature,
     
 }
 
-
-
-
 double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
         CurvatureDirection curvature_direction, Point3 target, 
         OnSurfacePoint closest_point,
@@ -331,18 +464,20 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
     double k1, k2;
     patch->principal_curvatures(closest_point.parametric_coordinates,k1,k2);
     double k = curvature_direction == CurvatureDirection::FIRST ? k1 : k2;
-    //cout << "rad of curvature: " << k << ", " << closest_point.distance_from_target<< endl;
     if(closest_point.distance_from_target >.85/fabs(k) && k < 0){
         // assume point is far if it's near the radius of curvature where the
         // pullback breaks down.
         return 1e-12;
     }
-
+    // TODO replace with exact pullback
     imaginary target_pullback= ErrorEstimate::compute_pullback_under_patch(
             target, closest_point, curvature_direction, patch);
-    
-    //cout << "target:" << target << ", target_pullback: " << target_pullback << endl;
+    imaginary target_pullback_conj = conj(target_pullback);
 
+    ComplexNumMat complex_densities = density_to_complex(density_values, quadrature_order);
+    int density_dof = complex_densities.m();
+    ComplexNumVec uv = imaginary_chebyshev_sampling(quadrature_order);
+    /*
     int density_dof = density_values.m();
     ComplexNumMat complex_densities(density_dof, quadrature_order);
     imaginary r(1., 0.);
@@ -350,9 +485,10 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
         for (int k = 0; k < density_dof; k++) {
             complex_densities(k,i) = r*density_values(k,i);
         }
-    }
+    }*/
     //   b. compute param values of density 
     //      i. sample as float
+    /*
     DblNumVec uv_float(quadrature_order, true, 
             Sampling::sample_1d<Sampling::chebyshev1>(quadrature_order, 
                 Rectangle(Interval(0.,1.), Interval(0., 1.))).data() );
@@ -361,8 +497,9 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
     ComplexNumVec uv(quadrature_order);
     for (int i = 0; i < quadrature_order; i++) {
         uv(i) = imaginary(uv_float(i), 0.);
-    }
-    //   c. interpolate the boundary data on the panel to the target point
+    }*/
+    
+    //   c. interpolate the boundary data on the panel to the target point...
     ComplexNumVec weights = 
         Interpolate::compute_barycentric_weights_1d<imaginary>(uv);
 
@@ -370,25 +507,27 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
         Interpolate::evaluate_barycentric_interpolant_1d<imaginary>(
                  uv, weights, complex_densities, 
                  ComplexNumVec(1, false, &target_pullback));
+    
+    // ... and at its conjugate location 
+    ComplexNumMat density_at_target_conj =
+        Interpolate::evaluate_barycentric_interpolant_1d<imaginary>(
+                 uv, weights, complex_densities, 
+                 ComplexNumVec(1, false, &target_pullback_conj));
     assert(density_at_target.n() == 1); 
     
     double L = patch->characteristic_length();
     CircleArc arc(k*L);
+    // Evaluate curve derivative at target point and at its conjugate
     imaginary curve_deriv_at_target = arc.derivative(target_pullback);
+    imaginary curve_deriv_at_target_conj = arc.derivative(target_pullback_conj);
 
-    /*cout << "curve_deriv_at_target: " << curve_deriv_at_target << endl;
-    cout << "complex_densities: " << complex_densities << endl;
-    cout << "density_at_target(i,0): " << density_at_target(0,0) << endl;
-    cout << "target_pullback: " << target_pullback << endl;*/
-    //cout << "curvature: " << k<< endl;
     double max_error_estimate = 0.;
     for (int i = 0; i < density_dof; i++) {
-        double ith_error_estimate = evaluate_error_estimate_expression(
-            abs(curve_deriv_at_target), 
-            abs(density_at_target(i,0)), 
-            target_pullback, quadrature_order);
-        //ith_error_estimate /= closest_point.distance_from_target/L;
-        max_error_estimate = max(max_error_estimate, ith_error_estimate);
+        
+        double error = evaluate_error_estimate_expression(L, closest_point.distance_from_target, quadrature_order, k,
+                target_pullback, curve_deriv_at_target, density_at_target(i,0), 
+                target_pullback_conj, curve_deriv_at_target_conj, density_at_target_conj(i,0));
+        max_error_estimate = max(max_error_estimate, error);
     }
     return max_error_estimate;
 
@@ -397,10 +536,6 @@ double ErrorEstimate::evaluate_error_estimate_on_patch( FaceMapSubPatch* patch,
 double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 target, 
         OnSurfacePoint closest_point, int quadrature_order, 
         DblNumMat uv_values, DblNumMat density_values){
-    // 1. evaluate the boundary data at the computed preimage
-    //   a. interpolate the boundary data on the panel
-    // need to prove that we can get away with interpolating |density| values 
-    // instead of just density values. should be ok
     assert(uv_values.n() == quadrature_order*quadrature_order);
     assert(density_values.n() == quadrature_order*quadrature_order);
     // MJM TODO possible bug: currently assuming density values are sampled from
@@ -410,15 +545,17 @@ double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 ta
     // Need to properly remap [-1,1] to the domain sampled in 
     // sample_patch_along_direction(), or target param value to [-1,1].
     // Testing without this for now to see what explodes
-    double max_error = 0.; // fully accurate, error will always be positive 
+    double total_error = 0.; // fully accurate, error will always be positive 
     
     for(auto dir_type : { CurvatureDirection::FIRST, CurvatureDirection::SECOND } ){
-        //cout << closest_point.parametric_coordinates << endl;
-        //cout << "compute curvature" << endl;
         Point2 curvature_dir = 
             compute_principal_curvature_direction(closest_point, patch, dir_type);
 
-        //cout << "sample along curv. dir." << endl;
+        // 1. evaluate the boundary data at the computed preimage
+        //   a. interpolate the boundary data on the panel
+        // need to prove that we can get away with interpolating |density| values 
+        // instead of just density values. should be ok 1/20 MJM i think this
+        // doesn't apply anymore
         DblNumMat samples_along_line(3, quadrature_order);
         DblNumMat uv_values_line(2, quadrature_order);
         sample_patch_along_direction(quadrature_order, curvature_dir, 
@@ -442,12 +579,12 @@ double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 ta
         imaginary target_imag(0., closest_point.distance_from_target/L);
         CircleArc arc(k*L);*/
         //cout << "compute error estimate on arc" << endl;
+        
         double error_estimate = ErrorEstimate::evaluate_error_estimate_on_patch(
                 patch, dir_type, target, closest_point, quadrature_order, density_values_along_line);
-
-        max_error = max(max_error, error_estimate);
+        total_error += error_estimate;
     }
-    return max_error;
+    return total_error;
 }
 
 END_EBI_NAMESPACE

@@ -360,7 +360,7 @@ int BlendedPatch::xy_to_patch_coords(double* xy, int flag, double* ret)
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
 
   // TODO exterior problems on multiply connected domains is likely broken
-  assert(Options::get_int_from_petsc_opts("-dom") == 0);
+  //assert(Options::get_int_from_petsc_opts("-dom") == 0);
 
   //int f;  double cd[2];		iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) );
   //ebiAssert(cd[0]<bdsurf.EVAL_UB() && cd[1]<bdsurf.EVAL_UB()); //assure it is good

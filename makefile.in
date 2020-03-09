@@ -36,7 +36,7 @@ PETSC_LIB = ${PETSC_DIR}/${PETSC_ARCH}/lib
 
 #PvFMM
 PVFMM_INC = ${PVFMM_DIR}/include utils/pvfmm-utils/
-PVFMM_LIB = ${PVFMM_DIR}/lib/pvfmm utils/pvfmm-utils/
+PVFMM_LIB = ${PVFMM_DIR}/lib utils/pvfmm-utils/
 
 MPI_INC = ${MPI_HOME}/include
 MPI_LIB = ${MPI_HOME}/lib
@@ -52,7 +52,8 @@ VTK_LIBS_TO_LINK = -lvtkIOXML-7.1 -lvtkChartsCore-7.1 -lvtkCommonDataModel-7.1 -
 #aggregate
 DEPS_INC = ${SURFACE_INC} ${SC_INC} ${P4EST_INC} ${FFTW_INC} ${PETSC_BUILD_INC} ${PVFMM_INC} ${MPI_INC} ${VTK_INC} ${GEOGRAM_INC}
 DEPS_LIB = ${SURFACE_LIB} ${SC_LIB} ${P4EST_LIB} ${FFTW_LIB} ${PETSC_LIB} ${PVFMM_LIB} ${MPI_LIB} ${FORTRAN_LIB} ${VTK_LIB} ${GEOGRAM_LIB}
-DEPS_LIB_FLAGS = -lpatchwork -lblend -lsc -lp4est -lfftw3 -lpvfmmwrap -lpvfmm -lpetsc -lgfortran -lexpat -lblas -llapack -fopenmp -lmpi -lm ${VTK_LIBS_TO_LINK} -lgeogram
+DEPS_LIB_FLAGS = -lpatchwork -lblend -lsc -lp4est -lfftw3 -lpvfmmwrap -lpvfmm -lpetsc -lgfortran -lexpat -lblas -llapack -fopenmp -lmpi -lm ${VTK_LIBS_TO_LINK} -lgeogram 
+#-lgomp
 #DEPS_LIB_FLAGS = -lfacemap -lblend -lsc -lp4est -lfftw3 -lpvfmm -lpvfmmwrap -lpetsc -lgfortran -lexpat -lblas -llapack -lgomp -lmpi -lm ${VTK_LIBS_TO_LINK}
 HEDGEHOG_INC = -I/usr/include -Isrc/ ${DEPS_INC:%=-I%}
 HEDGEHOG_LIB =   ${DEPS_LIB:%=-L%} ${DEPS_LIB_FLAGS}

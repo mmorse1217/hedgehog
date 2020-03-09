@@ -1,11 +1,11 @@
 -include $(PVFMM_DIR)/MakeVariables
-#VENDOR   = intel
+VENDOR   = intel
 
 FFLAGS   = -lstfmm3d -lgfortran -mkl -static-intel -openmp -lmath
 INCDIR   = -I${PVFMM_DIR}/include -I. -I${FFTW_DIR}/include -I${MPI_HOME}/include
 
 CXX      = ${HEDGEHOG_CXX}
-CXXFLAGS =  ${INCDIR} -fopenmp -DALLTOALLV_FIX -O3 -mavx
+CXXFLAGS =  ${INCDIR} -qopenmp -DALLTOALLV_FIX -O3 -std=c++11 -qno-offload
 
 LDLIBS  := -L${PVFMM_LIB} -L${FFTW_DIR}/lib  -L${FFTW_DIR}  ${LDFLAGS_PVFMM}
 

@@ -53,8 +53,8 @@ TEST_CASE("Generate data for qbkix schematic", "[results][images][schematic]"){
     
     DblNumMat t(3,target);
     t(0,0) = 0.1;
-    t(1,0) = .64;
-    t(2,0) = .5;
+    t(1,0) = .68;
+    t(2,0) = .53;
     
     vector<int> qbkix_ids;
     for (int i = 0; i < 6; i++) {
@@ -247,22 +247,23 @@ TEST_CASE("Generate data for test cases", "[results][images][tests]"){
         Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
         Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor","2");
         setup_test_case_and_singularities();
-    }
+    }*/
     SECTION("ttorus2"){
         Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/ttorus2.wrl"); // blob
         Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/ttorus2.wrl");
         setup_test_case_and_singularities();
     }
+    /*
     SECTION("pipe"){
         Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/pipe.wrl"); // blob
         Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/pipe.wrl");
         setup_test_case_and_singularities();
-    }*/
+    }
     SECTION("newtorus"){
         Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/newtorus.wrl"); // blob
         Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/newtorus.wrl");
         setup_test_case_and_singularities();
-    }
+    }*/
 
 }
 

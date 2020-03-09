@@ -2,7 +2,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "common/vtk_writer.hpp"
 #include "common/stats.hpp"
-#include "pvfmm/profile.hpp"
+#include "profile.hpp"
 BEGIN_EBI_NAMESPACE
 
 int EvaluatorQBKIX::setup(){
@@ -29,7 +29,8 @@ int EvaluatorQBKIX::setup(){
                          _refined_patch_samples->sample_point_normal(),
                          _aux_interpolation_points,
                          this->knl());
-    /*
+    
+    if(dynamic_cast<PatchSurfFaceMap*>(_patch_samples->bdry()) == NULL){
   _collocation_data->distribute_collocation_points(
                 _closest_sample_3d_position,
                 _closest_sample_as_face_point,
@@ -42,7 +43,8 @@ int EvaluatorQBKIX::setup(){
             _refined_patch_samples->sample_as_face_point(),
             _refined_patch_samples,
             this->source_dof(),
-            this->target_dof());*/
+            this->target_dof());
+    }
     stats.add_result("total qbx time", 0.);
     stats.add_result("total matvec time", 0.);
     stats.add_result("num. matvecs", 0.);
@@ -164,7 +166,8 @@ Vec EvaluatorQBKIX::compute_interpolation_target_potential(
             num_local_targets*target_dof(),
             PETSC_DETERMINE,
             &interpolation_point_potential);
-            
+    cout << "sizes in compute_interpolation_target_potential" << endl;
+            cout <<  num_local_targets*target_dof() << ", " << Petsc::get_vec_local_size(refined_density) << endl;
     _fmm->evaluate(refined_density, interpolation_point_potential);
     
 
@@ -195,14 +198,8 @@ double extrapolation_eval_point_qbkix(double distance_to_target, double h){
     //return -distance_to_target/h;
 }
 int EvaluatorQBKIX::eval(Vec density, Vec potential){
-    /*
-       VecView(density, PETSC_VIEWER_STDOUT_SELF);
-       VecView(potential, PETSC_VIEWER_STDOUT_SELF);
-       VecView(_refined_patch_samples->sample_point_3d_position(), PETSC_VIEWER_STDOUT_SELF);
-       VecView(_aux_interpolation_points, PETSC_VIEWER_STDOUT_SELF);
-       */
     double matvec_start = omp_get_wtime();
-    pvfmm::Profile::Tic("QBX Evaluation", &PETSC_COMM_WORLD, true,2);{
+    pvfmm::Profile::Tic("QBX Evaluation", &PETSC_COMM_WORLD, true);{
 
     double h;
     PetscBool err = PETSC_FALSE;
@@ -213,15 +210,14 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
 
     double start = omp_get_wtime();
 
-    pvfmm::Profile::Tic("Density interpolation", &PETSC_COMM_WORLD, true,2);
+    pvfmm::Profile::Tic("Density interpolation", &PETSC_COMM_WORLD, true);
     Vec refined_density = compute_refined_density(density);
     pvfmm::Profile::Toc();
-
 
     stats.result_plus_equals("total density interp time", (omp_get_wtime() - start) );
     string s= "total fmm";
     start = omp_get_wtime();
-    pvfmm::Profile::Tic("Eval potential at checks", &PETSC_COMM_WORLD, true,2);
+    pvfmm::Profile::Tic("Eval potential at checks", &PETSC_COMM_WORLD, true);
     Vec interpolation_point_potential = compute_interpolation_target_potential(refined_density);
     pvfmm::Profile::Toc();
     stats.result_plus_equals("total fmm time", (omp_get_wtime() - start) );
@@ -233,7 +229,7 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
 
     int num_local_targets = num_local_points(_target_3d_position);
     
-    pvfmm::Profile::Tic("Extrap to target", &PETSC_COMM_WORLD, true,2);
+    pvfmm::Profile::Tic("Extrap to target", &PETSC_COMM_WORLD, true,1);
     vector<double> interpolation_nodes; 
     int L;
     if(_expansion_type == EXTRAPOLATE_ONE_SIDE_CHEBYSHEV){
@@ -277,11 +273,9 @@ int EvaluatorQBKIX::eval(Vec density, Vec potential){
             &extrapolation_eval_point_qbkix,
             final_potential_local);
     
-
+#pragma omp parallel for
     for(int i = 0; i < num_local_targets; i++){
         if(target_in_out_local(0,i) == ON_SURFACE){
-            /*cout << "density correction" << endl;
-                cout << final_potential_local(0,i) << ", " << .5*density_local(0,i) << endl;*/
             for(int d = 0; d < target_dof(); d++){
                 final_potential_local(d,i) -= .5*density_local(d,i);
             }

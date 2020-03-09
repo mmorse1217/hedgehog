@@ -1,13 +1,11 @@
-from read import load_pydict,load_vtk_point_data, generate_latex_table
+from read import load_pydict#, generate_latex_table
 import numpy as np
 import pylab as pl
-import vtk
 import glob
-import os
 
 
 def get_prop_list(results, s):
-    return np.array([r[s] for r in results])
+    return np.array([r[s] if s in r else 1 for r in results ])
 
 def load_test_results(path_to_results, file_prefix):
     results = []
@@ -24,6 +22,18 @@ def fit_line(x,y):
     assert x.shape == y.shape
     A = np.hstack([np.ones((n,1)),x.reshape(n,1)])
     return np.linalg.lstsq(A,y, rcond=1e-13)
+
+def plot_fit_line(x,coeffs,color='k',axis=False):
+    assert coeffs.shape[0] == 2
+    a = x.min()
+    b = x.max()
+    t = np.linspace(a,b,100)
+    exp = coeffs[1]
+    print exp
+    if axis:
+        axis.loglog(t, 10**(coeffs[0] + np.log10(t)*coeffs[1]), '--', color=color,label=r'$h^{%0.2f}$' % (exp,) )
+    else:                                                                         
+        pl.loglog(t, 10**(coeffs[0] + np.log10(t)*coeffs[1]),   '--', color=color,label=r'$h^{%0.2f}$' % (exp,) )
 
 def compute_rate(error,spacing):
     assert error.shape == spacing.shape
@@ -56,7 +66,9 @@ def plot_greens_identity(path_to_tests, out_dir):
             x = prop_values_indep['face-map max patch size']#/\
                     #np.floor(1./prop_values_indep['coarse spacing'])+1.
             y = prop_values_dep['max relative error']
-            print 'convergence rate', kernel, domain,':',fit_line(x,y)[0]
+            coeffs = fit_line(x,y)[0]
+            print 'convergence rate', kernel, domain,':',
+            plot_fit_line(x, coeffs)
             #print y
             print 'convergence rate',compute_rate(np.log10(x), np.log10(y))
             pl.loglog(x,y, 'o-',label=kernel.capitalize())
@@ -68,7 +80,9 @@ def plot_greens_identity(path_to_tests, out_dir):
                 bbox_inches='tight',dpi=150)
 
 def plot_solver_convergence(path_to_tests, out_dir):
-    domain_names = {'cube': 'Cube', 'pipe':'Pipe', 'ttorus2': 'Genus 2 surface'}
+    domain_names = {'cube': 'Cube', 
+            'pipe':'Pipe', 
+            'ttorus2': 'Genus 2 surface'}
     for domain in domain_names.keys():
         pl.figure()
         for kernel in ['laplace', 'stokes', 'navier']:
@@ -76,6 +90,7 @@ def plot_solver_convergence(path_to_tests, out_dir):
             test_name = test_name[:-1] if domain is 'ttorus2' else test_name
             test_output_path = path_to_tests + test_name + '/output/test_qbkix_eval_convergence/'
             test_output_path = test_output_path + '/' + domain + '/' + kernel +'/'
+            print test_output_path
             
             results = load_test_results(test_output_path, 'qbx')
             
@@ -87,8 +102,10 @@ def plot_solver_convergence(path_to_tests, out_dir):
             x = prop_values_indep['face-map max patch size']#/\
                     #np.floor(1./prop_values_indep['coarse spacing'])+1.
             y = prop_values_dep['max relative error']
-            print 'convergence rate', kernel, domain,':',fit_line(x,y)[0]
+            coeffs = fit_line(x,y)[0]
+            print 'convergence rate', kernel, domain,':',coeffs
             pl.loglog(x,y,'o-', label=kernel.capitalize())
+            plot_fit_line(x,coeffs)
         
         pl.legend(loc='best')#, bbox_to_anchor=(1, .5))
         pl.title('Solver Convergence: '+domain_names[domain])
@@ -114,15 +131,15 @@ def plot_comparison_error(path_to_tests, out_dir):
                 'kernel' : 'laplace',
                 'dir'    : 'sphere/laplace/'
                 }, \
-            'navier_qbx_vs_singular_quad_const_den': {
-                'domain' : 'cube_const_den',
-                'kernel' : 'navier',
-                'dir'    : 'const_density/cube/navier/'
-                }, \
             'laplace_qbx_vs_singular_quad_solve': {
                 'domain' : 'cube_solve',
                 'kernel' : 'laplace',
                 'dir'    : 'solve/cube/laplace/'
+                }, \
+            'navier_qbx_vs_singular_quad_const_den': {
+                'domain' : 'cube_const_den',
+                'kernel' : 'navier',
+                'dir'    : 'const_density/cube/navier/'
                 }, \
             'face_map_qbx_vs_singular_quad': {
                 'domain' : 'cube',
@@ -135,27 +152,33 @@ def plot_comparison_error(path_to_tests, out_dir):
                 'dir'    : 'face_map_vs_blended/cube/navier/'
                 }
             }
+    '''
+    '''
     def plot_error_vs_coarse_spacing(results, *args, **kwargs):
-        props_dep = ['max absolute error']
+        props_dep = ['max relative error']
         props_indep = ['coarse spacing']
         prop_values_dep = extract_props_from_results(props_dep, results)
         prop_values_indep = extract_props_from_results(props_indep, results)
         x = prop_values_indep['coarse spacing']
-        y = prop_values_dep['max absolute error']
+        y = prop_values_dep['max relative error']
         pl.loglog(x,y, *args, **kwargs)
+        coeffs = fit_line(x,y)[0] 
+        plot_fit_line(x,coeffs)
 
     def plot_error_vs_face_map_size(results, *args, **kwargs):
-        props_dep = ['max absolute error']
+        props_dep = ['max relative error']
         props_indep = ['coarse spacing','face-map max patch size']
         prop_values_dep = extract_props_from_results(props_dep, results)
         prop_values_indep = extract_props_from_results(props_indep, results)
         x = prop_values_indep['face-map max patch size']/\
                (np.floor(1./prop_values_indep['coarse spacing'])+1.)
-        y = prop_values_dep['max absolute error']
+        y = prop_values_dep['max relative error']
         pl.loglog(x,y, *args, **kwargs)
+        coeffs = fit_line(x,y)[0] 
+        plot_fit_line(x,coeffs)
 
     # plot error comparision
-    '''
+    
     for test_name, test_data in test_paths.items()[:-2]:
 
 
@@ -164,6 +187,7 @@ def plot_comparison_error(path_to_tests, out_dir):
         #test_output_path = test_output_path + '/' + domain + '/' + kernel +'/'
         qbx_results = load_test_results(test_output_path, 'qbx')
         singular_results = load_test_results(test_output_path, 'singular_eval')
+        print test_name
         plot_error_vs_coarse_spacing(qbx_results, 'o-', label='QBX')
         plot_error_vs_coarse_spacing(singular_results, 'o-', label='Singular Quad.')
         
@@ -175,7 +199,7 @@ def plot_comparison_error(path_to_tests, out_dir):
         pl.xlabel(r'$h$')
         pl.savefig(out_dir+'comparison_'+test_data['domain']+'_'+test_data['kernel']+'_error',  bbox_inches='tight',dpi=150)
 
-    '''
+   
 
     #pl.figure()
     f, ax = pl.subplots(ncols=2, nrows=1, sharex=True, sharey=True,
@@ -223,34 +247,7 @@ def plot_comparison_error(path_to_tests, out_dir):
     pl.savefig(out_dir+'comparison_face_map_vs_blendsurf_'+test_data['domain']+'_'+test_data['kernel']+'_error',  bbox_inches='tight',dpi=150)
 
 def plot_comparison_timing(path_to_tests, out_dir):
-    const_den = {
-            'laplace_qbx_vs_singular_quad': {
-                'domain' : 'cube',
-                'kernel' : 'laplace',
-                'dir'    : 'cube/laplace/'
-                }, \
-            'navier_qbx_vs_singular_quad_const_den': {
-                'domain' : 'cube_const_den',
-                'kernel' : 'navier',
-                'dir'    : 'const_density/cube/navier/'
-                }
-            }
-    test_paths = {
-            'navier_qbx_vs_singular_quad': {
-                'domain' : 'cube',
-                'kernel' : 'navier',
-                'dir'    : 'cube/navier/'
-                }, \
-            'sph_harm_qbx_vs_singular_quad': {
-                'domain' : 'sphere',
-                'kernel' : 'laplace',
-                'dir'    : 'sphere/laplace/'
-                }, \
-            'laplace_qbx_vs_singular_quad_solve': {
-                'domain' : 'cube_solve',
-                'kernel' : 'laplace',
-                'dir'    : 'solve/cube/laplace/'
-                }, \
+    fm = {
             'face_map_qbx_vs_singular_quad': {
                 'domain' : 'cube',
                 'kernel' : 'laplace',
@@ -262,6 +259,35 @@ def plot_comparison_timing(path_to_tests, out_dir):
                 'dir'    : 'face_map_vs_blended/cube/navier/'
                 }
             }
+    test_paths = {
+            'laplace_qbx_vs_singular_quad': {
+                'domain' : 'cube',
+                'kernel' : 'laplace',
+                'dir'    : 'cube/laplace/'
+                }, \
+            'navier_qbx_vs_singular_quad': {
+                'domain' : 'cube',
+                'kernel' : 'navier',
+                'dir'    : 'cube/navier/'
+                }, \
+            'navier_qbx_vs_singular_quad_const_den': {
+                'domain' : 'cube_const_den',
+                'kernel' : 'navier',
+                'dir'    : 'const_density/cube/navier/'
+                },\
+            'laplace_qbx_vs_singular_quad_solve': {
+                'domain' : 'cube_solve',
+                'kernel' : 'laplace',
+                'dir'    : 'solve/cube/laplace/'
+                }, \
+            }
+    '''
+    'sph_harm_qbx_vs_singular_quad': {
+        'domain' : 'sphere',
+        'kernel' : 'laplace',
+        'dir'    : 'sphere/laplace/'
+        }, \
+    '''
     def plot_timing_vs_error_qbx(results, ax, *args, **kwargs):
         props_indep = ['total fmm time',  'total qbx time', 'total matvec time', 
                 'total density interp time']
@@ -270,36 +296,37 @@ def plot_comparison_timing(path_to_tests, out_dir):
                 'density interp']
         props_indep_names = [ 'QBX ' + p for p in props_indep_names]
         
-        props_markers = ['*',  '^', 'o', 
-                '+']
+        props_markers = ['*',  '^', 'o', '+']
         props_markers = ['b-'+ m for m in props_markers]
 
-        props_dep = ['max absolute error', 'FMM benchmark time', 'number of GMRES iterations']
+        props_dep = ['max relative error','total coarse samples', 'FMM benchmark time', 'number of GMRES iterations']
         prop_values_dep = extract_props_from_results(props_dep, results)
         prop_values_indep = extract_props_from_results(props_indep, results)
         
-        x = prop_values_dep['max absolute error']
+        x = prop_values_dep['max relative error']
         fmm = prop_values_dep['FMM benchmark time']
+        #num_samples= prop_values_dep['total coarse samples']
         gmres_iters = prop_values_dep['number of GMRES iterations']
+        print gmres_iters
         plots = []
         for prop, name, marker in zip(props_indep, props_indep_names, props_markers):
-            y = prop_values_indep[prop]/fmm/gmres_iters
+            #y = prop_values_indep[prop]/gmres_iters/num_samples
+            y = prop_values_indep[prop]/gmres_iters/fmm
+            print prop,':', y
             if prop is 'total matvec time':
                 a = ax[0]
-                #pl.subplot(131)
-                #pl.loglog(x,y, marker, label=name,*args, **kwargs)
                 p, = a.loglog(x,y, marker, label=name,*args, **kwargs)
-                #coeffs,_,__,___ = fit_line(np.log10(x),np.log10(y))
-                #a.loglog(x, (10**coeffs[0] *x**coeffs[1]), 'k--')
-                #plots.append(p)
-            #pl.subplot(132)
-            #pl.loglog(x,y, marker, label=name,*args, **kwargs)
+                coeffs = fit_line(x,y)[0]
+                print 'qbx',
+                plot_fit_line(x,coeffs,a)
+            
             a = ax[1]
             p, = a.loglog(x,y, marker, label=name,*args, **kwargs)
             plots.append(p)
         return plots, props_indep_names
     def plot_timing_vs_error_singular(results, ax, *args, **kwargs):
-        props_indep = ['total fmm time', 'total inaccurate subtract time', 'total fft upsample time', 'total polar quad time', 'total matvec time']
+        props_indep = ['total fmm time', 'total inaccurate subtract time',
+                'total fft upsample time', 'total polar quad time', 'total matvec time']
         
         props_indep_names = ['FMM',  'subtract', 'FFT', 'polar quad', 'total']
         props_indep_names = [ 'Singular ' + p for p in props_indep_names]
@@ -307,22 +334,28 @@ def plot_comparison_timing(path_to_tests, out_dir):
         props_markers = ['*',  'D', '+', '^', 'o']
         props_markers = ['r-'+ m for m in props_markers]
 
-        props_dep = ['max absolute error', 'FMM benchmark time', 'number of GMRES iterations']
+        props_dep = ['max relative error', 'FMM benchmark time', 'total coarse samples', 'number of GMRES iterations']
 
         prop_values_dep = extract_props_from_results(props_dep, results)
         prop_values_indep = extract_props_from_results(props_indep, results)
-        x = prop_values_dep['max absolute error']
+        x = prop_values_dep['max relative error']
         fmm = prop_values_dep['FMM benchmark time']
+        #num_samples = prop_values_dep['total coarse samples']
         gmres_iters = prop_values_dep['number of GMRES iterations']
+        print gmres_iters
         plots = []
         for prop, name, marker in zip(props_indep, props_indep_names,
                 props_markers):
-            y = prop_values_indep[prop]/fmm/gmres_iters
+            #y = prop_values_indep[prop]/gmres_iters/num_samples
+            y = prop_values_indep[prop]/gmres_iters/fmm
             if prop is 'total matvec time':
                 #pl.subplot(131)
                 a = ax[0]
                 #pl.loglog(x,y, marker, label=name,*args, **kwargs)
                 p, = a.loglog(x,y, marker, label=name,*args, **kwargs)
+                coeffs = fit_line(x,y)[0]
+                print 'sin',
+                plot_fit_line(x,coeffs,a)
                 #plots.append(p)
             #pl.subplot(133)
             a = ax[2]
@@ -354,7 +387,7 @@ def plot_comparison_timing(path_to_tests, out_dir):
 
     f, ax = pl.subplots(ncols=3, nrows=1, sharex=True, sharey=True, figsize=figure_size)
     test_name = 'face_map_qbx_vs_singular_quad'
-    test_data = test_paths['face_map_qbx_vs_singular_quad']
+    test_data = fm['face_map_qbx_vs_singular_quad']
     test_output_path = path_to_tests + test_name + '/output/test_qbkix_vs_singular_quad/' + test_data['dir']
     #test_output_path = test_output_path + '/' + domain + '/' + kernel +'/'
     qbx_results = load_test_results(test_output_path, 'qbx')
@@ -372,7 +405,7 @@ def plot_comparison_timing(path_to_tests, out_dir):
 
     f, ax = pl.subplots(ncols=3, nrows=1, sharex=True, sharey=True, figsize=figure_size)
     test_name = 'face_map_qbx_vs_singular_quad_navier'
-    test_data = test_paths['face_map_qbx_vs_singular_quad_navier']
+    test_data = fm['face_map_qbx_vs_singular_quad_navier']
     test_output_path = path_to_tests + test_name + '/output/test_qbkix_vs_singular_quad/' + test_data['dir']
     #test_output_path = test_output_path + '/' + domain + '/' + kernel +'/'
     qbx_results = load_test_results(test_output_path, 'qbx')
@@ -389,10 +422,10 @@ def plot_comparison_timing(path_to_tests, out_dir):
     f.savefig(out_dir+'comparison_face_map_vs_blendsurf_'+test_data['domain']+'_'+test_data['kernel']+'_timing',  bbox_inches='tight',dpi=150)
 
 
-test_results_dir = 'data/results16/'
-out_dir = 'output/plots_final14/'
+test_results_dir = 'data/results22/'
+out_dir = 'output/plots_final22/'
 plot_greens_identity(test_results_dir, out_dir)
 plot_solver_convergence(test_results_dir, out_dir)
-plot_comparison_error(test_results_dir, out_dir)
-plot_comparison_timing(test_results_dir, out_dir)
+#plot_comparison_error(test_results_dir, out_dir)
+#plot_comparison_timing(test_results_dir, out_dir)
 

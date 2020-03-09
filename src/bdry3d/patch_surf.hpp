@@ -84,7 +84,7 @@ protected:
 public:
   double _approx_jacobian;
   Patch(PatchSurf* b, int pi): _bdry(b), _pi(pi) {;}
-        double characteristic_length(){
+        double& characteristic_length(){
             return _characteristic_length;
         }
 

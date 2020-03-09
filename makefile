@@ -41,14 +41,20 @@ BIN_OBJ = $(BIN_SRC:%.cpp=$(BUILD_DIR)/%.o)
 BIN_DEP = $(BIN_OBJ:%.o=%.d)
 BIN_EXEC = $(BIN_OBJ:%.o=%)
 
-##### WARNING SEGFAULT IN POINT MARKING WHEN NOT COMPILED WITH -g WITH INTEL COMPILER###########
 # linking flags
-LDFLAGS = -lstdc++  -O3  -mavx
+# gcc
+LDFLAGS = -lstdc++  -O3 
+#intel 
+#LDFLAGS = -lstdc++  -O3 -fPIC -unroll -ip -axCORE-AVX2 -qopenmp -qopt-report-stdout -qopt-report-phase=openmp -shared-intel
 LDLIBS = -L$(LIB_DIR) -l$(LIB) ${HEDGEHOG_LIB} 
 
 # Compiling flags
 INC = -I. ${HEDGEHOG_INC}
-CXXFLAGS = -std=c++11  -Wall -O3 -mavx  -fPIC -fopenmp -DFFTW3  $(INC) 
+#gcc
+#CXXFLAGS = -std=c++11  -Wall -O3 -fPIC -qopenmp -DFFTW3  $(INC) 
+#intel
+CXXFLAGS = -std=c++11  -Wall -O3 -fPIC -qopenmp -DFFTW3   $(INC) 
+#CXXFLAGS = -std=c++11  -Wall -lstdc++  -O3 -fPIC -unroll -ip -axCORE-AVX2 -qopenmp -qopt-report-stdout -qopt-report-phase=openm -DFFTW3  $(INC) 
 
 
 $(BIN): $(BIN_EXEC) MOVE_EXEC

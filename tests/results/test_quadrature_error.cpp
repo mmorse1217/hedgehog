@@ -10,6 +10,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "bdry3d/p4est_refinement.hpp"
 #include <math.h>
+#include <sstream>
 using namespace Ebi;
 void laplace_dl_potential(Vec targets, int dof,Vec& potential){
     Vec source;
@@ -40,8 +41,6 @@ void laplace_dl_potential(Vec targets, int dof,Vec& potential){
     fmm->evaluate_direct(density, potential);
 }
 
-//static double dist_to_patch = .01;
-//double compute_integral(PatchSurfFaceMap* face_map, double dist_to_patch){
 double compute_integral(PatchSurfFaceMap* face_map, Point3 target_point){
     //setup sampling and quadrature evaluator with current spacing
     unique_ptr<PatchSamples> samples (new PatchSamples("", ""));
@@ -54,7 +53,7 @@ double compute_integral(PatchSurfFaceMap* face_map, Point3 target_point){
     Vec target;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, 1*DIM, target);
     PetscInt idx[3] = {0,1,2};
-    //double v[3] = {0., 0.,dist_to_patch};
+
     VecSetValues(target, 3, idx, target_point.array(), INSERT_VALUES);
     VecAssemblyBegin(target);
     VecAssemblyEnd(target);
@@ -69,12 +68,22 @@ double compute_integral(PatchSurfFaceMap* face_map, Point3 target_point){
     
     Vec density;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, samples->local_num_sample_points(), density);
-    VecSet(density, 1.);
+    Point3 charge_location(0., 5., 0.);
+    {
+        DblNumMat density_local(1,density);
+        DblNumMat sample_points_local(DIM, samples->sample_point_3d_position());
+        for(int i = 0; i < density_local.n(); i++){
+            Point3 y(sample_points_local.clmdata(i));
+            density_local(0,i) = 1./(y-charge_location).length();
+        }
+    }
+    //VecSet(density, 1.);
     Vec potential;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, 1, potential);
     VecSet(potential, 0.);
     // compute the integral
     evaluator->eval(density,  potential);
+
     double integral = 0;
     {
         DblNumMat p_local(1, potential);
@@ -112,12 +121,12 @@ void perturb_flat_patch(unique_ptr<PatchSurfFaceMap>& face_map, double tx, doubl
     Point3 dy(0.,0.,ty);
     for (int i = 0; i < 4; i+=3) {
         for (int j = 1; j < 3; j++) {
-            (*coefficients)(i*4 + j) += dx; 
+            (*coefficients)(i*4 + j) += dx/2.; 
         }
     }
     for (int i = 1; i < 3; i++) {
         for (int j = 0; j < 4; j+=3) {
-            (*coefficients)(i*4 + j) += dy; 
+            (*coefficients)(i*4 + j) += dy/2.; 
         }
     }
     for (int i = 0; i < 4; i+=3) {
@@ -228,6 +237,134 @@ void run_quad_estimate_test(string domain, Point3 target_point, int num_steps){
 
 }
 
+void error_sweep_over_curvature_opt(string domain, vector<double> dists_to_patch, vector<int> quad_orders, vector<double> curvatures){
+    int num_dist_to_patch=dists_to_patch.size();
+    int num_quad_steps= quad_orders.size();
+    int num_curvature_steps= curvatures.size();
+    double min_t = *min_element(curvatures.begin(), curvatures.end());
+    double max_t = *max_element(curvatures.begin(), curvatures.end());
+
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/"+domain+".wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/"+domain+".wrl");
+    Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/"+domain+".poly");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".1");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
+
+    Options::set_value_petsc_opts("-near_interpolation_num_samples", "12");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".15");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".15");
+    Options::set_value_petsc_opts("-bis3d_pts_max", "1000000000");
+
+    Options::set_value_petsc_opts("-direct_eval", "1");
+
+    // TODO need higher multipole order>16to evaluate beyond 9 digits below
+    //Options::set_value_petsc_opts("-bis3d_np", "16");
+    int qbkix_order = Options::get_int_from_petsc_opts("-near_interpolation_num_samples");
+
+    // setup and adaptively refine true face-map to serve as a proxy for the
+    int iter =0;
+    DblNumMat data(7+6, num_curvature_steps*num_curvature_steps*num_quad_steps*num_dist_to_patch);
+    cout << "min_t "<< min_t << endl;
+    cout << "max_t "<< max_t << endl;
+#pragma omp parallel for
+    for (int ti = 0; ti < num_curvature_steps; ti++) {
+        for (int tj = 0; tj < num_curvature_steps; tj++) {
+            // set up patch for reference solution
+            //Options::set_value_petsc_opts("-bis3d_spacing", ".05");
+            unique_ptr<PatchSurfFaceMap> refined_face_map(new PatchSurfFaceMap("BD3D_", "bd3d_"));
+            refined_face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
+            refined_face_map->_coarse = true;
+
+            refined_face_map->setFromOptions();
+            refined_face_map->setup();
+            double tx = curvatures[ti];
+            double ty = curvatures[tj];
+            cout << "ti, tj: " << ti << ", " << tj << endl;
+            perturb_flat_patch(refined_face_map, tx, ty);
+
+            refined_face_map->refine_uniform(4);
+            cout << "refined" << endl;
+            
+            // setup single patch surface
+            unique_ptr<PatchSurfFaceMap> face_map(new PatchSurfFaceMap("BD3D_", "bd3d_"));
+            face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
+            face_map->_coarse = true;
+
+            face_map->setFromOptions();
+            face_map->setup();
+            perturb_flat_patch(face_map, tx, ty);
+            face_map->refine_test();
+            cout << "dist iter" << endl;
+
+            for(auto dist_to_patch : dists_to_patch){
+                cout << "dist: " << dist_to_patch << endl;
+
+                auto patch = face_map->subpatch(0);
+
+                vector<Point3> sample_point(3, Point3());
+                Point2 uv(.5, .5);
+
+                patch->xy_to_patch_coords(uv.array(), PatchSamples::EVAL_VL|PatchSamples::EVAL_FD, (double*)sample_point.data());
+                Point3 normal = cross(sample_point[1], sample_point[2]);
+                normal /= normal.length();
+
+                Point3 target_point = sample_point[0] - dist_to_patch*normal;
+
+                double init_step = 1./(10.-1.);
+                std::ostringstream out;
+                out.precision(20);
+                out << std::fixed << init_step;
+                Options::set_value_petsc_opts("-bis3d_spacing", out.str());
+                double true_integral = compute_integral(refined_face_map.get(),target_point);
+
+                double max_jacobian;
+                patch->estimate_jacobian(&max_jacobian);
+                double L; 
+                double mean_curvature = patch->mean_curvature(uv);
+                double gaussian_curvature = patch->gaussian_curvature(uv);
+                double k1,k2;
+                patch->principal_curvatures(uv,k1,k2);
+                
+                vector<double> integrals(num_quad_steps);
+                for (int qi = 0; qi < num_quad_steps; qi++) {
+                //for(auto qi : quad_orders){
+                    cout << "quad order: "<< qi << endl;
+                    double step = 1./(double(quad_orders[qi])-1);
+                    std::ostringstream out;
+                    out.precision(20);
+                    out << std::fixed << step;
+                    Options::set_value_petsc_opts("-bis3d_spacing", out.str());
+                    double approx_integral = compute_integral(face_map.get(), target_point);
+                    integrals[qi] = approx_integral;
+                    L = patch->characteristic_length();
+                }
+
+                DblNumMat data(7+6+2, num_quad_steps);
+                for (int i = 0; i < num_quad_steps; i++) {
+                    double integral = integrals[i];
+                    double error = fabs(integral - true_integral)/fabs(true_integral);
+
+                    data(0,i) = quad_orders[i]; // quad order
+                    data(1,i) = error; 
+                    data(2,i) = mean_curvature;
+                    data(3,i) = gaussian_curvature;
+                    data(4,i) = max_jacobian;
+                    data(5,i) = dist_to_patch;
+                    data(6,i) = L;
+                    for (int di = 0; di < DIM; di++) {
+                        data(7+di, i) = sample_point[0](di);
+                        data(7+DIM+di, i) = target_point(di);
+                    }
+                        data(7+2*DIM, i) = k1;
+                        data(7+2*DIM+1, i) = k2;
+                }
+                cout << "save" << endl;
+                cout << data << endl;
+                Debug::save_mat(data, "output/quad_estimate_data/"+domain+"quad_error_curve_param_new"+to_string(iter++)+".txt");
+            }
+        }
+    }
+}
 
 void error_sweep_over_curvature(string domain, int num_dist_to_patch, int num_quad_steps, int num_curvature_steps, double min_t, double max_t){
 
@@ -252,24 +389,22 @@ void error_sweep_over_curvature(string domain, int num_dist_to_patch, int num_qu
     int iter =0;
     for (int ti = 0; ti < num_curvature_steps; ti++) {
         for (int tj = 0; tj < num_curvature_steps; tj++) {
+            unique_ptr<PatchSurfFaceMap> refined_face_map(new PatchSurfFaceMap("BD3D_", "bd3d_"));
+            refined_face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
+            refined_face_map->_coarse = true;
+
+            refined_face_map->setFromOptions();
+            refined_face_map->setup();
+            double tx = (max_t-min_t)/double(num_curvature_steps-1)*ti + min_t;
+            double ty = (max_t-min_t)/double(num_curvature_steps-1)*tj + min_t;
+            cout << "tx: " << tx << ", ty: " << ty << endl;
             for (int ci = 0; ci < num_dist_to_patch; ci++) {
 
-                unique_ptr<PatchSurfFaceMap> refined_face_map(new PatchSurfFaceMap("BD3D_", "bd3d_"));
-                refined_face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
-                refined_face_map->_coarse = true;
-
-                refined_face_map->setFromOptions();
-                refined_face_map->setup();
-                double tx = (max_t-min_t)/double(num_curvature_steps-1)*ti + min_t;
-                double ty = (max_t-min_t)/double(num_curvature_steps-1)*tj + min_t;
-                cout << "tx: " << tx << ", ty: " << ty << endl;
                 double dist_to_patch  = (max_d-min_d)/double(num_dist_to_patch-1)*ci + min_d;
 
                 perturb_flat_patch(refined_face_map, tx, ty);
                 //refined_face_map->refine_test();
                 refined_face_map->refine_uniform(3);
-                auto f = refined_face_map.get();
-                //resolve_function(refined_face_map->_p4est, f, &laplace_dl_potential, 1, 1e-11);
 
 
                 // setup single patch surface
@@ -467,7 +602,7 @@ TEST_CASE("Test quadrature error estimate", "[flat-patch][quad-error][results]")
     //run_quad_estimate_test("parabaloid", target, 15);
     //run_quad_estimate_test("parabaloid_flip", target, 25);
 }
-TEST_CASE("Test quadrature error w.r.t curvature", "[results][quad-error][curvature]"){
+TEST_CASE("Test quadrature error w.r.t curvature", "[quad-error][curvature]"){
     error_sweep_over_curvature("flat_patch", 10, 20 , 10, -1., 1.);
 }
 
@@ -475,7 +610,31 @@ TEST_CASE("Test error estimate vs. computed error", "[quad-error][bie]"){
     Point3 target(0., 0., .75);
     test_bie_quad("cube", target, 12);
 }
+TEST_CASE("Validate error estimate for range of curvatures", "[quad-error][error-estimate][results]"){
+    /*
+     * For 50 x 50 curvature value pairs in [-1,1]^2, compute the actual error
+     * and the estimated error for quadrature orders 6,12,18,24 and target
+     * points distances 1e-3, 1e-2, 1e-1, 1 from the boundary
+     */
+    //vector<double> dists_to_patch = {1e-3, 1e-2, 1e-1, 1.};
+    //vector<int> quad_orders = {6, 13, 18, 24};
+    //vector<double> dists_to_patch = {.01,.1,.2, .4, .5,.6};
+    vector<double> dists_to_patch = {.01, .05, .1, .13, .16, .2};
+    vector<int> quad_orders = {10, 12, 14, 16, 18, 20};
 
+    vector<double> curvatures;
+    int num_curvatures = 100;
+    for(int i=0; i < num_curvatures; i++){
+        double a = -1.;
+        double b = 1.;
+        double h = (b-a)/double(num_curvatures-1); 
+        curvatures.push_back(a + i*h);
+    }
+
+    error_sweep_over_curvature_opt("flat_patch", dists_to_patch, quad_orders, curvatures);
+}
+TEST_CASE("Validate error estimate in 3D on a slice through the geometry", "[quad-error][error-estimate][results]"){
+}
 
 
 TEST_CASE("Test bounding box inflation", "[bbox][flat-patch]"){
@@ -517,17 +676,5 @@ TEST_CASE("Test bounding box inflation", "[bbox][flat-patch]"){
                 face_map.get(), i, "output/");
 
     }
-    //assert(face_map->num_patches() == 1);
-    /*write_face_map_patch_bounding_boxes_to_vtk(
-            pids,
-            face_map.get(), 100, "output/bbox_test");
-    face_map->refine_uniform(3);
-    pids.clear();
-    for (int pi = 0; pi < face_map->num_patches(); pi++) {
-        pids.push_back(pi);
-    }
-write_face_map_patches_to_vtk(DblNumMat(0,0),pids,
-         face_map.get(), 100, "output/");*/
-
 
 }

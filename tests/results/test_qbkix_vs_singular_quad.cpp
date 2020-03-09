@@ -67,7 +67,8 @@ void check_potential(PatchSurf* surface,
 
     if(boundary_condition == BoundaryDataType::HARMONIC){
         test.singularity_type= SingularityType::SPHERE;
-        test.sphere_radius_bc = 2.;
+        //test.sphere_radius_bc = .89;
+        test.sphere_radius_bc = 1.;
     } else if (boundary_condition != BoundaryDataType::CONSTANT_DENSITY){
         assert(0);
     }
@@ -82,6 +83,8 @@ void check_potential(PatchSurf* surface,
         test.target_type   = TargetType::SPHERE_FAR;
         test.sphere_radius_targets = .2;
         test.evaluation_scheme = EvaluationScheme::SMOOTH_QUAD;
+        /*test.target_type   = TargetType::COLLOCATION_POINTS;
+        test.evaluation_scheme = EvaluationScheme::ON_QBKIX;*/
 
     } else if(solution_scheme == SolutionScheme::EXPLICIT_DENSITY){
         // we know the density exactly, test singular quadrature error
@@ -118,6 +121,11 @@ void check_potential(PatchSurf* surface,
     stats.add_result("num check points", Options::get_double_from_petsc_opts("-near_interpolation_num_samples"));
     stats.add_result("fft refinement factor", Options::get_double_from_petsc_opts("-dnref"));
     stats.dump_key_values("", stats._file_prefix);
+    if(solution_scheme == SolutionScheme::GMRES_SOLVE){
+    cout << "T_"<< eval_type <<  "/T_FMM: " << stats._results["total matvec time"]/stats._results["FMM benchmark time"]/stats._results["number of GMRES iterations"] << endl;
+    } else {
+    cout << "T_"<< eval_type <<  "/T_FMM: " << stats._results["total matvec time"]/stats._results["FMM benchmark time"] << endl;
+    }
     stats.print_results(); 
     stats.clear();
 
@@ -141,7 +149,7 @@ TEST_CASE("Test singular quad vs. qbkix solver on analytic surfaces",
     //Options::set_value_petsc_opts("-bis3d_spacing", ".5");
     //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".08333");
     Options::set_value_petsc_opts("-qbkix_convergence_type", "classic");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "1000");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
     
     // These give 1e-7 abs error...
     //Options::set_value_petsc_opts("-bis3d_spacing", ".03125");
@@ -236,18 +244,21 @@ TEST_CASE("Test singular quad vs. qbkix eval on blendsurf laplace",
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
     Options::set_value_petsc_opts("-bis3d_spacing", ".3");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".075");
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".6");
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".15");
     Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
     Options::set_value_petsc_opts("-bd3d_bdsurf_pouctrl","1");
     Options::set_value_petsc_opts("-LL", "4");
     Options::set_value_petsc_opts("-dnref", "10");
 
 
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "1");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
     //double alpha = .42857099; // 36 x upsampling
-    double alpha = 0.2691271301;
+    double alpha = 1.12105;
+//1.12105, 0.186842
     double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
     //double check_pt_h = .928*sqrt(h);
     //double check_pt_h = 1./4.*(h); // initial spacing is too coarse for \sqrt(h)
@@ -256,7 +267,7 @@ TEST_CASE("Test singular quad vs. qbkix eval on blendsurf laplace",
     Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
     Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", to_string(h/10));
-    Options::set_value_petsc_opts("-pou_radius_constant", "1.1");
+    Options::set_value_petsc_opts("-pou_radius_constant", "1.");
     
     /*
     double rad; 
@@ -322,19 +333,23 @@ TEST_CASE("Test singular quad vs. qbkix eval on blendsurf navier constant densit
     Options::set_value_petsc_opts("-dnref", "10");
 
 
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
     Options::set_value_petsc_opts("-bdsurf_interpolate", "1");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
     //double alpha = .42857099; // 36 x upsampling
-    double alpha = 0.2691271301;
+    //double alpha = 0.2691271301;
+    //double alpha = 1.0157/5.;
+    //double alpha = 1.2;
+    double alpha = .8;
+    //alpha = 1.0157/6.;
     double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
     //double check_pt_h = .928*sqrt(h);
     //double check_pt_h = 1./4.*(h); // initial spacing is too coarse for \sqrt(h)
     double check_pt_h = alpha*sqrt(h);
     double tt = 6.;
     Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/6.));
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
     Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", to_string(h/10));
     Options::set_value_petsc_opts("-pou_radius_constant", "1.0");
     
@@ -378,7 +393,7 @@ TEST_CASE("Test singular quad vs. qbkix eval on blendsurf navier constant densit
             */
             double check_pt_h = alpha*sqrt(h/2.);
             Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/6.));
+            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
 
             // and run it again
 
@@ -412,21 +427,23 @@ TEST_CASE("Test singular quad vs. qbkix solver on blendsurf navier",
     Options::set_value_petsc_opts("-dnref", "10");
     //Options::set_value_petsc_opts("-bis3d_ksp_max_it", "100");
 
-    Options::set_value_petsc_opts("-pou_radius_constant", "1.2");
+    Options::set_value_petsc_opts("-pou_radius_constant", "1.0");
 
     Options::set_value_petsc_opts("-bdsurf_interpolate", "1");
     //Options::set_value_petsc_opts("-qbkix_convergence_type","adaptive");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
 
     double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
     //double alpha = .42857099;
     //double alpha = .183333; // upsampling 36x
-    double alpha = 0.2263153093; // upsampling 4x
+    //double alpha = 0.2263153093; // upsampling 4x
+    double alpha = 1.0157/4.;
+    double tt = 6.;
     double check_pt_h = alpha*sqrt(h);
     Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
     Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", to_string(h/10));
 
     string output_folder = "output/test_qbkix_vs_singular_quad/";
@@ -458,7 +475,7 @@ TEST_CASE("Test singular quad vs. qbkix solver on blendsurf navier",
 
             double check_pt_h = alpha*sqrt(h/2.);
             Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
 
             // and run it again
 
@@ -497,15 +514,20 @@ TEST_CASE("Test singular quad vs. qbkix solver on blendsurf laplace solve",
     //Options::set_value_petsc_opts("-qbkix_convergence_type","adaptive");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
 
     double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
     //double alpha = .42857099;
     //double alpha = .183333; // upsampling 36x
-    double alpha = 0.2263153093; // upsampling 4x
+    //double alpha = 0.2263153093; // upsampling 4x
+    double alpha = 1.12105/5.;
+    alpha = 1.12105/7.; // 1e-10
+    alpha = 1.12105/6.5; 
+    //1.12105, 0.186842gt
+    double tt = 6.;
     double check_pt_h = alpha*sqrt(h);
     Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
     Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", to_string(h/10));
 
     string output_folder = "output/test_qbkix_vs_singular_quad/solve/";
@@ -537,7 +559,7 @@ TEST_CASE("Test singular quad vs. qbkix solver on blendsurf laplace solve",
 
             double check_pt_h = alpha*sqrt(h/2.);
             Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h/tt));
 
             // and run it again
 
@@ -553,7 +575,8 @@ TEST_CASE("Test singular quad on blendsurf vs. qbkix on face-map",
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // blob
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
-    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "26");
+    //Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "26");
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "20");
     Options::set_value_petsc_opts("-LL", "4");
     Options::set_value_petsc_opts("-upsampling_type", "uniform");
     Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "1");
@@ -562,7 +585,7 @@ TEST_CASE("Test singular quad on blendsurf vs. qbkix on face-map",
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor","1");
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
 
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
     Options::set_value_petsc_opts("-dnref", "10");
@@ -619,8 +642,9 @@ TEST_CASE("Test singular quad on blendsurf vs. qbkix on face-map",
 
             double check_pt_spacing = .075;
             //double check_pt_spacing = .135;
+            double tt = 6.;
             Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_spacing));
-            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_spacing/6.));
+            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_spacing/tt));
 
             check_potential(face_map_surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::GMRES_SOLVE,
                     "qbx_", output_folder, i, BoundaryDataType::HARMONIC);
@@ -650,7 +674,7 @@ TEST_CASE("Test singular quad on blendsurf vs. qbkix on face-map, navier",
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor","1");
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
 
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "250");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bis3d_np", "16");
     Options::set_value_petsc_opts("-dnref", "10");
@@ -708,10 +732,11 @@ TEST_CASE("Test singular quad on blendsurf vs. qbkix on face-map, navier",
             Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
             double check_pt_spacing = .08;
+            double tt = 6.;
             //double check_pt_spacing = .075;
             //double check_pt_spacing = .135;
             Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_spacing));
-            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_spacing/6.));
+            Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_spacing/tt));
 
             check_potential(face_map_surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::GMRES_SOLVE,
                     "qbx_", output_folder, i, BoundaryDataType::HARMONIC);
@@ -789,7 +814,7 @@ TEST_CASE("Parameter qbkix error on sphere",
 TEST_CASE("Parameter qbkix error on blendsurf cube", 
         "[qbkix][param][solver][blended]"){
     Options::set_value_petsc_opts("-kt", "111"); // Laplace problem
-    //Options::set_value_petsc_opts("-kt", "511"); // Laplace problem
+    //Options::set_value_petsc_opts("-kt", "511"); // not a Laplace problem
     Options::set_value_petsc_opts("-dom", "0"); // interior problem
     Options::set_value_petsc_opts("-bdtype", "1"); // blended surface
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // blob
@@ -818,16 +843,17 @@ TEST_CASE("Parameter qbkix error on blendsurf cube",
 
 
     // Best check point spacing for blendsurf: .928*\sqrt(h)
-
-
+//  .910526 .227632 .019
+//1.01579 .169298 .0182
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
+    Options::set_value_petsc_opts("-bis3d_np", "10");
 
     double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
-    double alpha = .6;
+    double alpha = 1.2;
+    double beta = alpha/6.;
     double check_pt_h = alpha*sqrt(h);
-    Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+    Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(alpha*sqrt(h)));
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(beta*sqrt(h)));
 
     unique_ptr<PatchSurfBlended> surface(new PatchSurfBlended("BD3D_", "bd3d_"));
     surface->setFromOptions();
@@ -836,7 +862,7 @@ TEST_CASE("Parameter qbkix error on blendsurf cube",
 
     output_folder += Test::get_domain() + "/" + Test::get_kernel() + "/param-sweep/";
     int iter=20;
-    double step = .4/double(iter-1);
+    double step = .2/double(iter-1);
     for(int i = 0; i < iter-1; i++){
         unique_ptr<PatchSurfBlended> surface(new PatchSurfBlended("BD3D_", "bd3d_"));
         surface->setFromOptions();
@@ -851,17 +877,19 @@ TEST_CASE("Parameter qbkix error on blendsurf cube",
            */
 
 
-        //check_potential(surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::GMRES_SOLVE,
-                //"qbx_", output_folder, i, BoundaryDataType::HARMONIC);
-            check_potential(surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::EXPLICIT_DENSITY,
-              "qbx_", output_folder, i);
+        check_potential(surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::GMRES_SOLVE,
+                "qbx_", output_folder, i, BoundaryDataType::HARMONIC);
+            //check_potential(surface.get(), EvaluationType::EXTRAPOLATION_AVERAGE,  SolutionScheme::EXPLICIT_DENSITY,
+              //"qbx_", output_folder, i);
 
         // half the surface spacing
         double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
         alpha -= step; 
         double check_pt_h=alpha*sqrt(h);
-        Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(check_pt_h));
-        Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(check_pt_h));
+        double beta = alpha/6.;
+            cout << "iteration: " << i << "sqrt(h), alpha, beta: " << sqrt(h) << ", " << alpha << ", " << beta << endl;
+        Options::set_value_petsc_opts("-boundary_distance_ratio", to_string(alpha*sqrt(h)));
+        Options::set_value_petsc_opts("-interpolation_spacing_ratio", to_string(beta*sqrt(h)));
 
         // and run it again
 
@@ -967,7 +995,7 @@ TEST_CASE("Test blendsurf timing", "[debug][blendsurf][timing]"){
     surface->setup();
     stats.stop_timer("blended setup");
    
-    int num_iter = 2000;
+    int num_iter = 20;
     stats.start_timer("blended eval");
     for(auto const& patch: surface->patches()){
         for (int i = 0; i < num_iter; i++) {

@@ -226,11 +226,12 @@ int SolverGMRESDoubleLayer::setup()
           refine_patches_for_fixed_qbkix_points(refined_face_map->_p4est, refined_face_map);
           refined_face_map->patches() = p4est_to_face_map_subpatches(refined_face_map->_p4est, refined_face_map);
       }
+      //write_face_map_patches_to_vtk(DblNumMat(0,0), vector<int>(refined_face_map->num_patches(),0), refined_face_map, 10, "_upsampled_");
       /*vector<int> pids;
       for(int i =0; i < refined_face_map->num_patches(); i++)
           pids.push_back(i);
-      write_face_map_patches_to_vtk(DblNumMat(0,0), pids, refined_face_map, 10, stats._file_prefix+"_upsampled_");*/
       stats.add_result("num upsampled_patches", refined_face_map->num_patches());
+      */
         /*
         // Refine until points are inside
         p4est_connectivity_t* connectivity = build_connectivity_from_face_map(refined_face_map);
@@ -591,7 +592,6 @@ int SolverGMRESDoubleLayer::setup()
              PatchSamples::Tag* tag = (PatchSamples::Tag*)(iarr+ui);
              // DZ RENAME component_id
              int cid = int(tag->_gid);
-             //cout <<"cid: " << cid << endl;
 
              if(cid>=bnd_domain_offset) { //good
                  int p = cid - bnd_domain_offset;
@@ -604,7 +604,7 @@ int SolverGMRESDoubleLayer::setup()
 
                  ebiAssert(tdof == gdof);
                  DblNumMat id_matrix = Kernel3d::get_identity_matrix(tdof);
-                 // note id_matrix is square by assertion
+                 // note id_matrix is square 
 
                  //\phi_k(c_k) = w_k*\varphi(g_k(c_k))*J_k
                  // warr is a pointer to wcb and 
@@ -1821,7 +1821,7 @@ Vec greens_identity(
             sample_point_normal);
 
     cout << "evaluated u(x)" << endl;
-    VecView(potential, PETSC_VIEWER_STDOUT_SELF);
+    //VecView(potential, PETSC_VIEWER_STDOUT_SELF);
     Vec potential_dn = Test::compute_neumann_boundary_data(
             solver->mpiComm(),
             problem_kernel,
@@ -1831,7 +1831,7 @@ Vec greens_identity(
             sample_point_3d_position,
             sample_point_normal);
     cout << "evaluated du/dn(x)" << endl;
-    VecView(potential_dn, PETSC_VIEWER_STDOUT_SELF);
+    //VecView(potential_dn, PETSC_VIEWER_STDOUT_SELF);
     
     Vec solution = greens_identity(comm, potential, potential_dn, target_points, solver);
     Petsc::destroy_vec(potential);

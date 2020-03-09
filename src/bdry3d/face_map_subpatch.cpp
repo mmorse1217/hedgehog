@@ -26,7 +26,7 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
     _quadrature_weights(quad_weights)
 {
     estimate_jacobian(&_approx_jacobian);
-
+    /*
     // TODO factor out quadrature weight computation; pre-cache integrals of
     // lagrange basis functions
     int num_samples = 20;
@@ -86,30 +86,14 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
     if(_quadrature_weights != NULL){
         for(int si = 0; si < num_samples; si++)
             (*_quadrature_weights)(si) *=pow(2.,_level);
-    }
-    _near_zone_distance = compute_near_zone_distance();
-    
+    }*/
+    //_near_zone_distance = compute_near_zone_distance();
+    // TODO might be slow
 
 }
-
-double FaceMapSubPatch::compute_near_zone_distance(){
-
-    Point2 uv(.5, .5);
-    double k1, k2;
-    this->principal_curvatures(uv, k1,k2);
-
-    double target_accuracy = Options::get_double_from_petsc_opts("-target_accuracy");
-    double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
-    double L = _characteristic_length;
-    int n = int(floor(1./spacing))+1;
-    double near_zone_distance1 = 
-        ErrorEstimate::evaluate_near_zone_distance(k1*L, 1., target_accuracy, n);
-    double near_zone_distance2 = 
-        ErrorEstimate::evaluate_near_zone_distance(k2*L, 1., target_accuracy, n);
-    return max(near_zone_distance1, near_zone_distance2)*L/pow(2., _level);
-
+void FaceMapSubPatch::compute_near_zone_distance(){
+    _near_zone_distance = ErrorEstimate::evaluate_near_zone_distance(this);    
 }
-
 
 Point3 FaceMapSubPatch::normal(double* xy) {
     double xy_scaled[2];
@@ -231,11 +215,11 @@ void FaceMapSubPatch::inflated_bounding_box(Point3& bounding_box_min, Point3& bo
     double mean_curvature = this->mean_curvature(Point2(.5, .5));
     double L = this->_characteristic_length;
     //double inflation_factor = near_zone_approx_size_fit(n,1.,-L*mean_curvature, target_accuracy);
-    double inflation_factor = .7;
+    double inflation_factor = _near_zone_distance;
     //double inflation_factor = 0.;
 //3*near_zone_approx_size(n, 1., -mean_curvature, target_accuracy);
-    bounding_box_max += Point3(inflation_factor*L);
-    bounding_box_min -= Point3(inflation_factor*L);
+    bounding_box_max += Point3(inflation_factor);
+    bounding_box_min -= Point3(inflation_factor);
 }
 
 void FaceMapSubPatch::bounding_box(Point3& bounding_box_min, Point3& bounding_box_max){

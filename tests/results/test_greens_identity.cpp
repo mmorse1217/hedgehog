@@ -52,6 +52,7 @@ void test_greens_identity(PatchSurfFaceMap* surface, string output_folder, int i
 }
 
 void greens_identity_base_options(){
+    /*
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "8");
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
@@ -64,13 +65,6 @@ void greens_identity_base_options(){
     //Options::set_value_petsc_opts("-boundary_distance_ratio", ".115");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".115");
     // one level of upsampling, good  convergence rates on cube and torus
-    /*Options::set_value_petsc_opts("-boundary_distance_ratio", ".135");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".135");
-    Options::set_value_petsc_opts("-upsampling_type", "uniform");
-    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "1");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".125");
-    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".125");
-    */
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
     //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
     //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
@@ -154,6 +148,59 @@ void greens_identity_base_options(){
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+    
+    
+    // Holy magic 
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "8000");
+    Options::set_value_petsc_opts("-bis3d_np", "16");
+    Options::set_value_petsc_opts("-bis3d_spacing", "0.0454545");
+    //Options::set_value_petsc_opts("-bis3d_spacing", "0.09090909");
+    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "2");
+    //Options::set_value_petsc_opts("-bis3d_spacing", "0.0588");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".066");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0111");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".015");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0025");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
+*/    
+    Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".045");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".045");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".006666");
+    Options::set_value_petsc_opts("-upsampling_type", "uniform");
+    Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
+    Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
+    //Options::set_value_petsc_opts("-bis3d_spacing", "0.14285");
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", "0.14285");
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".090909");
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".090909");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
+    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
+    Options::set_value_petsc_opts("-dump_qbkix_points", "1");
+    Options::set_value_petsc_opts("-dom", "0");
+    Options::set_value_petsc_opts("-bdtype", "2");
+    Options::set_value_petsc_opts("-bis3d_np", "20");
+    Options::set_value_petsc_opts("-bis3d_ptsmax", "10000");
+    Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
+
+    Options::set_value_petsc_opts("-bis3d_spacing", "0.05");
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".0475");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00225");
+    // best for newtorus
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".0475");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".002");
+    // best for cube
+    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".004");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0013");
+    // Current best
+    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
+    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0025");
     /*
     Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "3");
@@ -200,7 +247,7 @@ TEST_CASE("Test qbkix Green's Identity Laplace: torus", "[results][gid][laplace]
     string domain = "newtorus.wrl"; // domain mesh
     string polynomial_patch_filename = "explicit_torus_patches.poly";
     string output_folder = "output/test_greens_identity/";
-    int num_iters = 4;
+    int num_iters = 6;
 
     setup_and_run_face_map_convergence_test(
             patch_order, 
@@ -414,7 +461,7 @@ TEST_CASE("Test qbkix Green's Identity Laplace mpi: cube", "[mpi-green][cube]"){
     //kinks in normals at patch corners
     int patch_refinement_factor = 0; // a bit of uniform fitting to better resolve patch corners
     int kernel_enum = 111; // laplace problem
-    string domain = "pipe.wrl"; // domain mesh
+    string domain = "cube.wrl"; // domain mesh
     string output_folder = "output/test_greens_identity/";
     int num_iters = 1;
 
@@ -431,3 +478,4 @@ TEST_CASE("Test qbkix Green's Identity Laplace mpi: cube", "[mpi-green][cube]"){
             num_iters);
 
 }
+//TEST_CASE

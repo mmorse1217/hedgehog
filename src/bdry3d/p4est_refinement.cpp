@@ -236,7 +236,9 @@ void resolve_function(p4est_t* p4est, PatchSurfFaceMap*& face_map, FunctionHandl
         // if so, continue
         //p4est_refine_ext(p4est, 0, -1, is_panel_inadmissible<FaceMapSubPatch>, NULL, copy_user_data_from_parent_quad);
 refine_p4est_quads( p4est);
-        {
+        
+        bool dump_points = Options::get_int_from_petsc_opts("-dump_qbkix_points"); 
+        if(dump_points){
             DblNumMat test(1,1);
             vector<int> pids(face_map->num_patches(),0);
             for (int i = 0; i < pids.size(); i++) {
@@ -414,12 +416,15 @@ void refine_patches_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map,
         patches_to_refine = patches_that_need_refinement(p4est);
         qbkix_points_local = get_local_vector(DIM, num_qbkix_samples, qbkix_points);
 
-        vector<int> ids(intermediate_face_map->num_patches(),0);
-        for(size_t i =0; i < ids.size(); i++){
-            ids[i] = i;
+        bool dump_points = Options::get_int_from_petsc_opts("-dump_qbkix_points"); 
+        if(dump_points){
+            vector<int> ids(intermediate_face_map->num_patches(),0);
+            for(size_t i =0; i < ids.size(); i++){
+                ids[i] = i;
+            }
+            string s = stats._file_prefix + "interior_ref_";
+            dump_vtk_data_for_paraview(qbkix_points_local, closest_on_surface_points, it++, ids, intermediate_face_map, s);
         }
-        string s = stats._file_prefix + "interior_ref_";
-        dump_vtk_data_for_paraview(qbkix_points_local, closest_on_surface_points, it++, ids, intermediate_face_map, s);
 
         qbkix_points_local.restore_local_vector();
     }
@@ -518,7 +523,13 @@ void refine_patches_midpoint_near_medial_axis(p4est_t*& p4est, PatchSurfFaceMap*
 
 
                     //shuffle(closest_on_surface_points.begin(), closest_on_surface_points.end());
-
+                    /*cout << "near patch ids to point " << qbkix_i << ": " << endl;
+                    for(int kk = 0; kk < closest_on_surface_points.size(); kk++){
+                        cout << closest_on_surface_points[kk].parent_patch << ", ";
+                    }
+                    cout << endl;
+                    cout << "looking for patch " << patch->V() << endl;
+                    */
                     assert(closest_on_surface_points.size() > 0);
                     // find the closest on-surface point
                     // TODO replace with
@@ -764,7 +775,7 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
         }
         stats.stop_timer(s);
         cout << "dump_qbkix_points : " << dump_points << endl;
-        if(dump_points){
+        if(!dump_points){
             cout << "PRINTING DATA" << endl;
             
             vector<int> patches_refined_relative_ids(intermediate_face_map->num_patches(), -1);

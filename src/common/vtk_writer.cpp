@@ -189,6 +189,7 @@ void write_general_points_to_vtk(Vec points, int degrees_of_freedom,
     vtkSmartPointer<vtkXMLPolyDataWriter>::New();
   
   string f = file_prefix + filename;
+  cout << "WRITING TO " << f << endl;
   writer->SetFileName(f.c_str());
   writer->SetInputData(polydata);
  

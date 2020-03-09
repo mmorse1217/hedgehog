@@ -24,7 +24,7 @@ TEST_CASE("Test solver convergence with qbkix: torus ", "[results][qbkix-solver-
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -46,7 +46,7 @@ TEST_CASE("Test laplace solver convergence with qbkix: cube", "[results][qbkix-s
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -67,7 +67,7 @@ TEST_CASE("Test laplace solver convergence with qbkix: pipe", "[results][qbkix-s
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -111,7 +111,7 @@ TEST_CASE("Test navier solver convergence with qbkix: cube", "[results][qbkix-so
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -132,7 +132,7 @@ TEST_CASE("Test navier solver convergence with qbkix: pipe", "[results][qbkix-so
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -176,7 +176,7 @@ TEST_CASE("Test stokes solver convergence with qbkix: cube", "[results][qbkix-so
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }
@@ -197,7 +197,7 @@ TEST_CASE("Test stokes solver convergence with qbkix: pipe", "[results][qbkix-so
             domain,
             output_folder,
             &test_gmres_solve_near_eval,
-            &solver_test_base_options,
+            &gmres_test_base_options,
             polynomial_patch_filename,
             num_iters);
 }

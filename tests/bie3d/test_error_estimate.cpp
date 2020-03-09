@@ -9,10 +9,91 @@
 #include "../utils/evaluation_utils.hpp"
 #include "common/vtk_writer.hpp"
 #include "bie3d/error_estimate.hpp"
+#include "bie3d/evaluator_far.hpp"
 
 using namespace Ebi;
 using ErrorEstimate::CurvatureDirection;
 using Markgrid::NearFieldMap;
+
+void perturb_flat_patch2(unique_ptr<PatchSurfFaceMap>& face_map, double tx, double ty){
+    assert(face_map->num_patches() == 1);
+    auto coefficients= face_map->face_map().control_points_write(0);
+    // 4x4 grid of coefficients
+    Point3 dx(0.,0.,tx);
+    Point3 dy(0.,0.,ty);
+    for (int i = 0; i < 4; i+=3) {
+        for (int j = 1; j < 3; j++) {
+            (*coefficients)(i*4 + j) += dx/2.; 
+        }
+    }
+    for (int i = 1; i < 3; i++) {
+        for (int j = 0; j < 4; j+=3) {
+            (*coefficients)(i*4 + j) += dy/2.; 
+        }
+    }
+    for (int i = 0; i < 4; i+=3) {
+        for (int j = 0; j < 4; j+=3) {
+            (*coefficients)(i*4 + j) += (dy+dx)*.5; 
+            
+        }
+    }
+        
+    
+}
+
+double compute_integral2(PatchSurfFaceMap* face_map, Point3 target_point){
+    //setup sampling and quadrature evaluator with current spacing
+    unique_ptr<PatchSamples> samples (new PatchSamples("", ""));
+    int num_patches = face_map->num_patches();
+    vector<int> patch_partition(num_patches, 0);
+    samples->bdry() = face_map;
+    samples->patch_partition() = patch_partition;
+    samples->setup();
+    
+    Vec target;
+    Petsc::create_mpi_vec(MPI_COMM_WORLD, 1*DIM, target);
+    PetscInt idx[3] = {0,1,2};
+
+    VecSetValues(target, 3, idx, target_point.array(), INSERT_VALUES);
+    VecAssemblyBegin(target);
+    VecAssemblyEnd(target);
+    
+    Kernel3d kernel(121, vector<double>(2,1.));
+    unique_ptr<EvaluatorFar> evaluator(new EvaluatorFar("", ""));
+    evaluator->knl()                  = kernel;
+    evaluator->target_3d_position()   = target;
+    evaluator->set_surface_discretization(samples.get());
+    evaluator->setFromOptions();
+    evaluator->setup();
+    
+    Vec density;
+    Petsc::create_mpi_vec(MPI_COMM_WORLD, samples->local_num_sample_points(), density);
+    Point3 charge_location(0., 5., 0.);
+    {
+        DblNumMat density_local(1,density);
+        DblNumMat sample_points_local(DIM, samples->sample_point_3d_position());
+        for(int i = 0; i < density_local.n(); i++){
+            Point3 y(sample_points_local.clmdata(i));
+            density_local(0,i) = 1./(y-charge_location).length();
+        }
+    }
+    //VecSet(density, 1.);
+    Vec potential;
+    Petsc::create_mpi_vec(MPI_COMM_WORLD, 1, potential);
+    VecSet(potential, 0.);
+    // compute the integral
+    evaluator->eval(density,  potential);
+
+    double integral = 0;
+    {
+        DblNumMat p_local(1, potential);
+        integral = p_local(0,0);
+    }
+    VecDestroy(&target);
+    VecDestroy(&density);
+    VecDestroy(&potential);
+    return integral;
+}
 
 void test_pullback_and_pushforward(string filename, bool inside_domain, CurvatureDirection curvature_direction){
     // compute the pullback of a target point; push pullback forward through
@@ -175,6 +256,7 @@ TEST_CASE("Test error estimate", "[error-estimate][cases]"){
         PetscOptionsSetValue(NULL, "-bd3d_meshfile", "wrl_files/flat_patch.wrl");
         PetscOptionsSetValue(NULL, "-poly_coeffs_file", "wrl_files/poly/flat_patch.poly");
         Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
+        Options::set_value_petsc_opts("-target_accuracy", "1e-9");
         Options::set_value_petsc_opts("-bis3d_spacing", ".06666");
 
 
@@ -182,13 +264,21 @@ TEST_CASE("Test error estimate", "[error-estimate][cases]"){
         face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
         face_map->setFromOptions();
         face_map->setup();
+        double shift = 1.;
+        perturb_flat_patch2(face_map, shift, shift);
         face_map->refine_test();
-
+       
+        unique_ptr<PatchSurfFaceMap> refined_face_map( new PatchSurfFaceMap("BD3D_", "bd3d_"));
+        refined_face_map->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
+        refined_face_map->setFromOptions();
+        refined_face_map->setup();
+        perturb_flat_patch2(refined_face_map, shift, shift);
+        refined_face_map->refine_uniform(4);
+        
+        
+        cout << "num_patches: "<< face_map->patches().size() << endl;
         assert(face_map->patches().size() == 1); // only a single flat patch
         auto patch = face_map->subpatch(0);
-        int n = 11;
-        double step_size = 2./(n-1);
-        double curvature = 0.;
 
         unique_ptr<PatchSamples> samples(new PatchSamples("", ""));
         samples->bdry() = face_map.get();
@@ -201,11 +291,9 @@ TEST_CASE("Test error estimate", "[error-estimate][cases]"){
         VecCopy(samples->sample_point_3d_position(), targets);
 
         // move target points off surface along the normal
-        double d = .0001;
+        //double d = .05;
+        double d = .3;
         bool inside_domain = true;
-        if(inside_domain){
-            d *= -1;
-        }
         VecAXPY(targets, d, samples->sample_point_normal()); 
         DblNumMat targets_local(DIM, targets);
         
@@ -215,16 +303,25 @@ TEST_CASE("Test error estimate", "[error-estimate][cases]"){
         DblNumMat density_values(1, uv_values.n()); 
         setvalue(density_values, 1.);
         int q = int(1./Options::get_double_from_petsc_opts("-bis3d_spacing")) +1;
-        for (int i = 0; i < targets_local.n(); i++) {
+        for (int i = q*q/2; i < q*q/2+ 1; i++){//targets_local.n(); i++) {
+        //for (int i = 0; i < targets_local.n(); i++) {
             Point3 target(targets_local.clmdata(i));
             OnSurfacePoint closest_point = closest_points(i);
             closest_point.distance_from_target = d;
             double error = ErrorEstimate::evaluate_error_estimate(patch, target, 
                     closest_point, q, uv_values, density_values);
-            cout << error << endl;
+            double computed_integral = compute_integral2(face_map.get(), target);
+            double true_integral= compute_integral2(refined_face_map.get(), target);
+            cout << "true_integral: " << true_integral << endl;
+            cout << "computed_integral: " << computed_integral << endl;
+            cout << "estimated error: " << error << endl;
+            double true_error = fabs(true_integral-computed_integral)/fabs(true_integral);
+            cout << "true error: " << true_error << endl;
+            CHECK(fabs(true_error - error)/fabs(true_error) <=10); 
         }
 
     } SECTION(""){
 
     }
 }
+

@@ -9,7 +9,7 @@
 #include "common/stats.hpp"
 #include <unordered_map>
 #include <sampling.hpp>
-#include <pvfmm/profile.hpp>
+#include <profile.hpp>
 BEGIN_EBI_NAMESPACE
 
 using std::min;
@@ -155,7 +155,7 @@ int PatchSamples::setup(bool refined)
     }
 
     for(int pi=0; pi<num_patches; pi++)	 
-        cerr<<_num_sample_points[pi]<<" ";  cerr<<endl;
+        cout<<_num_sample_points[pi]<<" ";  cout<<endl;
 
     //2. patch_sampling_index, num_sample_points_in_patch, sample_point_starting_index
     int local_num_sample_points = 0;
@@ -225,39 +225,45 @@ int PatchSamples::setup(bool refined)
             MPI_SUM, 
             mpiComm());
     num_local_valid_samples -= local_num_sample_points;
+
+    // number of local valid samples on other processors
     int actual_num_local_valid_samples = num_local_valid_samples;
 
-    for(int pi=0; pi<num_patches; pi++) {
-        if(_patch_partition[pi]==mpiRank()) {
-            _sample_point_starting_index[pi] = num_local_valid_samples;
-            num_local_valid_samples += _num_sample_points_in_patch[pi];
-        }
-    }
-    vector<int> tmpufpnumvec(_num_sample_points_in_patch);
-    // get number of samples and starting indices of other partitions
-    MPI_Allreduce( &(tmpufpnumvec[0]), 
-            &(_num_sample_points_in_patch[0]),
-            num_patches, 
-            MPI_INT, 
-            MPI_SUM, 
-            mpiComm() );
-
-    vector<int> tmp_sample_point_starting_index(_sample_point_starting_index);
-
-    MPI_Allreduce( &(tmp_sample_point_starting_index[0]),
-            &(_sample_point_starting_index[0]), 
-            num_patches, 
-            MPI_INT,
-            MPI_SUM, 
-            mpiComm() );
     if(dynamic_cast<PatchSurfFaceMap*>(_bdry) != NULL){
+        // face-map
         for(int i =0; i < _sample_point_starting_index.size(); i++){
             _sample_point_starting_index[i] = actual_num_local_valid_samples + 
                      i*_num_sample_points[i]*_num_sample_points[i];
             _num_sample_points_in_patch[i] = _num_sample_points[i]*_num_sample_points[i];
 
         }
+    } else{
+        // blendsurf + analytic
+        for(int pi=0; pi<num_patches; pi++) {
+            if(_patch_partition[pi]==mpiRank()) {
+                _sample_point_starting_index[pi] = num_local_valid_samples;
+                num_local_valid_samples += _num_sample_points_in_patch[pi];
+            }
+        }
+        vector<int> tmp_uniform_num_samples_vec(_num_sample_points_in_patch);
+        // get number of samples and starting indices of other partitions
+        MPI_Allreduce( &(tmp_uniform_num_samples_vec[0]), 
+                &(_num_sample_points_in_patch[0]),
+                num_patches, 
+                MPI_INT, 
+                MPI_SUM, 
+                mpiComm() );
+
+        vector<int> tmp_sample_point_starting_index(_sample_point_starting_index);
+
+        MPI_Allreduce( &(tmp_sample_point_starting_index[0]),
+                &(_sample_point_starting_index[0]), 
+                num_patches, 
+                MPI_INT,
+                MPI_SUM, 
+                mpiComm() );
     }
+    cout << "making vecs." << endl;
 
     //3. create all per sample point distrib storage
     Petsc::create_mpi_vec(mpiComm(), local_num_sample_points*face_point_size_in_doubles(), _sample_as_face_point);
@@ -370,11 +376,11 @@ int PatchSamples::setup(bool refined)
             double init = -bnd;
             
             //[0,1]^2 for face-map
-            double patch_size;
+            /*double patch_size;
             if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
                 patch_size = curpch->characteristic_length();
                 max_patch_size = max(max_patch_size, patch_size);
-            }
+            }*/
 
             int num_samples = _num_sample_points[pi];
             double step = _step_size[pi];
@@ -414,7 +420,7 @@ int PatchSamples::setup(bool refined)
             //double max_sample_spacing;
 
             // Compute distance between further samples
-
+            double patch_size = 0.;
             for(int j=0; j<num_samples; j++) {
                 for(int i=0; i<num_samples; i++) {
                     int index = patch_sampling_index(i,j);
@@ -461,17 +467,22 @@ int PatchSamples::setup(bool refined)
                         quad_weight(index) = step*step;
 
                         if(dynamic_cast<PatchSurfFaceMap*>(_bdry) != NULL){
-                        int on_surface_point_index = pi*num_samples*num_samples + index;
-                        OnSurfacePoint on_surface_point(
-                                pi,         //parent patch
-                                1e-16,      // distance to target
-                                Point2(xy), // (u,v) coordinates
-                                NEAR,       // region marking
-                                on_surface_point_index); // corr. target id
-                        on_surface_point.inside_domain = INSIDE; 
-                        _sample_point_as_on_surface_point(on_surface_point_index) = 
-                            on_surface_point;
+                            int on_surface_point_index = pi*num_samples*num_samples + index;
+                            OnSurfacePoint on_surface_point(
+                                    pi,         //parent patch
+                                    1e-16,      // distance to target
+                                    Point2(xy), // (u,v) coordinates
+                                    NEAR,       // region marking
+                                    on_surface_point_index); // corr. target id
+                            on_surface_point.inside_domain = INSIDE; 
+                            _sample_point_as_on_surface_point(on_surface_point_index) = 
+                                on_surface_point;
+                            
+                            int level = FaceMapSubPatch::as_subpatch(curpch)->_level;
+                            quad_weight(index) = lagrange_basis_integrals(i,j)/double(pow(4,level));
+                            alpha = 1.;
                         }
+                        patch_size += jacobian(index)*quad_weight(index);
                         /* For face-map only:
                          * approximate the discrete density samples of \phi on a patch by
                          * 
@@ -486,35 +497,10 @@ int PatchSamples::setup(bool refined)
                          */
 
                         //far_field(index) = _spacing;
-                        //Integral of basis function L_i(x)*L_i(y)
-                        if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
-
-                            // For patch refinement of a large face-map patch,
-                            // one must scale the contribution of a subpatch to
-                            // be be proportional to it's size. Since the domain
-                            // of a subpatch is still [0,1]^2, we need to scale 
-                            // the quadrature weight by 1/(4^level).
-                            int level = FaceMapSubPatch::as_subpatch(curpch)->_level;
-                            quad_weight(index) = lagrange_basis_integrals(i,j)/double(pow(4,level));
-                            alpha = 1.;
+                        // assumes spacing and distance are hard coded
+                        far_field(index) = _boundary_distance_ratio;
+                        interpolant_spacing(index) = _interpolation_spacing_ratio;
                         
-                            if(!qbkix_classical_conv && qbkix_adaptive_conv){
-                                // scale point spacing with L
-                                far_field(index) = patch_size*_boundary_distance_ratio;
-                                interpolant_spacing(index) = patch_size*_interpolation_spacing_ratio;
-                            } else if(qbkix_classical_conv && !qbkix_adaptive_conv){
-                                // scale point spacing with sqrt(L)
-                                far_field(index) = sqrt(patch_size)*_boundary_distance_ratio;
-                                interpolant_spacing(index) = sqrt(patch_size)*_interpolation_spacing_ratio;
-                            } else{
-                                assert(0);
-                            }
-                        } else {
-                            // assumes spacing and distance are hard coded
-                            far_field(index) = _boundary_distance_ratio;
-                            interpolant_spacing(index) = _interpolation_spacing_ratio;
-
-                        }
                         //combined integration weight
                         combined_weight(index) = len * alpha * quad_weight(index) ; //jac * alf * wgt
 
@@ -536,12 +522,59 @@ int PatchSamples::setup(bool refined)
                     }
                 }
             }
+            
+            // computing patch size
+            curpch->characteristic_length() = sqrt(patch_size);
+            for(int j=0; j<num_samples; j++) {
+                for(int i=0; i<num_samples; i++) {
+                    //Integral of basis function L_i(x)*L_i(y)
+                    int index = patch_sampling_index(i,j);
+                    if(index!=-1) {
+                        double L;
+                        if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
+                            L = curpch->characteristic_length(); // spacing is param space chebyshev spacing
+                        } else {
+                            L = 1.; // spacing is blendsurf direct 3 spacing
+                        }
+
+                        // For patch refinement of a large face-map patch,
+                        // one must scale the contribution of a subpatch to
+                        // be be proportional to it's size. Since the domain
+                        // of a subpatch is still [0,1]^2, we need to scale 
+                        // the quadrature weight by 1/(4^level).
+                        if(!qbkix_classical_conv && qbkix_adaptive_conv){
+                            // scale point spacing with L
+                            far_field(index) = L*_boundary_distance_ratio;
+                            interpolant_spacing(index) = L*_interpolation_spacing_ratio;
+                        } else if(qbkix_classical_conv && !qbkix_adaptive_conv){
+                            // scale point spacing with sqrt(L)
+                            far_field(index) = sqrt(L)*_boundary_distance_ratio;
+                            interpolant_spacing(index) = sqrt(L)*_interpolation_spacing_ratio;
+                        } else{
+                            assert(0);
+                        }
+                    }
+
+                }
+            }
+
         }
 
     }// end of patch loop
-    cerr<<"SUM "<<sum<<endl;
+    cout <<"SUM "<<sum<<endl;
     if(!refined){
         stats.stop_timer("PatchSamples::setup()");
+    }
+    if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
+        for(auto p: _bdry->patches()){
+            max_patch_size = max(max_patch_size, 
+                    FaceMapSubPatch::as_subpatch(p)->characteristic_length());
+        }
+#pragma omp parallel for
+        for(int i =0; i < _bdry->num_patches(); i++){ 
+            auto p = _bdry->patch(i);
+            FaceMapSubPatch::as_subpatch(p)->compute_near_zone_distance();
+        }
     }
     stats.add_result("face-map max patch size", max_patch_size);
 

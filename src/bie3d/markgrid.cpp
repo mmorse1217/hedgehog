@@ -44,10 +44,11 @@ NumVec<OnSurfacePoint> Markgrid::mark_target_points(
 
     // points are UNMARKED and NOWHERE by default
     setvalue(on_surface_points, OnSurfacePoint(-1, DBL_MAX, Point2(-1,-1), UNMARKED, -1)); 
-    if(compute_far_marking)
+    /*if(compute_far_marking)
         // Mark all points via FMM as far + in/out and unmarked for further processing
         mark_far_field(input_points, face_map, on_surface_points);
-
+        continue;
+    */
 
     // Mark all remaining unmarked points by near marking
     mark_near_field(input_points, face_map, on_surface_points);
@@ -90,11 +91,14 @@ void Markgrid::mark_far_field(DblNumMat input_points, PatchSurfFaceMap* face_map
     cout << "marking far field" << endl;
     for(int i = 0; i < input_points.n(); i++){
         double potential_at_target = potential_local(0,i);
-        if(fabs(potential_at_target - 1.)  <= 1e-4){
+        cout << potential_at_target << endl;
+        if(fabs(potential_at_target - 1.)  <= 1e-2){
+            //cout << "FAR MARKING INSIDE " << i  << endl;
             on_surface_points(i).inside_domain = INSIDE;
             on_surface_points(i).region = FAR;
             
-        } else if(fabs(potential_at_target) <= 1e-4){
+        } else if(fabs(potential_at_target) <= 1e-2){
+            //cout << "FAR MARKING OUTSIDE " << i  << endl;
             on_surface_points(i).inside_domain = OUTSIDE;
             on_surface_points(i).region = FAR;
         } else {
@@ -304,6 +308,11 @@ Vec Markgrid::evaluate_fmm_with_constant_density(DblNumMat input_points, PatchSu
     solver->setFromOptions(); 
     solver->_compute_refined_surface = false;
     solver->setup();
+    cout << "FMM Solver dom: " <<  solver->dom() << endl;
+    cout << "FMM Solver orientation: " ;
+        for(int i = 0; i < solver->bdry()->boundary_orientation().size() ; i++)
+            cout <<  solver->bdry()->boundary_orientation()[i] << ", ";
+        cout << endl;
     
     int source_degrees_of_freedom = 1;
     int target_degrees_of_freedom = 1;
@@ -670,6 +679,7 @@ Markgrid::NearFieldMap Markgrid::find_patches_near_point(
                 PatchSamples::EVAL_VL|PatchSamples::EVAL_FD,
                 (double*) ret);
         Point3 normal = cross(ret[1], ret[2]).dir();
+        cout << "dot prod " << dot(normal, target_point-ret[0]) << endl;
         if (dot(normal, target_point-ret[0]) < 0){
             //cout << "inside" << endl;
             closest_point.inside_domain = INSIDE; 
@@ -992,8 +1002,10 @@ void Markgrid::populate_closest_point_data(
     if (fabs(residual_proj_onto_normal) < threshold){
         closest_point.inside_domain = ON_SURFACE; 
     } else if(dot(normal, target_point-ret[0]) < 0){
+        //cout << "NEAR MARKING INSIDE: " <<  target_index << ", " << dot(normal, target_point-ret[0]) <<  endl;
         closest_point.inside_domain = INSIDE; 
     } else {
+        //cout << "NEAR MARKING OUTSIDE: " <<  target_index << ", " << dot(normal, target_point-ret[0]) <<  endl;
         closest_point.inside_domain = OUTSIDE; 
     }
 
@@ -1003,8 +1015,8 @@ void Markgrid::populate_closest_point_data(
     int n = int(floor(1./spacing))+1;
     DblNumMat density(1, n*n);
     setvalue(density, 1.);
-        DblNumMat uv_values(2, n*n, true, 
-                Sampling::sample_2d<Sampling::chebyshev2>(n, Sampling::base_domain).data());
+    DblNumMat uv_values(2, n*n, true, 
+            Sampling::sample_2d<Sampling::chebyshev2>(n, Sampling::base_domain).data());
     // mark near/far
     double error_estimate = ErrorEstimate::evaluate_error_estimate(  
             patch, target_point, closest_point, n, uv_values, density);
@@ -1187,7 +1199,6 @@ Point2 Markgrid::gradient_direction(Point3 X_u, Point3 X_v, Point3 n,
 
 bool Markgrid::stopping_criteria(Point3 u, Point3 v, Point3 p, 
         DescentType descent_type){
-
     switch(descent_type){
         case PLANE: 
             return (abs(dot(u/u.length(), p)) > 1e-15|| abs(dot(v/v.length(), p)) > 1e-15);
@@ -1201,10 +1212,10 @@ bool Markgrid::stopping_criteria(Point3 u, Point3 v, Point3 p,
 }
 
 bool is_xy_in_neighborhood_of_domain(Point2 xy){
-    return xy.x() >= -.2 && 
-           xy.y() >= -.2 && 
-           xy.x() <= 1.2 && 
-           xy.y() <= 1.2;
+    return xy.x() >= -.5 && 
+           xy.y() >= -.5 && 
+           xy.x() <= 1.5 && 
+           xy.y() <= 1.5;
 }
 
 OnSurfacePoint Markgrid::closest_on_surface_point_on_extended_patch(

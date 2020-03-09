@@ -38,7 +38,11 @@ void SystemStats::stop_timer(string timer_name){
 void SystemStats::add_result(string result_name, double result){
 #pragma omp critical 
     {
-    _results[result_name] = result;
+        if(_results.find(result_name) == _results.end()){
+            _results[result_name] += result;
+        } else {
+            _results[result_name] = result;
+        }
 }
 }
 
