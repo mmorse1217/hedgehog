@@ -9,3 +9,4 @@ output/**/*
 *.pvtu
 *.vtp
 *.visit
+.git
