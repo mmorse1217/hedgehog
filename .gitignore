@@ -5,3 +5,7 @@ build/*
 .DS_Store
 *.dSYM
 *.d
+*.vtu
+*.vtp
+lib/
+blendsurf3/

@@ -53,7 +53,7 @@ INC = -I. ${HEDGEHOG_INC}
 #gcc
 #CXXFLAGS = -std=c++11  -Wall -O3 -fPIC -qopenmp -DFFTW3  $(INC) 
 #intel
-CXXFLAGS = -std=c++11  -Wall -O3 -fPIC -qopenmp -DFFTW3   $(INC) 
+CXXFLAGS = -std=c++11  -Wall -O3 -fPIC -fopenmp -DFFTW3   $(INC) 
 #CXXFLAGS = -std=c++11  -Wall -lstdc++  -O3 -fPIC -unroll -ip -axCORE-AVX2 -qopenmp -qopt-report-stdout -qopt-report-phase=openm -DFFTW3  $(INC) 
 
 
