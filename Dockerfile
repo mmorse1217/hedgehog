@@ -71,14 +71,14 @@ RUN git clone https://github.com/dmalhotra/pvfmm && \
     cmake .. && \
     make && \
     make install
-
+# TODO change precomputed directory to be the host machine not the container
 
 # Install p4est 
 RUN wget http://p4est.github.io/release/p4est-1.1.tar.gz && \
     tar xvf p4est-1.1.tar.gz && \
     rm p4est-1.1.tar.gz && \
     cd /libs/p4est-1.1 && \
-    ./configure CC=mpicc F77=mpif77 FC=mpif90 --enable-mpi && \
+    ./configure CC=mpicc F77=mpif77 FC=mpif90 --enable-mpi --prefix=/usr/local && \
     make && \
     make install 
 
@@ -101,17 +101,39 @@ RUN git clone https://github.com/mmorse1217/blendsurf.git &&\
 ENV HEDGEHOG_LIBS=/libs \
     BLENDSURF_DIR=${HEDGEHOG_LIBS}/blendsurf \
     P4EST_DIR=${HEDGEHOG_LIBS}/p4est-1.1 \
-    PVFMM_DIR=${HEDGEHOG_LIBS}/pvfmm \
+    PVFMM_DIR=/usr/local/pvfmm \
     FFTW_DIR=${HEDGEHOG_LIBS}/fftw-3.3.4
 
 CMD ["/bin/bash"]
-FROM hedgehog-deps as hedgehog-build
+FROM hedgehog-deps as hedgehog-dev
+RUN mkdir /hedgehog
+WORKDIR /hedghog
+COPY patchwork/ /libs/patchwork
+#CMD ["/bin/bash"]
+#FROM hedgehog-dev as hedgehog-dev2
+RUN cd /libs/patchwork && \
+    mkdir -p build/ && \
+    cd build/ && \
+    P4EST_DIR=/usr/local cmake ..  && \
+    make &&
+    make install
 
-#TEST try compiling ebi 
-RUN mkdir -p ${HEDGEHOG_LIBS}/utils/pvfmm-utils
-#RUN mkdir -p ${MOBO_DIR}/src/
-ADD utils/pvfmm-utils ${HEDGEHOG_LIBS}/utils/pvfmm-utils
-#ADD src ${MOBO_DIR}/src
-#RUN ls ${MOBO_DIR}
+COPY utils/pvfmm-utils/ /libs/pvfmm-utils/
+RUN cd /libs/pvfmm-utils/ && \
+    mkdir build/ && \
+    cd build/ && \
+    CMAKE_PREFIX_PATH=/usr/local/share/pvfmm/ cmake .. && \
+    make VERBOSE=1 &&\
+    make install
+ENV DEBIAN_FRONTEND=noninteractive VTK_DIR=/usr/lib/x86_64-linux-gnu
+RUN apt-get update && apt-get install -y libvtk7-dev --no-install-recommends
+COPY . /hedgehog
+
 CMD ["bash"]
+RUN cd /hedgehog && \
+    mkdir build && \
+    cd build && \
+    PETSC_DIR=/usr/local/lib cmake .. && \
+    make VERBOSE=1
+
 

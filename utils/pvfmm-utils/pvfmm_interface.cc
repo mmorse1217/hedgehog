@@ -233,18 +233,18 @@ void laplace_sl_pvfmm(
     // FMM Setup
     delete ctx->tree;
 
-    pvfmm::PtFMM_Tree* tree=PtFMM_CreateTree(src_coord, src_value,
+    pvfmm::PtFMM_Tree<double>* tree = pvfmm::PtFMM_CreateTree<double>(src_coord, src_value,
            trg_coord, ctx->comm, ctx->max_pts, ctx->boundary);
     ctx->tree = tree;
     ctx->tree->SetupFMM(ctx->mat);
     // Run FMM
     COUT("Evaluating point FMM");
-    PtFMM_Evaluate(ctx->tree,potv,ntrg);
+    pvfmm::PtFMM_Evaluate<double>(ctx->tree,potv,ntrg);
   } else {
     // only Run FMM
     ctx->tree->ClearFMMData();
     COUT("Evaluating point FMM");
-    PtFMM_Evaluate(ctx->tree,potv,ntrg);
+    pvfmm::PtFMM_Evaluate<double>(ctx->tree,potv,ntrg);
   }
   /*
   // rebuild tree
@@ -371,10 +371,10 @@ void laplace_sldl_pvfmm(
           clock_t t = clock();
           if( ctx->sl ){
 
-              ctx->tree = PtFMM_CreateTree(sl_srcv, sl_denv, empty, empty,
+              ctx->tree = pvfmm::PtFMM_CreateTree<double>(sl_srcv, sl_denv, empty, empty,
                       trgv,ctx->comm, ctx->max_pts, ctx->boundary);
           } else { //Double layer
-              ctx->tree = PtFMM_CreateTree( empty, empty, dl_srcv, dl_denv,
+              ctx->tree = pvfmm::PtFMM_CreateTree<double>( empty, empty, dl_srcv, dl_denv,
                       trgv,ctx->comm, ctx->max_pts, ctx->boundary);
           }
           t = clock() - t;
@@ -388,7 +388,7 @@ void laplace_sldl_pvfmm(
           // Run FMM
           COUT("Evaluating point FMM");
           t = clock();
-          PtFMM_Evaluate(ctx->tree, potv, ntrg);
+          pvfmm::PtFMM_Evaluate<double>(ctx->tree, potv, ntrg);
           t = clock() - t;
           COUTDEBUG("FMM eval time:" << ((float) t/ CLOCKS_PER_SEC));
 
@@ -396,9 +396,9 @@ void laplace_sldl_pvfmm(
           // only Run FMM
           ctx->tree->ClearFMMData();
           if (ctx->sl){
-              PtFMM_Evaluate(ctx->tree, potv, ntrg, &sl_denv, NULL);
+              pvfmm::PtFMM_Evaluate<double>(ctx->tree, potv, ntrg, &sl_denv, NULL);
           } else { 
-              PtFMM_Evaluate(ctx->tree, potv, ntrg, NULL, &dl_denv);
+              pvfmm::PtFMM_Evaluate<double>(ctx->tree, potv, ntrg, NULL, &dl_denv);
           }
       }
   }
@@ -578,7 +578,7 @@ void construct_id_maps(void **context){
     //ASSERT(ctx->pvfmm_to_kifmm_ids == NULL, "pvfmm_to_kifmm_ids already initialized");
 
     // Build map from tree level i to PvFMM box ID's that occur on level i.
-    pvfmm::PtFMM_Tree* tree = ctx->tree;
+    pvfmm::PtFMM_Tree<double>* tree = ctx->tree;
     Node_t* current_node = tree->PreorderFirst();
     std::map<int , std::vector<pvfmm::MortonId> > level_to_box_ids;
     
@@ -640,12 +640,12 @@ void initialize_pvfmm_tree(vec sl_srcv, vec sl_denv, vec dl_srcv, vec dl_denv,
 
     vec empty;
     if( ctx->sl ){
-        ctx->tree = PtFMM_CreateTree(sl_srcv, sl_denv, empty, empty,
+        ctx->tree = pvfmm::PtFMM_CreateTree<double>(sl_srcv, sl_denv, empty, empty,
                 trgv,ctx->comm, ctx->max_pts, ctx->boundary);
     } else { //Double layer 
         // TODO eliminate conditional; tree structure shouldn't depend 
         // on normals + density
-        ctx->tree = PtFMM_CreateTree( empty, empty, dl_srcv, dl_denv,
+        ctx->tree = pvfmm::PtFMM_CreateTree<double>( empty, empty, dl_srcv, dl_denv,
                 trgv,ctx->comm, ctx->max_pts, ctx->boundary);
     }
     ctx->tree->SetupFMM(ctx->mat);
@@ -755,7 +755,7 @@ std::map<int, std::vector<int> > build_level_to_box_ids_map(void **context){
     
     PVFMMContext *ctx = (PVFMMContext*) *context;
 
-    pvfmm::PtFMM_Tree* tree = ctx->tree;
+    pvfmm::PtFMM_Tree<double>* tree = ctx->tree;
     
     std::map<int , std::vector<int> > level_to_box_ids;
     int depth = 0;

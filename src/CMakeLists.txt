@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.1)
-set(CMAKE_CXX_STANDARD 11)
 
 add_subdirectory(bdry3d)
 add_subdirectory(bie3d)
@@ -20,8 +18,33 @@ add_library(Hedgehog STATIC ${Hedgehog_dirs})
 
 set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
 set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib )
-link_directories($ENV{VTK_DIR}/lib)
-target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES} ${FACEMAP_LIB} ${BLENDSURF_LIB} 
-    ${P4EST_LIB} ${SC_LIB} ${PVFMM_INTERFACE_LIB} ${PVFMM_LIB} ${GEOGRAM_LIB} 
-    ${FFTW_LIB}  ${PETSC_LIB} ${MPI_LIB}  lapack blas expat)
+target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES}) 
+#target_link_libraries(Hedgehog PUBLIC ${FACEMAP_LIB})
+target_link_libraries(Hedgehog PUBLIC ${Blendsurf_LIBRARIES})
+target_link_libraries(Hedgehog PUBLIC ${p4est_LIBRARIES})
+#target_link_libraries(patchwork -L${p4est_LIB} ${p4est_LIBRARIES})
+target_link_libraries(Hedgehog PUBLIC ${PETSC_LIBRARIES})
+target_link_libraries(Hedgehog PUBLIC pvfmmutils)
+#target_link_libraries(Hedgehog ZLIB::ZLIB)
+target_link_libraries(Hedgehog PUBLIC ${LAPACK_LIBRARIES} )
+target_link_libraries(Hedgehog PUBLIC ${MPI_LIBRARIES})
+target_link_libraries(Hedgehog PUBLIC LAPACK )
+target_link_libraries(Hedgehog PUBLIC VTK)
+
+target_include_directories(Hedgehog PUBLIC ${VTK_INCLUDE}) 
+#target_include_directories(Hedgehog PUBLIC ${FACEMAP_LIB})
+target_include_directories(Hedgehog PUBLIC ${Blendsurf_INCLUDE_DIRS})
+target_include_directories(Hedgehog PUBLIC ${p4est_INCLUDE_DIR})
+#target_include_directories(patchwork -L${p4est_LIB} ${p4est_INCLUDE})
+target_include_directories(Hedgehog PUBLIC ${PETSC_INCLUDES})
+target_include_directories(Hedgehog PUBLIC pvfmmutils)
+#target_include_directories(Hedgehog ZLIB::ZLIB)
+target_include_directories(Hedgehog PUBLIC ${LAPACK_INCLUDE} )
+target_include_directories(Hedgehog PUBLIC ${MPI_CXX_INCLUDE_DIRS})
+target_include_directories(Hedgehog PUBLIC LAPACK )
+target_include_directories(Hedgehog PUBLIC VTK)
+
+#${PVFMM_INTERFACE_LIB} ${PVFMM_LIB} ${GEOGRAM_LIB} 
+#${FFTW_LIB}  ${PETSC_LIB} ${MPI_LIB}  lapack blas expat)
+target_include_directories(Hedgehog PUBLIC ${Hedgehog_SOURCE_DIR}/src)
 target_compile_options(Hedgehog PUBLIC "-DFFTW3")
