@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <math.h>
 #include "common/ebi_petsc.hpp"
+#include <random>
 using Ebi::DblNumMat;
 using Ebi::get_local_vector;
 using Ebi::DIM;

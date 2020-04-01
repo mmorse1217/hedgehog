@@ -1,6 +1,7 @@
 FROM ubuntu:18.04 as hedgehog-deps
 
 # Install dependencies
+ENV DEBIAN_FRONTEND=noninteractive 
 RUN apt-get update && apt-get install -y \
     autoconf \
     automake \
@@ -14,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     libexpat1-dev \
     liblapack-dev \
     libtool \
+    libvtk7-dev \
     mpich \
     python \
     wget \
@@ -39,17 +41,9 @@ RUN mkdir petsc-3.7.2 && \
     --with-debugging=0 --with-64-bit-indices=1 --with-single-library=1 && \ 
     make && \
     make install 
-# TODO COMPILE PETSC!!!
     
 
-# ADD FFTW from mobo directory to the container and install 
-#RUN wget http://www.fftw.org/fftw-3.3.4.tar.gz && \
-#    tar xvf fftw-3.3.4.tar.gz && \
-#    rm fftw-3.3.4.tar.gz && \
-#    cd fftw-3.3.4 && \
-#    ./configure --prefix=`pwd` --enable-openmp && \
-#    make && \
-#    make install
+# Install FFTW3: install single and double precision libraries for PVFMM
 RUN wget http://www.fftw.org/fftw-3.3.4.tar.gz && \
     tar xvf fftw-3.3.4.tar.gz && \
     rm fftw-3.3.4.tar.gz && \
@@ -78,7 +72,7 @@ RUN wget http://p4est.github.io/release/p4est-1.1.tar.gz && \
     tar xvf p4est-1.1.tar.gz && \
     rm p4est-1.1.tar.gz && \
     cd /libs/p4est-1.1 && \
-    ./configure CC=mpicc F77=mpif77 FC=mpif90 --enable-mpi --prefix=/usr/local && \
+    ./configure CC=mpicc CXX=mpic++ F77=mpif77 FC=mpif90 --enable-mpi --prefix=/usr/local && \
     make && \
     make install 
 
@@ -90,50 +84,59 @@ RUN git clone https://github.com/mmorse1217/blendsurf.git &&\
     make  &&\
     make install
 
-# Install patchwork
-#RUN git clone https://github.com/mmorse1217/patchwork.git &&\
-#    mkdir -p patchwork/build/ && \
-#    cd patchwork/build/ && \
-#    cmake -DCMAKE_MODULE_PATH=/usr/share/cmake-3.10/Modules/ ..  && \
-#    make 
-# TODO replace with subrepo + COPY + compile
 
-ENV HEDGEHOG_LIBS=/libs \
-    BLENDSURF_DIR=${HEDGEHOG_LIBS}/blendsurf \
-    P4EST_DIR=${HEDGEHOG_LIBS}/p4est-1.1 \
-    PVFMM_DIR=/usr/local/pvfmm \
-    FFTW_DIR=${HEDGEHOG_LIBS}/fftw-3.3.4
+# Install Geogram
+RUN cd /libs && \
+    wget https://gforge.inria.fr/frs/download.php/file/37442/geogram_1.6.2.tar.gz &&\
+    tar xvf geogram_1.6.2.tar.gz && \
+    rm geogram_1.6.2.tar.gz && \
+    cd geogram_1.6.2/ &&\
+    mkdir build && \
+    cd build &&\
+    cmake -DGEOGRAM_WITH_VORPALINE=OFF -DVORPALINE_PLATFORM=Linux64-gcc\
+    -DGEOGRAM_WITH_EXPLORAGRAM=OFF -DGEOGRAM_LIB_ONLY=ON\
+    -DGEOGRAM_WITH_GRAPHICS=OFF .. &&\
+    make &&\
+    make install
+
+
+
+
+#ENV HEDGEHOG_LIBS=/libs \
+#    BLENDSURF_DIR=${HEDGEHOG_LIBS}/blendsurf \
+#    P4EST_DIR=${HEDGEHOG_LIBS}/p4est-1.1 \
+#    PVFMM_DIR=/usr/local/pvfmm \
+#    FFTW_DIR=${HEDGEHOG_LIBS}/fftw-3.3.4
 
 CMD ["/bin/bash"]
 FROM hedgehog-deps as hedgehog-dev
 RUN mkdir /hedgehog
-WORKDIR /hedghog
+WORKDIR /hedgehog
 COPY patchwork/ /libs/patchwork
-#CMD ["/bin/bash"]
-#FROM hedgehog-dev as hedgehog-dev2
+
+#Install patchwork
 RUN cd /libs/patchwork && \
     mkdir -p build/ && \
     cd build/ && \
-    P4EST_DIR=/usr/local cmake ..  && \
-    make &&
+    cmake ..  && \
+    make && \
     make install
 
+#Install PVFMM wrapper
 COPY utils/pvfmm-utils/ /libs/pvfmm-utils/
 RUN cd /libs/pvfmm-utils/ && \
     mkdir build/ && \
     cd build/ && \
-    CMAKE_PREFIX_PATH=/usr/local/share/pvfmm/ cmake .. && \
+    cmake -DCMAKE_MODULE_PATH=cmake .. && \
     make VERBOSE=1 &&\
     make install
-ENV DEBIAN_FRONTEND=noninteractive VTK_DIR=/usr/lib/x86_64-linux-gnu
-RUN apt-get update && apt-get install -y libvtk7-dev --no-install-recommends
-COPY . /hedgehog
 
+ENV CC=gcc CXX=g++
 CMD ["bash"]
-RUN cd /hedgehog && \
-    mkdir build && \
-    cd build && \
-    PETSC_DIR=/usr/local/lib cmake .. && \
-    make VERBOSE=1
+#RUN cd /hedgehog && \
+#    mkdir build && \
+#    cd build && \
+#    PETSC_DIR=/usr/local/lib cmake .. && \
+#    make -j${nprocs} VERBOSE=1
 
 

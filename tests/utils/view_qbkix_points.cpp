@@ -4,6 +4,7 @@
 #include "common/vtk_writer.hpp"
 #include "common/stats.hpp"
 #include "evaluation_utils.hpp"
+#include <numeric>
 using namespace Ebi;
 
 TEST_CASE("dump qbkix points for paraview", "[qbkix-points][debug]"){

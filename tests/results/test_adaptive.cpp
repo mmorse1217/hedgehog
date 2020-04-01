@@ -5,6 +5,7 @@
 #include "../utils/evaluation_utils.hpp"
 #include "bdry3d/patch_surf_face_map.hpp"
 #include <sampling.hpp>
+#include <numeric>
 #include "bie3d/markgrid.hpp"
 using namespace Ebi;
 using Sampling::sample_2d;

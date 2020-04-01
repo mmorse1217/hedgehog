@@ -18,7 +18,7 @@ int main( int argc, char**  argv ) {
     GEO::initialize();
     bool profile = Options::get_int_from_petsc_opts("-profile");
     if(profile)
-    pvfmm::Profile::Enable(true);
+    //pvfmm::Profile::Enable(true);
     
     srand48( (long)time(NULL) );
     MPI_Comm comm = petsc_context.comm();
