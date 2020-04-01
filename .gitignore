@@ -9,3 +9,5 @@ build/*
 *.vtp
 lib/
 blendsurf3/
+*.data
+precomp/
