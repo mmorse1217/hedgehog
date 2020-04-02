@@ -540,10 +540,10 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
 
 TEST_CASE("Test patch h-refinement with varied refinement levels","[refine][interpolate][patch_samples]"){
     // Load patch + polynomial from file
-    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/flat_patch.wrl");
-    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/flat_patch.wrl");
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/flat_patch.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/flat_patch.wrl");
     Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
-    Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/flat_patch.poly");
+    Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/flat_patch.poly");
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "1");
     Options::set_value_petsc_opts("-bis3d_spacing", ".066666");
     int num_samples_per_patch_1d = floor(1./Options::get_double_from_petsc_opts("-bis3d_spacing"))+1;
@@ -614,10 +614,10 @@ TEST_CASE("Test patch h-refinement with varied refinement levels","[refine][inte
 }
 TEST_CASE("Test patch h-refinement with adaptive refinement","[refine][interpolate][patch_samples][adaptive]"){
     // Load patch + polynomial from file
-    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/flat_patch.wrl");
-    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/flat_patch.wrl");
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/flat_patch.wrl");
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/flat_patch.wrl");
     Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
-    Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/flat_patch.poly");
+    Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/flat_patch.poly");
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "1");
     //Options::set_value_petsc_opts("-bis3d_spacing", ".066666");
     Options::set_value_petsc_opts("-bis3d_spacing", ".1");

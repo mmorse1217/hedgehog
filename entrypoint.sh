@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # code to execute during CI build
-mkdir -p /hedgehog/build/ 
-cd /hedgehog/build/
+mkdir -p build/ 
+cd build/
 cmake ..  
-make -j${nprocs}
+make 
 cd ../
-bin/test_patchwork [critical]
+build/tests/test_hedgehog [critical]
+

@@ -24,9 +24,9 @@ TEST_CASE("Test qbkix extrapolation of known functions", "[critical][eval][near]
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
     SECTION("Test single flat patch, extrapolate analytic function"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/small_flat_patch.wrl"); // single small_flat_patch
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/small_flat_patch.wrl");
-        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/small_flat_patch.poly");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/small_flat_patch.wrl"); // single small_flat_patch
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/small_flat_patch.wrl");
+        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/small_flat_patch.poly");
 
         unique_ptr<PatchSurfFaceMap> surface(new PatchSurfFaceMap("BD3D_", "bd3d_"));
         surface->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
@@ -53,8 +53,8 @@ TEST_CASE("Test qbkix extrapolation of known functions slow", "[eval][near][qbki
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
 
     SECTION("Test single curved flat patch with adaptive refinement, extrapolate analytic functions"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/gaussian.wrl"); // single small_flat_patch
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/gaussian.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/gaussian.wrl"); // single small_flat_patch
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/gaussian.wrl");
         Options::set_value_petsc_opts("-analytic_function", "4");
         Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "6");
         Options::set_value_petsc_opts("-bd3d_facemap_fit_accuracy", "1e-6");
@@ -73,8 +73,8 @@ TEST_CASE("Test qbkix extrapolation of known functions slow", "[eval][near][qbki
     }
 
     SECTION("Test cube, extrapolate analytic function"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // single cube
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl"); // single cube
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
         Options::set_value_petsc_opts("-bd3d_facemap_adaptive", "0");
         Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "1");
 

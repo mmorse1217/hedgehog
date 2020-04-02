@@ -11,7 +11,14 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        submodules: 'recursive'
+        token: ${{secrets.PERSONAL_ACCESS_TOKEN}}
+        submodules: true
     - uses: docker://mmorse1217/hedgehog:latest
     - name: Build hedgehog
-      run: docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog mmorse1217/hedgehog:latest sh entrypoint.sh
+      run: |
+        docker build -t hedgehog-dev --target=hedgehog-dev --cache-from="mmorse1217/hedgehog:latest" .
+        ls
+        pwd
+        echo ${GITHUB_WORKSPACE}
+        docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog hedgehog-dev ls
+        docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog hedgehog-dev sh entrypoint.sh
