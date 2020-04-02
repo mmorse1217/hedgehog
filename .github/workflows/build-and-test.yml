@@ -1,0 +1,17 @@
+name: build and test
+
+on: [push]
+  
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+    - uses: docker://mmorse1217/hedgehog:latest
+    - name: Build hedgehog
+      run: docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog mmorse1217/hedgehog:latest sh entrypoint.sh

@@ -102,11 +102,6 @@ RUN cd /libs && \
 
 
 
-#ENV HEDGEHOG_LIBS=/libs \
-#    BLENDSURF_DIR=${HEDGEHOG_LIBS}/blendsurf \
-#    P4EST_DIR=${HEDGEHOG_LIBS}/p4est-1.1 \
-#    PVFMM_DIR=/usr/local/pvfmm \
-#    FFTW_DIR=${HEDGEHOG_LIBS}/fftw-3.3.4
 
 CMD ["/bin/bash"]
 FROM hedgehog-deps as hedgehog-dev
@@ -133,10 +128,5 @@ RUN cd /libs/pvfmm-utils/ && \
 
 ENV CC=gcc CXX=g++
 CMD ["bash"]
-#RUN cd /hedgehog && \
-#    mkdir build && \
-#    cd build && \
-#    PETSC_DIR=/usr/local/lib cmake .. && \
-#    make -j${nprocs} VERBOSE=1
 
 
