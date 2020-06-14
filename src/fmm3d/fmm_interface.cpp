@@ -4,14 +4,15 @@
 BEGIN_EBI_NAMESPACE
 
 // ----------------------------------------------------------------------
+FMM::FMM(){
+}
+FMM::~FMM(){
+}
 void FMM::initialize_fmm(Vec source_positions, Vec source_normals,
         Vec target_positions, Kernel3d kernel, bool call_setup){
 
 
-   // note the FMM and hence the solver is always centered at the origin
-   _center = Point3(0., 0., 0.);
 
-   _root_level =         Options::get_int_from_petsc_opts("-bis3d_rootlvl");
    _max_level  =         Options::get_int_from_petsc_opts("-bis3d_maxlevel"); 
    _multipole_order =    Options::get_int_from_petsc_opts("-bis3d_np");
    _max_points_per_box = Options::get_int_from_petsc_opts("-bis3d_ptsmax");

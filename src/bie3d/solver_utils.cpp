@@ -106,8 +106,7 @@ int denscale(int sd, vector<Vec>& constant_vecs, Vec den, Vec scaled_density)
 /*
 void pvfmm_evaluation(Vec sources, Vec normals, Vec targets, Kernel3d kernel,
         Vec density, Vec potential){
-    PvFMM* fmm = new PvFMM();
-    fmm->initialize_fmm(sources, normals, targets, kernel);
+    PvFMM* fmm = new PvFMM(sources, normals, targets, kernel);
     fmm->evaluate(density, potential);
     delete fmm;
 }
@@ -365,16 +364,16 @@ void evaluate_singularity_solution(
 
     // MJM TODO add asserts to verify correct size vectors based on kernel DOF's
    /* 
-    PvFMM* fmm = new PvFMM();
+
     cout << "before fmm initialize" <<  endl;
-    Vec dummy_normals;
-    VecCreateMPI(MPI_COMM_WORLD, num_local_samples*3, PETSC_DETERMINE, &dummy_normals);
-    VecSet(dummy_normals, 0.);
-    fmm->initialize_fmm(
+    PvFMM* fmm = new PvFMM(
             singularity_positions,
             singularity_normals,
             target_points,
             kernel);
+    Vec dummy_normals;
+    VecCreateMPI(MPI_COMM_WORLD, num_local_samples*3, PETSC_DETERMINE, &dummy_normals);
+    VecSet(dummy_normals, 0.);
     cout << "after fmm initialize" <<  endl;
     
     cout << "before fmm evaluate" <<  endl;
@@ -538,9 +537,8 @@ void evaluate_singularity_solution(
 
     // MJM TODO add asserts to verify correct size vectors based on kernel DOF's
     
-    PvFMM* fmm = new PvFMM();
     cout << "before fmm initialize" <<  endl;
-    fmm->initialize_fmm(
+    PvFMM* fmm = new PvFMM(
             singularity_positions,
             singularity_normals,
             target_points,

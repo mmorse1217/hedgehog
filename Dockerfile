@@ -104,6 +104,7 @@ RUN cd /libs && \
 
 
 CMD ["/bin/bash"]
+
 FROM hedgehog-deps as hedgehog-dev
 RUN mkdir /hedgehog
 WORKDIR /hedgehog
@@ -117,16 +118,36 @@ RUN cd /libs/patchwork && \
     make && \
     make install
 
-#Install PVFMM wrapper
-COPY utils/pvfmm-utils/ /libs/pvfmm-utils/
-RUN cd /libs/pvfmm-utils/ && \
-    mkdir build/ && \
-    cd build/ && \
-    cmake -DCMAKE_MODULE_PATH=cmake .. && \
-    make VERBOSE=1 &&\
-    make install
-
 ENV CC=gcc CXX=g++
 CMD ["bash"]
 
 
+FROM hedgehog-dev as hedgehog-dev-local
+
+
+ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
+    PATH="~/miniconda3/bin:${PATH}"  \
+    TERM=xterm-256color 
+RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform
+WORKDIR /terraform 
+
+RUN apt-get update -y && apt install -y sudo git
+RUN bash dotfiles/setup.sh 
+
+RUN bash programs/python.sh 
+
+# build vim
+RUN bash vim/build_from_source.sh  
+
+# setup language servers for c++/python
+RUN bash vim/lang-servers/setup.sh  
+RUN bash vim/lang-servers/python-language-server.sh  
+RUN bash vim/lang-servers/clangd.sh  
+
+# install plugins
+RUN bash vim/install_plugins.sh
+
+WORKDIR /hedgehog
+
+
+CMD ["/bin/bash"]

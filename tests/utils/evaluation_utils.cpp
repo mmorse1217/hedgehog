@@ -2,6 +2,8 @@
 #include "common/vtk_writer.hpp"
 #include "common/nummat.hpp"
 #include "common/stats.hpp"
+#include <petscvec.h>
+#include <petscviewer.h>
 #include <sampling.hpp>
 #include "bie3d/markgrid.hpp"
 #include "bie3d/solver_utils.hpp"
@@ -1128,10 +1130,11 @@ void run_coarse_fmm(unique_ptr<SolverGMRESDoubleLayer>& solver,
     
     Kernel3d k(solver->equation_type() + DOUBLE_LAYER + VAR_U, solver->eqcoefs());
     
-    unique_ptr<PvFMM> fmm(new PvFMM());
-    fmm->initialize_fmm(solver->patch_samples()->sample_point_3d_position(),
-            solver->patch_samples()->sample_point_normal(),
-            solver->patch_samples()->sample_point_3d_position(), k);
+    unique_ptr<PvFMM> fmm(new PvFMM(
+                solver->patch_samples()->sample_point_3d_position(),
+                solver->patch_samples()->sample_point_normal(),
+                solver->patch_samples()->sample_point_3d_position(), k
+                ));
     int64_t n;
     VecGetSize(solver->patch_samples()->sample_point_3d_position(), &n);
     n /= DIM;
@@ -1172,6 +1175,8 @@ void run_test(PatchSurf* surface,
             closest_points, solved_density, 
             computed_potential,
             test_type);
+    cout << "solved density" << endl;
+    VecView(solved_density, PETSC_VIEWER_STDOUT_SELF);
     if(test_type.time_coarse_fmm){
         run_coarse_fmm(solver, boundary_data, targets);
     }
@@ -1330,6 +1335,8 @@ void test_qbkix_constant_density(unique_ptr<SolverGMRESDoubleLayer>& solver,
     int num_target_points = Petsc::get_vec_local_size(targets)/DIM;
     
     NumVec<OnSurfacePoint> on_surface_points = solver->patch_samples()->sample_point_as_on_surface_point();//(num_target_points);
+    cout << "on_surface_points: " << on_surface_points.m() << endl;
+
     solver->evaluate(targets,
             boundary_data,
             computed_potential,

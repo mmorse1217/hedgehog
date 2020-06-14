@@ -24,16 +24,15 @@ class FMM {
         DblNumMat* _trgPos;
         Kernel3d _kernel;
         // FMM properties. Loaded from options files
-        Point3 _center;
-        int64_t _root_level;
         int64_t _multipole_order;
         int64_t _max_level;
         int64_t _max_points_per_box;
 
 
     public:
-        FMM(){;}
-        virtual ~FMM(){;}
+        FMM();
+        //virtual ~FMM(){;}
+        virtual ~FMM();
         
         void collect_fmm_data(Vec source_positions, Vec source_normals,
                 Vec target_positions, Kernel3d kernel);
@@ -44,9 +43,9 @@ class FMM {
          * Call from inside GMRES matvec.
          */
         // Note: function signature may need to change.
-        virtual int evaluate( const Vec& srcDen, Vec& trgVal) = 0;
-        virtual int evaluate(const DblNumVec& srcDen, DblNumVec& trgVal) = 0;
-        virtual int interaction_matrix(DblNumMat source_positions, 
+        virtual void evaluate( const Vec& srcDen, Vec& trgVal) = 0;
+        virtual void evaluate(const DblNumVec& srcDen, DblNumVec& trgVal) = 0;
+        virtual void interaction_matrix(DblNumMat source_positions, 
                 DblNumMat source_normals, DblNumMat target_positions, 
                 DblNumMat& interaction_matrix) = 0;
         
@@ -61,9 +60,6 @@ class FMM {
         DblNumMat*& srcNor() { return _srcNor; } 
         DblNumMat*& trgPos() { return _trgPos; } 
         
-        int64_t root_level(){
-            return _root_level;
-        }
 
         int64_t multipole_order(){
             return _multipole_order;

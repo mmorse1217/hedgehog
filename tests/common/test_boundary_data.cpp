@@ -305,10 +305,10 @@ TEST_CASE("Dirichlet Neumman condition", "[boundary-data][navier][dirichlet]"){
                     computed_boundary_data);
         }
          // evaluate with pvfmm
-         unique_ptr<PvFMM> fmm(new PvFMM());
-         fmm->initialize_fmm(source_positions,
-                 source_normals,
-                 samples->sample_point_3d_position(), kernel);
+        unique_ptr<PvFMM> fmm(new PvFMM(
+                    source_positions,
+                    source_normals,
+                    samples->sample_point_3d_position(), kernel));
          Vec true_boundary_data;
          Petsc::create_mpi_vec(MPI_COMM_WORLD, num_samples*kernel.get_tdof(), true_boundary_data);
          VecSet(true_boundary_data,0.);

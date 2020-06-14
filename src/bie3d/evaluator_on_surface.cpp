@@ -100,15 +100,7 @@ int EvaluatorOnSurface::setup()
   // correctly for a single processor, as it goes over sposarr and other
   // arrays obtained from distributed vectors below from 0 to global vector DIMension
   
-  /*{
-      DblNumMat tmp_samples(DIM, patch_samples->sample_point_3d_position());
-      tmp_samples(0,3132) +=1e-8;
-      //tmp_samples(1,3132) +=1e-6;
-      //tmp_samples(2,3132) +=1e-6;
-
-  }*/
-  fmm = new PvFMM(); 
-  fmm->initialize_fmm(
+  fmm = new PvFMM(
           patch_samples->sample_point_3d_position(), /* source positions */
           patch_samples->sample_point_normal(),      /* source normals */
           _target_3d_position,                       /* target positions */

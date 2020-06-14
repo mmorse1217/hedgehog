@@ -92,3 +92,12 @@ docker-build: Dockerfile
 
 clean: 
 	-rm $(BUILD_DIR)/$(BIN) $(OBJ) $(DEP) $(TEST_OBJ) $(TEST_DEP) $(BUILD_DIR)/* $(BIN_OBJ) build/tests/test_bis.o
+container-create:
+	echo "making container...";
+	docker create -it -v `pwd`:/hedgehog --name hedgehog-dev hedgehog
+container-start:
+	echo "starting container...";
+	docker start hedgehog-dev
+container-exec:
+	echo "exec-ing into container...";
+	docker exec -it hedgehog-dev bash

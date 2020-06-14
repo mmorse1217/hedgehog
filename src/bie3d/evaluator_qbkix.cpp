@@ -23,11 +23,11 @@ int EvaluatorQBKIX::setup(){
     
     int n = Petsc::get_vec_local_size(_aux_interpolation_points)/3;
     // set up FMM
-    _fmm = unique_ptr<FMM>(new PvFMM());
-    _fmm->initialize_fmm(_refined_patch_samples->sample_point_3d_position(),
-                         _refined_patch_samples->sample_point_normal(),
+    _fmm = unique_ptr<FMM>(new PvFMM(
+                _refined_patch_samples->sample_point_3d_position(),
+                _refined_patch_samples->sample_point_normal(),
                          _aux_interpolation_points,
-                         this->knl());
+                         this->knl()));
     
     if(dynamic_cast<PatchSurfFaceMap*>(_patch_samples->bdry()) == NULL){
   _collocation_data->distribute_collocation_points(

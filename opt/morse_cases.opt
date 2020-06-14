@@ -180,15 +180,15 @@
 #------------------------------------------------------------------------------------
 #BASIC CONTROLS(CATMULL-CLARK)
 
--ccsurf_submatlibfile		blendsurf3/ccsubmatall.dat #ccsubmat_int_boun_v8.dat
+-ccsurf_submatlibfile		/libs/blendsurf/ccsubmatall.dat #ccsubmat_int_boun_v8.dat
 -ccsurf_renderlvl		5
 -ccsurf_flats			-1		#flatness parameter, -1 is the default val
 						#given in paper (Biermann, Zorin)
 #------------------------------------------------------------------------------------
 #BASIC CONTROLS(BLEND SURFACE)
 
--bd3d_bdsurf_submatlibfile		blendsurf3/ccsubmatall.dat # ccsubmat_intboun13_corner8.dat # ccsubmat_int_v13.dat #	
--bd3d_bdsurf_bdulibfile		blendsurf3/bdsurf_U_ONE.dat
+-bd3d_bdsurf_submatlibfile		/libs/blendsurf/ccsubmatall.dat # ccsubmat_intboun13_corner8.dat # ccsubmat_int_v13.dat #	
+-bd3d_bdsurf_bdulibfile		/libs/blendsurf/blendsurf3/bdsurf_U_ONE.dat
 -bdsurf_renderlvl		5
 -bdsurf_rendergen		0		# 0 = render full mesh, 
 						# 1 = render 1/2 charts,

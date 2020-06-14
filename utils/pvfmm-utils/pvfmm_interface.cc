@@ -473,10 +473,17 @@ void pvfmm_direct_summation(const size_t &sl_nsrc, const real_t *sl_src,
         size_t b=((i+1)*ntrg)/omp_p;
 
 
-        ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
-                dl_denv.data(), 1,
-                trgv.data() + a*3, b-a,
-                potv.data()+a*ctx->ker->ker_dim[1],NULL);
+        if(ctx->sl && !ctx->dl){
+            ctx->ker->ker_poten(sl_srcv.data(), sl_nsrc,
+                    sl_denv.data(), 1,
+                    trgv.data() + a*3, b-a,
+                    potv.data()+a*ctx->ker->ker_dim[1],NULL);
+        } else if(!ctx->sl && ctx->dl){
+            ctx->ker->dbl_layer_poten(dl_srcv.data(), dl_nsrc,
+                    dl_denv.data(), 1,
+                    trgv.data() + a*3, b-a,
+                    potv.data()+a*ctx->ker->ker_dim[1],NULL);
+        }
     }
 
 #pragma omp parallel for
@@ -541,7 +548,7 @@ void pvfmm_interaction_matrix(const size_t &sl_nsrc, const real_t *sl_src,
             for(int j = 0; j < source_dof; j++){
                 std::vector<real_t> v_src(source_dof,0.);
                 v_src[j]=1.0;
-                ctx->ker->ker_poten(&sl_srcv[DIM*i], 1, &v_src[0], 1, trgv.data(), ntrg,
+                ctx->ker->ker_poten(&sl_srcv[DIM*i], 1, &v_src[0], source_dof, trgv.data(), ntrg,
                         &interaction_matrix[(i*source_dof+j)*ntrg*target_dof], NULL);
             }
         }

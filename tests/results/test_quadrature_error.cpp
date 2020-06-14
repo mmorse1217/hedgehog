@@ -29,8 +29,7 @@ void laplace_dl_potential(Vec targets, int dof,Vec& potential){
     
     Kernel3d kernel(121, vector<double>(2,1.));
 
-    unique_ptr<PvFMM> fmm(new PvFMM());
-    fmm->initialize_fmm(source, src_normal, targets, kernel);
+    unique_ptr<PvFMM> fmm(new PvFMM(source, src_normal, targets, kernel));
 
     VecSet(potential, 0.);
     Vec density;

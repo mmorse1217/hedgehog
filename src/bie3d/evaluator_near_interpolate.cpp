@@ -276,8 +276,7 @@ Vec evaluate_smooth_quadrature(MPI_Comm comm, Vec refined_samples, Vec refined_n
             PETSC_DETERMINE,
             &target_potential);
 
-    PvFMM* fmm = new PvFMM();
-    fmm->initialize_fmm(refined_samples, refined_normals, targets, kernel);
+    PvFMM* fmm = new PvFMM(refined_samples, refined_normals, targets, kernel);
     fmm->evaluate(refined_density, target_potential);
     return target_potential;
 }

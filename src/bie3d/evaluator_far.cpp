@@ -10,10 +10,9 @@ int EvaluatorFar::setup()
   ebiAssert(_target_3d_position!=NULL);
 
   PatchSamples* patch_samples = this->_patch_samples;
-  fmm = unique_ptr<FMM>(new PvFMM());
-  fmm->initialize_fmm(patch_samples->sample_point_3d_position(),
+  fmm = unique_ptr<FMM>(new PvFMM(patch_samples->sample_point_3d_position(),
                  patch_samples->sample_point_normal(),
-                 _target_3d_position, this->knl());
+                 _target_3d_position, this->knl()));
   
 
   ebiFunctionReturn(0);

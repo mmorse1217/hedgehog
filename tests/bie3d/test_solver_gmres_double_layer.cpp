@@ -76,18 +76,37 @@ TEST_CASE("Test singular quad solver on analytic surfaces", "[solver][analytic]"
         Options::set_value_petsc_opts("-kt", "111"); // Laplace problem
         Options::set_value_petsc_opts("-dom", "0"); // interior problem
         Options::set_value_petsc_opts("-bdtype", "0"); // analytic surface
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/sphere.wrl"); // single sphere
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/sphere.wrl");
-        //Options::set_value_petsc_opts("-bis3d_spacing", ".125");
-        //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".0625");
-        Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
-        Options::set_value_petsc_opts("-bis3d_rfdspacing", ".03125");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/sphere.wrl"); // single sphere
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/sphere.wrl");
+        Options::set_value_petsc_opts("-bis3d_spacing", ".1");
+        Options::set_value_petsc_opts("-bis3d_rfdspacing", ".05");
+        Options::set_value_petsc_opts("-boundary_distance_ratio", ".0625");
+        Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".03125");
+        /*Options::set_value_petsc_opts("-bis3d_spacing", ".125");
+        Options::set_value_petsc_opts("-bis3d_rfdspacing", ".0625");
+        //Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
+        //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".03125");
+        Options::set_value_petsc_opts("-boundary_distance_ratio", ".0625");
+        Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".03125");
+        */
 
         unique_ptr<PatchSurfAnalytic> surface(new PatchSurfAnalytic("BD3D_", "bd3d_"));
         surface->setFromOptions();
         surface->setup();
         
-        test_constant_boundary_data(surface.get(), true);
+        //test_constant_boundary_data(surface.get(), true);
+        //test_constant_boundary_data(surface.get());
+
+        TestConfig test;
+        test.bc_type = BoundaryDataType::CONSTANT_DENSITY;
+        test.target_type   = TargetType::GRID;
+        test.evaluation_scheme = EvaluationScheme::AUTOEVAL_QBKIX;
+        test.solver_matvec_type = EvaluationType::EXTRAPOLATION_AVERAGE;
+        //test.solution_scheme   = SolutionScheme::EXPLICIT_DENSITY;
+        test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
+
+        test.dump_values = false;
+        run_test(surface.get(),test);
 
     }
     /*SECTION("Test single sphere Stokes exterior"){
@@ -118,8 +137,8 @@ TEST_CASE("Test solver on blended surfaces", "[solver][blended]"){
         Options::set_value_petsc_opts("-kt", "111"); // Laplace problem
         Options::set_value_petsc_opts("-dom", "0"); // interior problem
         Options::set_value_petsc_opts("-bdtype", "1"); // blended surface
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // single cube
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl"); // single cube
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
         Options::set_value_petsc_opts("-bis3d_spacing", ".192");
 
         // NOTE BUG figure out why blendsurf is so damn slow now

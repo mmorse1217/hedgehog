@@ -412,10 +412,9 @@ TEST_CASE("weird parallel pvfmm test", "[mpi-pvfmm]"){
     Options::set_value_petsc_opts("-bis3d_np", "16");
     Options::set_value_petsc_opts("-bis3d_ptsmax", "5000");
     Kernel3d k(121, vector<double>(2,1.));
-    auto fmm = unique_ptr<FMM>(new PvFMM());
-    fmm->initialize_fmm(refined_sample_points_vec,
+    auto fmm = unique_ptr<FMM>(new PvFMM(refined_sample_points_vec,
             refined_sample_points_normals_vec,
-            check_points_vec, k);
+            check_points_vec, k));
     Vec parallel_check_potential_vec;
     VecDuplicate(check_potential_vec, &parallel_check_potential_vec);
     VecSet(parallel_check_potential_vec,0.);

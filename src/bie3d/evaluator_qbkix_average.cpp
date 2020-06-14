@@ -23,18 +23,14 @@ int EvaluatorQBKIXAverage::setup(){
     
     // set up FMM
     //PatchSamples* refined_patch_samples = this->_refined_patch_samples;
-    _fmm = unique_ptr<FMM>(new PvFMM());
-    _fmm->initialize_fmm(_refined_patch_samples->sample_point_3d_position(),
-                         _refined_patch_samples->sample_point_normal(),
-                         _aux_interpolation_points,
-                         this->knl());
-                         
-  _collocation_data->distribute_collocation_points(
-                _closest_sample_3d_position,
-                _closest_sample_as_face_point,
-                this->_patch_samples, 
-                this->source_dof(), 
-                this->target_dof());
+    _fmm = unique_ptr<FMM>(
+        new PvFMM(_refined_patch_samples->sample_point_3d_position(),
+                  _refined_patch_samples->sample_point_normal(),
+                  _aux_interpolation_points, this->knl()));
+
+    _collocation_data->distribute_collocation_points(
+        _closest_sample_3d_position, _closest_sample_as_face_point,
+        this->_patch_samples, this->source_dof(), this->target_dof());
   
     _refined_collocation_data->distribute_collocation_points(
             _refined_patch_samples->sample_point_3d_position(),
