@@ -139,7 +139,6 @@ RUN bash vim/lang-servers/clangd.sh
 
 # install plugins
 RUN bash vim/install_plugins.sh
-
 RUN mkdir /hedgehog
 WORKDIR /hedgehog
 
