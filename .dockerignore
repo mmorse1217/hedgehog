@@ -10,3 +10,5 @@ output/**/*
 *.vtp
 *.visit
 .git
+*.data
+build/

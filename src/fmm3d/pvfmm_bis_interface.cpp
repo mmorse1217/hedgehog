@@ -150,6 +150,25 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
   return kernel;
 }
 
+void Ebi::PvFMM::_unscale_potential(int ntrg, int target_dof, real_t *pot) {
+  int omp_p = omp_get_max_threads();
+
+  Kernel3d temp(_kernel_type, vector<double>());
+  double density_unscale_factor =  temp.density_unscaling_value(_scale_factor);
+
+#pragma omp parallel for
+  for (int i = 0; i < omp_p; i++) {
+    size_t a = (i * ntrg * target_dof) / omp_p;
+    size_t b = ((i + 1) * ntrg * target_dof) / omp_p;
+    for (size_t iT = a; iT < b; iT++) {
+      pot[iT] = density_unscale_factor*pot[iT];
+      if (std::isnan(pot[iT])) {
+        CERR("fmm potential is NaN", abort());
+      }
+    }
+  }
+}
+
 void Ebi::PvFMM::_copy_potential(int ntrg, int target_dof, std::vector<real_t> potv,
                     real_t *pot, bool rescale) {
   int omp_p = omp_get_max_threads();
@@ -172,55 +191,6 @@ void Ebi::PvFMM::_copy_potential(int ntrg, int target_dof, std::vector<real_t> p
 
 
 
-
-void Ebi::PvFMM::pvfmm_direct_summation(
-        vec source_positions, vec source_densities, vec target_positions,
-        vec& target_potentials){
-    const size_t num_sources = source_positions.size()/DIM;
-    const size_t ntrg = target_positions.size()/DIM;
-  ASSERT(_impl, "was called with null context. "
-                "Generate a context by calling make_pvfmm_context.");
-
-  // context object
-  COUTDEBUG("pvfmm_direct_summation with num_source_points="
-            << num_sources << ", ntrg=" << ntrg);
-
-  COUTDEBUG("Using context with"
-            << " mult_order=" << _impl->mult_order
-            << ", max_pts=" << _impl->max_pts
-            << ", max_depth=" << _impl->max_depth << ", sl=" << _impl->sl
-            << ", dl=" << _impl->dl << ", periodic=" << _impl->periodic);
-
-  int source_dof = _impl->source_dof;
-  int target_dof = _impl->target_dof;
-  // copy data
-  
-  assert(_impl->dense_eval);
-
-  pvfmm::Kernel<real_t>::Ker_t kernel_function;
-
-  if (_impl->sl && !_impl->dl) {
-    kernel_function = _impl->ker->ker_poten;
-
-  } else if (!_impl->sl && _impl->dl) {
-    kernel_function = _impl->ker->dbl_layer_poten;
-  } else {
-    abort();
-  }
-  int omp_p = omp_get_max_threads();
-#pragma omp parallel for
-  for (int i = 0; i < omp_p; i++) {
-    size_t a = (i * ntrg) / omp_p;
-    size_t b = ((i + 1) * ntrg) / omp_p;
-
-    kernel_function(source_positions.data(), num_sources, source_densities.data(), 1,
-                    target_positions.data() + a * 3, b - a,
-                    target_potentials.data() + a * target_dof, NULL);
-  }
-
-  // TODO figure out why removing breaks things
-  //copy_potential(ntrg, target_dof, potv, target_potentials.data());
-}
 
 /*****************************************************************************/
 // end pvfmm_interface.cc
@@ -525,11 +495,50 @@ void PvFMM::evaluate_direct(const DblNumVec &srcDen, DblNumVec &trgVal) {
     ebiAssert(false);
   }
     vec target_potential(_target_dof*_num_targets, 0.);
-  pvfmm_direct_summation(_src_positions,
-                         source_density, 
-                         _trg_positions, target_potential);
+    const size_t num_sources = _src_positions.size()/DIM;
+    const size_t ntrg = _trg_positions.size()/DIM;
+  ASSERT(_impl, "was called with null context. "
+                "Generate a context by calling make_pvfmm_context.");
+
+  // context object
+  COUTDEBUG("pvfmm_direct_summation with num_source_points="
+            << num_sources << ", ntrg=" << ntrg);
+
+  COUTDEBUG("Using context with"
+            << " mult_order=" << _impl->mult_order
+            << ", max_pts=" << _impl->max_pts
+            << ", max_depth=" << _impl->max_depth << ", sl=" << _impl->sl
+            << ", dl=" << _impl->dl << ", periodic=" << _impl->periodic);
+
+  int source_dof = _impl->source_dof;
+  int target_dof = _impl->target_dof;
+  // copy data
+  
+  assert(_impl->dense_eval);
+
+  pvfmm::Kernel<real_t>::Ker_t kernel_function;
+
+  if (_impl->sl && !_impl->dl) {
+    kernel_function = _impl->ker->ker_poten;
+
+  } else if (!_impl->sl && _impl->dl) {
+    kernel_function = _impl->ker->dbl_layer_poten;
+  } else {
+    abort();
+  }
+  int omp_p = omp_get_max_threads();
+#pragma omp parallel for
+  for (int i = 0; i < omp_p; i++) {
+    size_t a = (i * ntrg) / omp_p;
+    size_t b = ((i + 1) * ntrg) / omp_p;
+
+    kernel_function(_src_positions.data(), num_sources, source_density.data(), 1,
+                    _trg_positions.data() + a * 3, b - a,
+                    trgVal.data() + a * target_dof, NULL);
+  }
   // remove
-  _copy_potential(_num_targets, _target_dof, target_potential, trgVal.data(), true);
+  //_copy_potential(_num_targets, _target_dof, target_potential, trgVal.data(), true);
+  _unscale_potential(_num_targets, _target_dof, trgVal.data());
   
   _rebuild_tree = false;
  

@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     automake \
     build-essential \ 
-    cmake \ 
     expat \
     extra-cmake-modules \
     git \
@@ -16,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     libtool \
     libvtk7-dev \
+    sudo \
     mpich \
     python \
     wget \
@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir /libs 
 
 
+# Install the latest version of cmake
+RUN wget -O - https://raw.githubusercontent.com/mmorse1217/terraform/master/programs/cmake.sh | bash
 
 #install Petsc 3.7.2
 WORKDIR /libs
@@ -101,6 +103,15 @@ RUN cd /libs && \
 
 
 
+# Install nanospline
+RUN cd /libs && \
+    git clone https://github.com/qnzhou/nanospline/ && \
+    cd nanospline/ && \
+    mkdir -p build/ && \
+    cd build/ && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make #&& \
+    #make install
 
 
 CMD ["/bin/bash"]
@@ -118,36 +129,39 @@ RUN cd /libs/patchwork && \
     make && \
     make install
 
+
 ENV CC=gcc CXX=g++
 CMD ["bash"]
 
 
-FROM hedgehog-dev as hedgehog-dev-local
-
-
-ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
-    PATH="~/miniconda3/bin:${PATH}"  \
-    TERM=xterm-256color 
-RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform
-WORKDIR /terraform 
-
-RUN apt-get update -y && apt install -y sudo git
-RUN bash dotfiles/setup.sh 
-
-RUN bash programs/python.sh 
-
-# build vim
-RUN bash vim/build_from_source.sh  
-
-# setup language servers for c++/python
-RUN bash vim/lang-servers/setup.sh  
-RUN bash vim/lang-servers/python-language-server.sh  
-RUN bash vim/lang-servers/clangd.sh  
-
-# install plugins
-RUN bash vim/install_plugins.sh
+#FROM hedgehog-dev as hedgehog-dev-local
+#
+#
+#ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
+#    PATH="~/miniconda3/bin:${PATH}"  \
+#    TERM=xterm-256color 
+#RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform
+#WORKDIR /terraform 
+#
+#RUN apt-get update -y && apt install -y sudo git
+#RUN bash dotfiles/setup.sh 
+#
+#RUN bash programs/python.sh 
+#
+## build vim
+#RUN bash vim/build_from_source.sh  
+#
+## setup language servers for c++/python
+#RUN bash vim/lang-servers/setup.sh  
+#RUN bash vim/lang-servers/python-language-server.sh  
+#RUN bash vim/lang-servers/clangd.sh  
+#
+## install plugins
+#RUN bash vim/install_plugins.sh
 
 WORKDIR /hedgehog
+
+
 
 
 CMD ["/bin/bash"]

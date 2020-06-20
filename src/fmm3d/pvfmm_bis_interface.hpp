@@ -30,6 +30,7 @@ class PvFMM: public FMM {
         typedef  double real_t;
         void _copy_potential(int ntrg, int target_dof, std::vector<real_t> potv,
                             real_t *pot, bool rescale=false); 
+void _unscale_potential(int ntrg, int target_dof, real_t *pot) ;
     protected:
         vec _src_positions;
         vec _src_normals;
