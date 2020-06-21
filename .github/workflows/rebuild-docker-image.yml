@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@master
+      with:
+        submodules: recursive
     - name: Publish to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
@@ -18,7 +20,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         tags: latest
         dockerfile: Dockerfile
-        buildoptions: "--target hedgehog-deps --cache-from=mmorse1217/hedgehog:latest"
+        buildoptions: "--target hedgehog-deps --cache-from='mmorse1217/hedgehog:latest'"
     - name: Publish Latex Dev to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
@@ -27,4 +29,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         tags: latest
         dockerfile: Dockerfile
-        buildoptions: "--target hedgehog-dev --cache-from=mmorse1217/hedgehog-dev:latest"
+        buildoptions: "--target hedgehog-dev --cache-from='mmorse1217/hedgehog:latest'"
