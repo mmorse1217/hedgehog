@@ -11,6 +11,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
       with:
+        token: ${{secrets.PERSONAL_ACCESS_TOKEN}}
         submodules: recursive
     - name: Publish Build Image to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
@@ -29,4 +30,4 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
         tags: latest
         dockerfile: Dockerfile
-        buildoptions: "--target hedgehog-dev --cache-from='mmorse1217/hedgehog:latest'"
+        buildoptions: "--target hedgehog-dev --cache-from='mmorse1217/hedgehog-dev:latest'"

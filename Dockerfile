@@ -152,8 +152,6 @@ RUN cd /libs/patchwork && \
     make && \
     make install
 
-
-
 ENV CC=gcc CXX=g++
 
 CMD ["/bin/bash"]
