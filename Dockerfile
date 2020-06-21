@@ -123,7 +123,7 @@ RUN cd /libs/patchwork && \
     make && \
     make install
 
-ENV CC=gcc CXX=g++ NANOSPLINE_DIR /libs/nanospline
+ENV CC=gcc CXX=g++ NANOSPLINE_DIR=/libs/nanospline
 
 
 CMD ["/bin/bash"]
