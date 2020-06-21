@@ -144,7 +144,6 @@ WORKDIR /hedgehog
 
 COPY patchwork/ /libs/patchwork
 
-
 #Install patchwork via copy
 RUN cd /libs/patchwork && \
     mkdir -p build/ && \
@@ -152,6 +151,7 @@ RUN cd /libs/patchwork && \
     cmake ..  && \
     make && \
     make install
+
 
 
 ENV CC=gcc CXX=g++

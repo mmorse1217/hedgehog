@@ -12,7 +12,7 @@ jobs:
     - uses: actions/checkout@master
       with:
         submodules: recursive
-    - name: Publish to Registry
+    - name: Publish Build Image to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
         name: mmorse1217/hedgehog
@@ -21,7 +21,7 @@ jobs:
         tags: latest
         dockerfile: Dockerfile
         buildoptions: "--target hedgehog-deps --cache-from='mmorse1217/hedgehog:latest'"
-    - name: Publish Latex Dev to Registry
+    - name: Publish Dev Image to Registry
       uses: elgohr/Publish-Docker-Github-Action@master
       with:
         name: mmorse1217/hedgehog-dev
