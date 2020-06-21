@@ -144,6 +144,7 @@ WORKDIR /hedgehog
 
 COPY patchwork/ /libs/patchwork
 
+
 #Install patchwork via copy
 RUN cd /libs/patchwork && \
     mkdir -p build/ && \
