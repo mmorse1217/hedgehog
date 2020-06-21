@@ -15,6 +15,5 @@ jobs:
         submodules: true
     - uses: docker://mmorse1217/hedgehog:latest
     - name: Build hedgehog
-      run: |
-        docker build -t hedgehog-dev --target=hedgehog-dev --cache-from="mmorse1217/hedgehog-dev:latest" .
-        docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog hedgehog-dev sh entrypoint.sh
+      run: 
+        docker run --rm -v${GITHUB_WORKSPACE}:/hedgehog mmorse1217/hedgehog:latest sh entrypoint.sh

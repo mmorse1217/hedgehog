@@ -110,37 +110,8 @@ RUN cd /libs && \
     mkdir -p build/ && \
     cd build/ && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make #&& \
+    make 
     #make install
-
-
-CMD ["/bin/bash"]
-
-FROM hedgehog-deps as hedgehog-dev
-
-ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
-    PATH="~/miniconda3/bin:${PATH}"  \
-    TERM=xterm-256color 
-RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform
-WORKDIR /terraform 
-
-RUN apt-get update -y && apt install -y sudo git
-RUN bash dotfiles/setup.sh 
-
-RUN bash programs/python.sh 
-
-# build vim
-RUN bash vim/build_from_source.sh  
-
-# setup language servers for c++/python
-RUN bash vim/lang-servers/setup.sh  
-RUN bash vim/lang-servers/python-language-server.sh  
-RUN bash vim/lang-servers/clangd.sh  
-
-# install plugins
-RUN bash vim/install_plugins.sh
-RUN mkdir /hedgehog
-WORKDIR /hedgehog
 
 COPY patchwork/ /libs/patchwork
 
@@ -152,6 +123,43 @@ RUN cd /libs/patchwork && \
     make && \
     make install
 
-ENV CC=gcc CXX=g++
+ENV CC=gcc CXX=g++ NANOSPLINE_DIR /libs/nanospline
+
+
+CMD ["/bin/bash"]
+
+FROM hedgehog-deps as hedgehog-dev
+
+ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
+    PATH="~/miniconda3/bin:${PATH}"  \
+    TERM=xterm-256color 
+WORKDIR /terraform 
+
+RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && \
+    bash dotfiles/setup.sh && \
+    bash programs/python.sh && \
+    bash vim/build_from_source.sh && \  
+    bash vim/lang-servers/setup.sh && \  
+    bash vim/lang-servers/python-language-server.sh && \  
+    bash vim/lang-servers/clangd.sh   && \
+    bash vim/install_plugins.sh && \
+    mkdir /hedgehog
+#RUN apt-get update -y && apt install -y sudo git
+#RUN bash dotfiles/setup.sh 
+#
+#RUN bash programs/python.sh 
+#
+## build vim
+#RUN bash vim/build_from_source.sh  
+#
+## setup language servers for c++/python
+#RUN bash vim/lang-servers/setup.sh  
+#RUN bash vim/lang-servers/python-language-server.sh  
+#RUN bash vim/lang-servers/clangd.sh  
+#
+## install plugins
+#RUN bash vim/install_plugins.sh
+#RUN mkdir /hedgehog
+WORKDIR /hedgehog
 
 CMD ["/bin/bash"]
