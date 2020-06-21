@@ -126,6 +126,7 @@ RUN cd /libs/patchwork && \
 ENV CC=gcc CXX=g++ NANOSPLINE_DIR=/libs/nanospline
 
 
+WORKDIR /hedgehog
 CMD ["/bin/bash"]
 
 FROM hedgehog-deps as hedgehog-dev
