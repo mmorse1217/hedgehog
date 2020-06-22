@@ -144,7 +144,7 @@ RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && 
     bash vim/lang-servers/python-language-server.sh && \  
     bash vim/lang-servers/clangd.sh   && \
     bash vim/install_plugins.sh && \
-    mkdir /hedgehog
+    mkdir -p /hedgehog
 #RUN apt-get update -y && apt install -y sudo git
 #RUN bash dotfiles/setup.sh 
 #
