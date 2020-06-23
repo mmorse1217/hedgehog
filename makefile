@@ -86,12 +86,12 @@ $(BUILD_DIR)/$(TEST): $(BUILD_DIR)/$(TEST_DIRS)/$(TEST).o  $(TEST_OBJ) $(OBJ)
 $(BUILD_DIR)/%.o: %.cpp
 	mkdir -p $(@D)
 	$(CXX) $(CXXFLAGS) -MMD -c $< -o $@
-docker-build: Dockerfile
-	docker build -t hedgehog:base -f Dockerfile .
 .PHONY: clean
 
 clean: 
 	-rm $(BUILD_DIR)/$(BIN) $(OBJ) $(DEP) $(TEST_OBJ) $(TEST_DEP) $(BUILD_DIR)/* $(BIN_OBJ) build/tests/test_bis.o
+container-build: Dockerfile
+	docker build --cache-from="mmorse1217/hedgehog:latest" -f Dockerfile -t hedgehog .
 container-create:
 	echo "making container...";
 	docker create -it -v `pwd`:/hedgehog --name hedgehog-dev hedgehog

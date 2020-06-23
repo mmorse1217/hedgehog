@@ -9,6 +9,7 @@ set(Hedgehog_geometry_src
     patch_surf_blended.cpp
     p4est_refinement.cpp
     patch_surf_face_map.cpp
+    patch_surf_nanospline.cpp
 )
 set(Hedgehog_geometry_header
     analytic_surf.hpp
@@ -22,6 +23,7 @@ set(Hedgehog_geometry_header
     p4est_interface.hpp
     patch_surf_face_map.hpp
     p4est_refinement.hpp
+    patch_surf_nanospline.hpp
 )
 
 PREPEND(Hedgehog_geometry_src)
