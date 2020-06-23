@@ -113,6 +113,15 @@ RUN cd /libs && \
     make 
     #make install
 
+RUN cd /libs && \
+    git clone https://github.com/jbeder/yaml-cpp && \
+    cd yaml-cpp && \
+    mkdir -p build/ && \
+    cd build && \
+    cmake .. && \
+    make && \ 
+    make install
+
 COPY patchwork/ /libs/patchwork
 
 #Install patchwork via copy
@@ -145,6 +154,8 @@ RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && 
     bash vim/lang-servers/clangd.sh   && \
     bash vim/install_plugins.sh && \
     mkdir /hedgehog
+
+
 #RUN apt-get update -y && apt install -y sudo git
 #RUN bash dotfiles/setup.sh 
 #
