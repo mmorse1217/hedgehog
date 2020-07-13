@@ -32,6 +32,7 @@ target_link_libraries(Hedgehog PUBLIC ${MPI_LIBRARIES})
 target_link_libraries(Hedgehog PUBLIC ${FFTW_LIBRARIES})
 target_link_libraries(Hedgehog PUBLIC ${VTK_LIBRARIES})
 
+target_include_directories(Hedgehog PUBLIC ${EIGEN3_INCLUDE_DIR})
 target_include_directories(Hedgehog PUBLIC ${VTK_INCLUDE}) 
 target_include_directories(Hedgehog PUBLIC ${Patchwork_INCLUDE_DIRS})
 target_include_directories(Hedgehog PUBLIC ${PETSC_INCLUDES})

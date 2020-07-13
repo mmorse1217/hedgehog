@@ -7,6 +7,7 @@ list(APPEND CMAKE_MODULE_PATH "${Hedgehog_SOURCE_DIR}/cmake")
 
 
 find_package(OpenMP REQUIRED)
+find_package(Eigen3 REQUIRED)
 find_package(Blendsurf REQUIRED)
 find_package(Patchwork REQUIRED)
 find_package(Nanospline REQUIRED)

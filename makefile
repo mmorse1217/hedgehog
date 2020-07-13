@@ -91,13 +91,16 @@ $(BUILD_DIR)/%.o: %.cpp
 clean: 
 	-rm $(BUILD_DIR)/$(BIN) $(OBJ) $(DEP) $(TEST_OBJ) $(TEST_DEP) $(BUILD_DIR)/* $(BIN_OBJ) build/tests/test_bis.o
 container-build: Dockerfile
-	docker build --cache-from="mmorse1217/hedgehog:latest" -f Dockerfile -t hedgehog .
+	docker build -f Dockerfile -t hedgehog .
 container-create:
 	echo "making container...";
 	docker create -it -v `pwd`:/hedgehog --name hedgehog-dev hedgehog
 container-start:
 	echo "starting container...";
 	docker start hedgehog-dev
+container-stop:
+	echo "stopping container...";
+	docker stop hedgehog-dev
 container-exec:
 	echo "exec-ing into container...";
 	docker exec -it hedgehog-dev bash

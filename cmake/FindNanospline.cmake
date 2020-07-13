@@ -58,8 +58,12 @@ set(Nanospline_LIBRARIES ${Nanospline_LIB})
 if(Nanospline_FOUND AND NOT TARGET Nanospline::Nanospline)
     add_library(Nanospline::Nanospline UNKNOWN IMPORTED)
     # Interface include directory
+    # NOTE: the /../ at the end is required in order to properly include headers
+    # in the prescribed manner:
+    #   #include <nanospline/Bezier.h>
+    # Otherwise the compiler can't find the transitive nanospline includes.
     set_target_properties(Nanospline::Nanospline PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${Nanospline_INCLUDE_DIRS}"
+        INTERFACE_INCLUDE_DIRECTORIES "${Nanospline_INCLUDE_DIRS}/../"
         )
 
     # Link to library file

@@ -103,6 +103,15 @@ RUN cd /libs && \
 
 
 
+RUN cd /libs && \
+    git clone https://gitlab.com/libeigen/eigen.git && \
+    cd eigen && \
+    mkdir -p build/ && \
+    cd build && \
+    cmake .. && \
+    make && \ 
+    make install
+
 # Install nanospline
 RUN cd /libs && \
     git clone https://github.com/qnzhou/nanospline/ && \
@@ -112,15 +121,6 @@ RUN cd /libs && \
     cmake .. -DCMAKE_BUILD_TYPE=Release && \
     make 
     #make install
-
-RUN cd /libs && \
-    git clone https://github.com/jbeder/yaml-cpp && \
-    cd yaml-cpp && \
-    mkdir -p build/ && \
-    cd build && \
-    cmake .. && \
-    make && \ 
-    make install
 
 COPY patchwork/ /libs/patchwork
 
@@ -153,9 +153,7 @@ RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && 
     bash vim/lang-servers/python-language-server.sh && \  
     bash vim/lang-servers/clangd.sh   && \
     bash vim/install_plugins.sh && \
-    mkdir /hedgehog
-
-
+    mkdir -p /hedgehog
 #RUN apt-get update -y && apt install -y sudo git
 #RUN bash dotfiles/setup.sh 
 #
