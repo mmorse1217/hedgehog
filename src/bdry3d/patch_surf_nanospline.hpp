@@ -34,14 +34,14 @@ class PatchSurfNanospline: public PatchSurf
         SurfaceType _surface_type;
         Point3 ctr() { return Point3(0.); };
         PatchSurfNanospline(const string& n, const string& p);
-        ~PatchSurfNanospline(){};
+        ~PatchSurfNanospline();
     public:
         void partial_teardown();
 
         string& filename() { return _filename; }
-        int setFromOptions();
+        int setFromOptions(){};
         int setup();
-        void bounding_box(Point3& bbmin, Point3& bbmax); 
+        void bounding_box(Point3& bbmin, Point3& bbmax){return;}; 
 
 
         DblNumVec* _quadrature_weights;
@@ -237,9 +237,9 @@ class NanosplinePatch: public Patch
         void bounding_box(Point3& min, Point3& max);
 
         Point3 normal(double* xy) ;
-        double gaussian_curvature(Point2 xy);
-        double mean_curvature(Point2 xy);
-        void principal_curvatures(Point2 xy, double& k1, double& k2);
+        //double gaussian_curvature(Point2 xy);
+        //double mean_curvature(Point2 xy);
+        //void principal_curvatures(Point2 xy, double& k1, double& k2);
 
         //static double _UB;
 };
