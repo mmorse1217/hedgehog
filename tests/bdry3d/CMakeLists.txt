@@ -5,6 +5,7 @@ set(Hedgehog_test_geometry_src
     test_p4est_patch_refinement.cpp
     test_patch_samples.cpp
     test_patch_surf_blended.cpp
+    test_patch_surf_nanospline.cpp
 )
 set(Hedgehog_test_geometry_header
 )

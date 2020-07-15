@@ -16,8 +16,6 @@ class PatchSurfNanospline: public PatchSurf
     protected:
         string _filename;
 
-        class NanosplineInterface;
-        unique_ptr<NanosplineInterface> _surface;
     public:
         double _on_surface_threshold;
         p4est_t* _p4est;
@@ -79,6 +77,7 @@ class PatchSurfNanospline: public PatchSurf
         int num_patches(){
             return _patches.size();
         }
+        
         // defined in face_map_subpatch.cpp
         //NanosplineSubPatch* subpatch(int pi);
 
@@ -89,6 +88,8 @@ class PatchSurfNanospline: public PatchSurf
 class NanosplinePatch: public Patch
 {
     protected:
+        class NanosplineInterface;
+        unique_ptr<NanosplineInterface> _surface;
 
         // _V  - the global index of the vertex that corresponds to the center of the
         // patch. Global index is with respect to the entire surface mesh
@@ -110,7 +111,7 @@ class NanosplinePatch: public Patch
          * internally by blendsurf.
          */
         NanosplinePatch(PatchSurf* b, int pi, int V); 
-        ~NanosplinePatch(){;}
+        ~NanosplinePatch();
         int& V() { 
             return _V;
         }

@@ -75,7 +75,8 @@ class Patch {
 public:
   enum {	 
       EVAL_VL = 1,
-      EVAL_FD = 2  
+      EVAL_FD = 2,
+      EVAL_SD = 4
   };
 protected:
   PatchSurf* _bdry;

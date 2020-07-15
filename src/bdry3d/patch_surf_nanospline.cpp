@@ -1,5 +1,7 @@
+#include <nanospline/PatchBase.h>
 #include <nanospline/forward_declaration.h>
 #include <nanospline/BSplinePatch.h>
+#include <nanospline/save_obj.h>
 #include <Eigen/Core>
 #include "patch_surf_nanospline.hpp"
 #include "common/interpolate.hpp"
@@ -22,29 +24,17 @@ using Sampling::base_domain;
 using Sampling::chebyshev2;
 using Scalar = double;
 BEGIN_EBI_NAMESPACE
-
-Eigen::MatrixXd initialize_flat_patch_control_grid(const int num_control_points_1D, const int degree_u, 
-        const int degree_v){
-    const int num_control_points = num_control_points_1D*num_control_points_1D;
-    Eigen::MatrixXd control_grid(num_control_points, DIM);
-
-    // identify x,y in R^3 with (u,v) in spline parameter space
-    // Place control points  equispaced on [-1,1] x [-1,1] x {0}
-    for (int ci = 0; ci < num_control_points_1D; ci++) { // u
-      for (int cj = 0; cj < num_control_points_1D; cj++) { // v
-          const int index = ci*num_control_points_1D + cj;
-          
-          // x and y spacing are the same
-          const double spacing = 2./(num_control_points_1D-1);
-          const double x = ci*spacing - 1.;
-          const double y = cj*spacing - 1.;
-          const double z = 0.; 
-          control_grid.row(index) << x, y, z;
-      }
+Eigen::MatrixXd get_greville_abscissae(const Eigen::MatrixXd knots, const int degree){
+    const int num_control_points = knots.size() - degree - 1;
+    Eigen::MatrixXd greville_abscissae(num_control_points,1);
+    greville_abscissae.setZero();
+    for (int k=0; k < num_control_points; k++) {
+        for (int d=0; d < degree; d++) {
+            greville_abscissae(k,0) += knots(k + d+1,0);
+        }
     }
-
-    return control_grid;
-    
+    greville_abscissae /= degree;
+    return greville_abscissae;
 }
 
 Eigen::MatrixXd initialize_flat_patch_knots(const int num_control_points_1D,
@@ -60,9 +50,6 @@ Eigen::MatrixXd initialize_flat_patch_knots(const int num_control_points_1D,
   // uniform knots for now.
   const double knot_spacing = 1. / (num_control_points_1D - degree - 1 + 1);
   for (int i = 0; i < num_control_points_1D - degree - 1; i++) {
-      cout << "knot_spacing: " << knot_spacing << endl;
-      cout << "i+1: " << i+1<< endl;
-      cout << "knot: " << (i+1) * knot_spacing<< endl;
     knots(counter) = (i+1) * knot_spacing;
     counter++;
   }
@@ -71,40 +58,70 @@ Eigen::MatrixXd initialize_flat_patch_knots(const int num_control_points_1D,
     counter++;
   }
   assert(counter == num_knots);
+  // uniform knots for now.
+  /*const double knot_spacing = 1. / (num_knots - 1);
+  for (int i = 0; i < num_knots; i++) {
+    knots(i) = (i) * knot_spacing;
+  }*/
   return knots;
 }
-class PatchSurfNanospline::NanosplineInterface {
+
+Eigen::MatrixXd initialize_flat_patch_control_grid(const int num_control_points_1D, const int degree_u, 
+        const int degree_v){
+    const int num_control_points = num_control_points_1D*num_control_points_1D;
+    Eigen::MatrixXd control_grid(num_control_points, DIM);
+
+    Eigen::MatrixXd knots_u = initialize_flat_patch_knots(num_control_points_1D, degree_u);
+    Eigen::MatrixXd knots_v = initialize_flat_patch_knots(num_control_points_1D, degree_v);
+    Eigen::MatrixXd greville_u = get_greville_abscissae(knots_u, degree_u);
+    Eigen::MatrixXd greville_v = get_greville_abscissae(knots_v, degree_v);
+
+    // identify x,y in R^3 with (u,v) in spline parameter space
+    // Place control points  equispaced on [-1,1] x [-1,1] x {0}
+    for (int ci = 0; ci < num_control_points_1D; ci++) { // u
+      for (int cj = 0; cj < num_control_points_1D; cj++) { // v
+          const int index = ci*num_control_points_1D + cj;
+          
+          // x and y spacing are the same
+          const double spacing = 2./(num_control_points_1D-1);
+          const double x = 2.*greville_u(ci) - 1.;
+          const double y = 2.*greville_u(cj) - 1.;
+          const double z = 0.; 
+          control_grid.row(index) << x, y, z;
+      }
+    }
+
+    return control_grid;
+    
+}
+
+class NanosplinePatch::NanosplineInterface {
     public:
+        nanospline::BSplinePatch<Scalar, DIM, -1, -1>  _patch;
   NanosplineInterface() {
     // 1. Get the name of surface we want to load
     // For now: load a flat surface, all weights = 1, uniform knots
-        const int num_control_points_1D = 5;
+        const int num_control_points_1D = 15;
         const int degree = 3;
         const int degree_u = degree;
         const int degree_v = degree;
         const int num_control_points = num_control_points_1D*num_control_points_1D;
-        nanospline::BSplinePatch<Scalar, DIM, -1, -1> patch;
-        
-    // 2. Load surface data with obj reader
-    // For now: explicitly generate control points, knots and weights.
+
+        // 2. Load surface data with obj reader
+        // For now: explicitly generate control points, knots and weights.
         Eigen::MatrixXd control_grid = 
             initialize_flat_patch_control_grid(num_control_points_1D, degree_u, degree_v);
-        cout << "control_grid: " << endl;
-        cout << control_grid << endl;
-        patch.set_control_grid(control_grid);
+        _patch.set_control_grid(control_grid);
 
         Eigen::MatrixXd knots_u = initialize_flat_patch_knots(num_control_points_1D, degree_u);
         Eigen::MatrixXd knots_v = initialize_flat_patch_knots(num_control_points_1D, degree_v);
-        cout << "knots_u: " << endl;
-        cout << knots_u << endl;
-        cout << "knots_v: " << endl;
-        cout << knots_v << endl;
-        patch.set_knots_u(knots_u);
-        patch.set_knots_v(knots_v);
-        
-        patch.set_degree_u(degree_u);
-        patch.set_degree_v(degree_v);
-        patch.initialize();
+        _patch.set_knots_u(knots_u);
+        _patch.set_knots_v(knots_v);
+
+        _patch.set_degree_u(degree_u);
+        _patch.set_degree_v(degree_v);
+        _patch.initialize();
+        //nanospline::save_patch_obj("flat_patch.obj", _patch);
   }
   ~NanosplineInterface() {
   }
@@ -113,11 +130,8 @@ class PatchSurfNanospline::NanosplineInterface {
 PatchSurfNanospline::~PatchSurfNanospline(){};
 PatchSurfNanospline::PatchSurfNanospline(const string &n, const string &p)
     : PatchSurf(n, p), _surface_type(NOT_SET), _coarse(false) {
-    // 1. Initialize NanosplineInterface
-    // 2. Perform any precomputations for patch-related data
-    // surface area?
-  unique_ptr<NanosplineInterface> impl(new NanosplineInterface);
-  _surface = std::move(impl);
+        // TODO generalize to arbtirary patch sets
+    _patches.push_back(new NanosplinePatch(this, 0, 0));
 }
 // ---------------------------------------------------------------------- 
 
@@ -147,8 +161,15 @@ PatchSurfNanospline* PatchSurfNanospline::load(string filename){
 
 }
 
+NanosplinePatch::~NanosplinePatch(){ }
+
 NanosplinePatch::NanosplinePatch(PatchSurf* b, int pi, int V): Patch(b, pi), _V(V)
 {
+    // 1. Initialize NanosplineInterface
+    // 2. Perform any precomputations for patch-related data
+    // surface area?
+  unique_ptr<NanosplineInterface> impl(new NanosplineInterface);
+  _surface = std::move(impl);
   
 }
 
@@ -180,7 +201,15 @@ int NanosplinePatch::face_point_to_xy(FacePointOverlapping* face_point, double* 
 //
 int NanosplinePatch::is_xy_valid(double* xy, bool& is_valid)
 {
-    return 0;
+    const double x = xy[0];
+    const double y = xy[1];
+    const double x_lower = _surface->_patch.get_u_lower_bound();
+    const double x_upper =_surface->_patch.get_u_upper_bound();
+    const double y_lower =_surface->_patch.get_v_lower_bound();
+    const double y_upper =_surface->_patch.get_v_upper_bound();
+    is_valid = x_lower <= x && x <= x_upper &&
+        y_lower <= y && y <= y_upper;
+    return is_valid;
 }
 // ---------------------------------------------------------------------- 
 int NanosplinePatch::is_xy_dominant(double* xy, bool& dominant)
@@ -193,8 +222,40 @@ int NanosplinePatch::xy_to_face_point(double* xy, FacePointOverlapping* face_poi
     return 0;
 }
 // ---------------------------------------------------------------------- 
+void copy_eigen_to_point(Eigen::MatrixXd eigen_matrix, Point3& point){
+    assert(eigen_matrix.cols() == 3);
+    assert(eigen_matrix.rows() == 1);
+  for (int d = 0; d < DIM; d++) {
+      point(d) = eigen_matrix(0,d);
+  }
+}
 int NanosplinePatch::xy_to_patch_coords(double* xy, int flag, double* ret)
-{
+{ 
+    bool is_valid;
+    is_xy_valid(xy, is_valid);
+    assert(is_valid);
+
+    Point3* point_ret = (Point3*)ret;
+    Eigen::MatrixXd position = _surface->_patch.evaluate(xy[0], xy[1]);
+    copy_eigen_to_point(position, point_ret[0]); 
+
+    if( flag & EVAL_FD){
+
+        Eigen::MatrixXd derivative_u = _surface->_patch.evaluate_derivative_u(xy[0], xy[1]);
+        Eigen::MatrixXd derivative_v = _surface->_patch.evaluate_derivative_v(xy[0], xy[1]);
+        copy_eigen_to_point(derivative_u, point_ret[1]);
+        copy_eigen_to_point(derivative_v, point_ret[2]);
+    }
+    if (flag & EVAL_2ND_DERIV) {
+        
+        Eigen::MatrixXd derivative_uu = _surface->_patch.evaluate_2nd_derivative_uu(xy[0], xy[1]);
+        Eigen::MatrixXd derivative_uv = _surface->_patch.evaluate_2nd_derivative_uv(xy[0], xy[1]);
+        Eigen::MatrixXd derivative_vv = _surface->_patch.evaluate_2nd_derivative_vv(xy[0], xy[1]);
+        copy_eigen_to_point(derivative_uu, point_ret[3]);
+        copy_eigen_to_point(derivative_uv, point_ret[4]);
+        copy_eigen_to_point(derivative_vv, point_ret[5]);
+    }
+
     return 0;
 }
 Point3 NanosplinePatch::normal(double* xy) {
