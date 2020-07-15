@@ -14,6 +14,7 @@ TEST_CASE("Test nanospline interface for flat patch", "[nanospline]"){
     const int num_samples = 20;
     Ebi::DblNumMat parametric_samples = DblNumMat(2, num_samples*num_samples, true, 
                 sample_2d<equispaced>(num_samples, base_domain).data());
+    CHECK(patch->characteristic_length() == Approx(2.));
     for (int i=0; i<num_samples; i++) {
       for (int j = 0; j < num_samples; j++) {
           int index = i*num_samples +j;

@@ -132,6 +132,57 @@ PatchSurfNanospline::PatchSurfNanospline(const string &n, const string &p)
     : PatchSurf(n, p), _surface_type(NOT_SET), _coarse(false) {
         // TODO generalize to arbtirary patch sets
     _patches.push_back(new NanosplinePatch(this, 0, 0));
+
+
+    // TODO move to patch constructor
+    const int num_samples = 20;
+    NumMatrix samples = sample_2d<chebyshev2>(num_samples, base_domain);
+
+    DblNumVec quad_weight(num_samples*num_samples);
+
+
+    DblNumVec quadrature_nodes(num_samples, true,
+            sample_1d<chebyshev2>(num_samples,base_domain).data());
+    
+    DblNumVec* quadrature_weights = new DblNumVec(num_samples);
+    
+    for(int si = 0; si < num_samples; si++){
+        (*quadrature_weights)(si) = 
+            Interpolate::integrate_ith_lagrange_basis_func(
+                si,0., 1., num_samples, quadrature_nodes, 50, 1.);
+
+    }
+    _quadrature_weights = quadrature_weights;
+
+    for(int si = 0; si < num_samples; si++){
+        for(int sj = 0; sj < num_samples; sj++){
+            int index = si*num_samples + sj;
+
+            quad_weight(index) = 
+                (*quadrature_weights)(si)*(*quadrature_weights)(sj);
+
+        }
+    }
+    for (int pi=0; pi <_patches.size(); pi++) {
+
+        Patch* patch = _patches[pi];
+
+        DblNumMat normals(DIM,num_samples*num_samples);
+        for(int i = 0; i < num_samples*num_samples; i++){
+            Point2 sample_uv(samples.clmdata(i));
+
+            vector<Point3> values(3, Point3());
+            patch->xy_to_patch_coords(sample_uv.array(), 
+                    PatchSamples::EVAL_VL|PatchSamples::EVAL_FD, 
+                    (double*)values.data());
+
+            Point3 normal = cross(values[1], values[2]);
+            for(int d = 0; d < DIM; d++)
+                normals(d, i) = normal(d);
+        }
+
+        patch->characteristic_length(normals, quad_weight);
+    }
 }
 // ---------------------------------------------------------------------- 
 
@@ -170,7 +221,7 @@ NanosplinePatch::NanosplinePatch(PatchSurf* b, int pi, int V): Patch(b, pi), _V(
     // surface area?
   unique_ptr<NanosplineInterface> impl(new NanosplineInterface);
   _surface = std::move(impl);
-  
+  // Compute surface area of the patch
 }
 
 int NanosplinePatch::group_id()
@@ -178,23 +229,23 @@ int NanosplinePatch::group_id()
     return 0;
 }
 
-NumVec<OnSurfacePoint> NanosplinePatch::sample_patch(
-        int num_samples,
-        SamplingPattern sampling_pattern){
-    NumVec<OnSurfacePoint> ret;
-    return ret;
-
-}
 
 // ---------------------------------------------------------------------- 
 int NanosplinePatch::is_face_point_valid(FacePointOverlapping* face_point, bool& is_valid)
 {
+  FacePointNanospline* face_point_blended = (FacePointNanospline*) face_point;
+  double* cd = face_point_blended->cd();
+  is_xy_valid(cd, is_valid);
     return 0;
 }
 // ---------------------------------------------------------------------- 
 
 int NanosplinePatch::face_point_to_xy(FacePointOverlapping* face_point, double* xy)
 {
+  FacePointNanospline* face_point_blended = (FacePointNanospline*)face_point;  
+  double* cd = face_point_blended->cd();
+  xy[0] = cd[0];
+  xy[1] = cd[1];
     return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -214,6 +265,8 @@ int NanosplinePatch::is_xy_valid(double* xy, bool& is_valid)
 // ---------------------------------------------------------------------- 
 int NanosplinePatch::is_xy_dominant(double* xy, bool& dominant)
 {
+  // All valid points are "dominant" for face-centered maps
+  is_xy_valid(xy, dominant);
     return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -268,10 +321,18 @@ Point3 NanosplinePatch::normal(double* xy) {
 }
 
 void NanosplinePatch::eval_unsafe(double* xy, int flag, double* ret) {
+    xy_to_patch_coords(xy, flag, ret);
 }
 // ---------------------------------------------------------------------- 
 int NanosplinePatch::estimate_jacobian(double* jac)
 {
+  double xy[2];  xy[0]=.5;  xy[1]=.5;
+    vector<Point3> position_and_derivs(3,Point3(0.));
+    xy_to_patch_coords(xy, EVAL_VL|EVAL_FD, (double*)position_and_derivs.data());
+
+    Point3 normal = cross(position_and_derivs[1],position_and_derivs[2]);
+
+  jac[0] = normal.length();
     return 0;
 }
 // ---------------------------------------------------------------------- 
@@ -281,7 +342,13 @@ int NanosplinePatch::xy_to_patch_value(double* xy, int flag, double* ret)
     return 0;
 }
 
-void NanosplinePatch::bounding_box(Point3& bounding_box_min, Point3& bounding_box_max){
+void NanosplinePatch::bounding_box(Point3 &bounding_box_min,
+                                   Point3 &bounding_box_max) {
+  Eigen::MatrixXd control_grid = _surface->_patch.get_control_grid();
+  Eigen::MatrixXd max = control_grid.colwise().maxCoeff();
+  Eigen::MatrixXd min = control_grid.colwise().minCoeff();
+  copy_eigen_to_point(max, bounding_box_max);
+  copy_eigen_to_point(min, bounding_box_min);
 }
 
 /*void NanosplinePatch::principal_curvatures(Point2 xy, double& k1, double& k2){
