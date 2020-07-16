@@ -188,7 +188,7 @@
 #BASIC CONTROLS(BLEND SURFACE)
 
 -bd3d_bdsurf_submatlibfile		/libs/blendsurf/ccsubmatall.dat # ccsubmat_intboun13_corner8.dat # ccsubmat_int_v13.dat #	
--bd3d_bdsurf_bdulibfile		/libs/blendsurf/blendsurf3/bdsurf_U_ONE.dat
+-bd3d_bdsurf_bdulibfile		/libs/blendsurf/bdsurf_U_ONE.dat
 -bdsurf_renderlvl		5
 -bdsurf_rendergen		0		# 0 = render full mesh, 
 						# 1 = render 1/2 charts,

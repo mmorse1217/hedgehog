@@ -39,6 +39,7 @@ void setup_blended(unique_ptr<PatchSurfBlended>& surface,
 
 string build_prefix(unique_ptr<PatchSamples>& samples){
     string prefix = "PatchSamples/";
+    prefix += Test::get_domain() + "/";
     if(dynamic_cast<PatchSurfFaceMap*>(samples->bdry())){
         prefix += "face_map/";
         if(Options::get_double_from_petsc_opts("-bd3d_facemap_adaptive")){
@@ -66,6 +67,9 @@ void dump_regression_data(unique_ptr<PatchSamples>& samples){
     Regression::dump(samples->sample_point_jacobian(), prefix+"sample_point_jacobian.reg");
     Regression::dump(samples->sample_point_quad_weight(), prefix+"sample_point_quad_weight.reg");
     Regression::dump(samples->sample_point_far_field(), prefix+"sample_point_far_field.reg");
+    Regression::dump(samples->sample_point_blend_func_value(), prefix+"sample_point_blend_func_value.reg");
+    Regression::dump(samples->sample_point_interpolant_spacing(), prefix+"sample_point_interpolant_spacing.reg");
+    Regression::dump(samples->sample_point_combined_weight(), prefix+"sample_point_combined_weight.reg");
 }
 
 void test_vec(Vec vec, string file){
@@ -82,7 +86,9 @@ void compare_to_regression_data(unique_ptr<PatchSamples>& samples){
     test_vec(samples->sample_point_jacobian(), prefix+"sample_point_jacobian.reg");
     test_vec(samples->sample_point_quad_weight(), prefix+"sample_point_quad_weight.reg");
     test_vec(samples->sample_point_far_field(), prefix+"sample_point_far_field.reg");
-    
+    test_vec(samples->sample_point_blend_func_value(), prefix+"sample_point_blend_func_value.reg");
+    test_vec(samples->sample_point_interpolant_spacing(), prefix+"sample_point_interpolant_spacing.reg");
+    test_vec(samples->sample_point_combined_weight(), prefix+"sample_point_combined_weight.reg");
 
 }
 
@@ -96,9 +102,9 @@ TEST_CASE("Regression test initialization for PatchSamples", "[patch-samples][re
         if(a != 'y'){
             exit(0);
         }
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/newtorus.wrl");
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/newtorus.wrl");
-        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/explicit_torus_patches.poly");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/newtorus.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/newtorus.wrl");
+        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/explicit_torus_patches.poly");
         Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
         Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
         Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
@@ -117,8 +123,8 @@ TEST_CASE("Regression test initialization for PatchSamples", "[patch-samples][re
 
 
     } SECTION("blended pipe"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/pipe.wrl");
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/pipe.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/pipe.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/pipe.wrl");
         Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
         Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
         Options::set_value_petsc_opts("-bis3d_spacing", ".125");
@@ -135,14 +141,33 @@ TEST_CASE("Regression test initialization for PatchSamples", "[patch-samples][re
         dump_regression_data(samples);
 
 
+    }SECTION("face-map fitting blended cube"){
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
+        Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
+        Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
+        Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
+        Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", ".0125");
+        Options::set_value_petsc_opts("-bdtype", "1");
+        Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
+        
+        
+
+        unique_ptr<PatchSurfFaceMap> surface;
+        unique_ptr<PatchSamples> samples;
+        setup_face_map(surface, samples);
+        dump_regression_data(samples);
+
+
     }
 }
 
 TEST_CASE("Regression test for PatchSamples", "[patch-samples][regression]"){
+   
     SECTION("explicit torus, non-adaptive, no patch refinement"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/newtorus.wrl");
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/newtorus.wrl");
-        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/explicit_torus_patches.poly");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/newtorus.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/newtorus.wrl");
+        Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/explicit_torus_patches.poly");
         Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
         Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
         Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
@@ -152,48 +177,48 @@ TEST_CASE("Regression test for PatchSamples", "[patch-samples][regression]"){
         Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "0");
         Options::set_value_petsc_opts("-bd3d_facemap_adaptive", "0");
         
+    unique_ptr<PatchSamples> samples;
         unique_ptr<PatchSurfFaceMap> surface;
-        unique_ptr<PatchSamples> samples;
         setup_face_map(surface, samples);
         compare_to_regression_data(samples);
-        
+       
     } SECTION("blended pipe"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/pipe.wrl");
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/pipe.wrl");
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/pipe.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/pipe.wrl");
         Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
         Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
         Options::set_value_petsc_opts("-bis3d_spacing", ".125");
         Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", ".0125");
         Options::set_value_petsc_opts("-bdtype", "1");
         Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
-        Options::set_value_petsc_opts("-bdsurf_interpolate", "1");
+        Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
 
+    unique_ptr<PatchSamples> samples;
         unique_ptr<PatchSurfBlended> surface;
-        unique_ptr<PatchSamples> samples;
         setup_blended(surface, samples);
+        compare_to_regression_data(samples);
+
+
+    } 
+     SECTION("face-map fitting blended cube"){
+        Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl");
+        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
+        Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
+        Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
+        Options::set_value_petsc_opts("-bis3d_spacing", ".0625");
+        Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", ".0125");
+        Options::set_value_petsc_opts("-bdtype", "1");
+        Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
+        
+        
+
+        unique_ptr<PatchSurfFaceMap> surface;
+        unique_ptr<PatchSamples> samples;
+        setup_face_map(surface, samples);
         compare_to_regression_data(samples);
 
 
     }
 }
 /*TEST_CASE("Regression test for PatchSamples", "[patch-samples][regression]"){
-     SECTION("blended pipe"){
-        Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
-        Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
-        Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
-        Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".1");
-        Options::set_value_petsc_opts("-bis3d_spacing", ".125");
-        Options::set_value_petsc_opts("-bdsurf_interpolant_spacing", ".0125");
-        Options::set_value_petsc_opts("-bdtype", "1");
-        Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
-        
-        
-
-        unique_ptr<PatchSurfBlended> surface;
-        unique_ptr<PatchSamples> samples;
-        setup_blended(surface, samples);
-        compare_to_regression_data(samples);
-
-
-    }
 }*/

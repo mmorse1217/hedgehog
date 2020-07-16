@@ -191,6 +191,7 @@ protected:
   DblNumVec _interpolation_nodes_y;
 public:
     PatchSamples(const string& n, const string& p);
+    PatchSamples(PatchSurf* surface);
     ~PatchSamples();  
     int setup(bool refined=false); 
   

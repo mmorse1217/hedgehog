@@ -349,7 +349,7 @@ string Options::get_string_from_petsc_opts(string opt_name){
 
 string Test::get_domain(){
     string domain = Options::get_string_from_petsc_opts("-bd3d_meshfile");
-    domain.erase(domain.begin(), domain.begin()+10); // chop off "wrl_files/" from file name
+    domain.erase(domain.begin(), domain.begin()+15); // chop off "wrl_files/" from file name
     domain.erase(domain.end()-4, domain.end()); // chop off ".wrl" from file name
     return domain;
 }

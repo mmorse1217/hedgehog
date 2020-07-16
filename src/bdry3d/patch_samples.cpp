@@ -89,24 +89,13 @@ int PatchSamples::setup(bool refined)
         } else {
             //assert(0);
         }
-            //PetscOptionsGetReal(NULL, "",  "-bis3d_rfdspacing", &_spacing,  &err);
             _spacing = Options::get_double_from_petsc_opts("-bis3d_rfdspacing");
     }
     if (refined && !dynamic_cast<PatchSurfBlended*>(_bdry)){
             _spacing = Options::get_double_from_petsc_opts("-bis3d_rfdspacing");
-            //PetscOptionsGetReal(NULL, "",  "-bis3d_rfdspacing", &_spacing,  &err);
     }
 
-    /*if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
-        PetscOptionsGetReal(NULL, "",  "-bis3d_spacing", &_spacing,  &err);
-        //if(refined)
-            //_spacing /= 4.;
-            //PetscOptionsGetReal(NULL, "",  "-bis3d_rfdspacing", &_spacing,  &err);
-
-    }*/
     cout << "SPACING = " << _spacing << endl;
-
-
 
 
     vector<Patch*>& patches = _bdry->patches(); //get patches
@@ -187,13 +176,6 @@ int PatchSamples::setup(bool refined)
                         //xy[1] = init + j*step;
                         xy = init*Point2(1) + Point2(i,j)*step;
                     }
-                    /*double xy[2];
-                    xy[0] = init + i*step;	
-                    xy[1] = init + j*step;
-                    if(dynamic_cast<PatchSurfFaceMap*>(_bdry) != NULL){
-                        xy[0] = (cos(i*M_PI/double(num_samples-1))+1.)/2.;	
-                        xy[1] = (cos(j*M_PI/double(num_samples-1))+1.)/2.;
-                    }*/
                     bool is_valid;
                     // check if (i,j) sample is inside the star-shaped patch domain
                     curpch->is_xy_valid(xy.array(), is_valid);
@@ -210,8 +192,6 @@ int PatchSamples::setup(bool refined)
     int cnt = 0;
     for(const auto num_points : _num_sample_points_in_patch)
         cnt += num_points;
-    /*for(const auto num_points : _num_sample_points_in_patch)
-        cerr<<num_points<<" ";  cerr<<endl;*/
     if(refined)
     stats.add_result("total refined samples", cnt);
     else
