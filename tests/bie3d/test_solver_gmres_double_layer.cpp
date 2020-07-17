@@ -9,6 +9,7 @@
 #include "common/nummat.hpp"
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
+#include "../utils/regression_utils.hpp"
 using namespace Ebi;
 
 
@@ -44,32 +45,23 @@ Vec run_test_get_potential(PatchSurf* surface,
     return computed_potential;
 }
 
-string build_prefix(unique_ptr<SolverGMRESDoubleLayer>& solver){
-    string prefix = "SolverGMRESDoubleLayer/";
-    if(dynamic_cast<PatchSurfFaceMap*>(solver->bdry())){
-        prefix += "face_map/";
-        if(Options::get_double_from_petsc_opts("-bd3d_facemap_adaptive")){
-            assert(fabs(Options:: get_double_from_petsc_opts("-bd3d_facemap_fit_accuracy") - 1e-4) <=1e-16);
-            prefix += "adaptive/";
-        } else {
-            prefix += "no_ref/";
-
-        }
-    } else if(dynamic_cast<PatchSurfBlended*>(solver->bdry())){
-        prefix += "blended/";
-    } else if(dynamic_cast<PatchSurfAnalytic*>(solver->bdry())){
-        prefix += "analytic/";
-    } else { 
-        assert(0);//????
-    }
-    return prefix;
-}
-void dump_regression_data(vector<Vec> computed_data, vector<string> file_names){
-    assert(computed_data.size() == file_names.size());
+void dump_regression_data(unique_ptr<SolverGMRESDoubleLayer>& solver){
 }
 
+void compare_to_regression_data(unique_ptr<SolverGMRESDoubleLayer> &solver) {
+  string prefix = Regression::build_prefix("SolverGMRESDoubleLayer");
+}
 
+TEST_CASE("Regression test initialization for SolverGMRESDoubleLayer", "[solver][regression-init]"){
 
+}
+
+TEST_CASE("Regression test for SolverGMRESDoubleLayer", "[solver][regression]"){
+
+}
+/*****************************************************************************/
+/*****************************************************************************/
+/*****************************************************************************/
 
 TEST_CASE("Test singular quad solver on analytic surfaces", "[solver][analytic]"){
     SECTION("Test single sphere Laplace interior"){

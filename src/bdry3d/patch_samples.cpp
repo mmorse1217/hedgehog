@@ -37,6 +37,16 @@ PatchSamples::PatchSamples(const string& n, const string& p):
     _sample_point_combined_weight(NULL),
     _sample_point_parametric_preimage(NULL)
 {
+    //----------------------------------------------------------------------  
+    // Load options from Petsc
+    //----------------------------------------------------------------------  
+    _spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
+    _boundary_distance_ratio = Options::get_double_from_petsc_opts("-boundary_distance_ratio");
+    _interpolation_spacing_ratio = Options::get_double_from_petsc_opts("-interpolation_spacing_ratio");
+}
+
+PatchSamples::PatchSamples(PatchSurf* surface): PatchSamples("", "") {
+    _bdry = surface;
 }
 
 PatchSamples::~PatchSamples()
@@ -54,6 +64,39 @@ PatchSamples::~PatchSamples()
   if(_sample_point_parametric_preimage!=NULL) { VecDestroy(&_sample_point_parametric_preimage); }
 }
 
+void PatchSamples::initialize_sampling_vectors(const int num_patches){
+    _step_size.resize( num_patches );
+    _num_sample_points.resize( num_patches );
+    _num_sample_points_in_patch.resize( num_patches, 0 );
+    _sample_point_starting_index.resize( num_patches, 0 );
+    _patch_sampling_index.resize( num_patches );  //_refined_datvec.resize( num_patches );
+}
+void PatchSamples::set_equal_sample_rate_param_space( const vector<Patch *> &patches) {
+  for (int pi = 0; pi < patches.size(); pi++) {
+    Patch *curpch = patches[pi];
+    assert(curpch);
+
+    _step_size[pi] = _spacing;
+    _num_sample_points[pi] = floor(1. / _spacing) + 1;
+  }
+}
+void PatchSamples::set_equal_sample_rate_physical_space( const vector<Patch *> &patches) {
+  for (int pi = 0; pi < patches.size(); pi++) {
+    Patch *curpch = patches[pi];
+    assert(curpch);
+    double bnd = curpch->bnd(); // Maximum value for x/y in parameter space
+
+    double estjac;
+
+    curpch->estimate_jacobian(&estjac);
+    // ---------------------------------------------------------------------
+    double tmp = _spacing / estjac; // max( ret[1].l2(), ret[2].l2() );
+    _num_sample_points[pi] = (int)(ceil(bnd / tmp)) * 2; //
+
+    // distance between regular samples of the bounding box enclosing the patch
+    _step_size[pi] = 2.0 * bnd / double(_num_sample_points[pi]);
+  }
+}
 // ---------------------------------------------------------------------- 
 #undef __FUNCT__
 #define __FUNCT__ "PatchSamples::setup"
@@ -63,12 +106,6 @@ int PatchSamples::setup(bool refined)
         stats.start_timer("PatchSamples::setup()");
     }
     ebiFunctionBegin;
-    //----------------------------------------------------------------------  
-    // Load options from Petsc
-    //----------------------------------------------------------------------  
-    _spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
-    _boundary_distance_ratio = Options::get_double_from_petsc_opts("-boundary_distance_ratio");
-    _interpolation_spacing_ratio = Options::get_double_from_petsc_opts("-interpolation_spacing_ratio");
     
     // TODO MJM remove this pattern
     // translate "solver spacing" to "surface discretization spacing"
@@ -103,16 +140,22 @@ int PatchSamples::setup(bool refined)
     int num_patches = patches.size();
 
     stats.add_result("Number of patches", num_patches);
-    _step_size.resize( num_patches );
+    /*_step_size.resize( num_patches );
     _num_sample_points.resize( num_patches );
     _num_sample_points_in_patch.resize( num_patches, 0 );
     _sample_point_starting_index.resize( num_patches, 0 );
-    _patch_sampling_index.resize( num_patches );  //_refined_datvec.resize( num_patches );
+    _patch_sampling_index.resize( num_patches );  //_refined_datvec.resize( num_patches );*/
+    initialize_sampling_vectors(num_patches);
 
     //1. compute  step_size, num_sample_points
+    if(dynamic_cast<PatchSurfBlended*>(_bdry)){
+        set_equal_sample_rate_physical_space(patches);
+    } else {
+        set_equal_sample_rate_param_space(patches);
+    }
     
     //1.1 decide the step and num_samples	 
-    for(int pi=0; pi<num_patches; pi++) {
+    /*for(int pi=0; pi<num_patches; pi++) {
         Patch* curpch = patches[pi];
         assert(curpch);
         if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
@@ -133,7 +176,7 @@ int PatchSamples::setup(bool refined)
 
         }
         // ---------------------------------------------------------------------
-    }
+    }*/
 
     DblNumMat parametric_samples;
     if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){

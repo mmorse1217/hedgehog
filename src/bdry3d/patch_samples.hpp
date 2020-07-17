@@ -4,6 +4,7 @@
 #include "patch_surf.hpp"
 #include "on_surface_point.hpp"
 #include <bdsurf.hpp>
+#include <vector>
 
 BEGIN_EBI_NAMESPACE
 
@@ -318,6 +319,10 @@ public:
       b=tmp_b/dim();
   }  
 NumVec <OnSurfacePoint> closest_points_to_qbkix_points();
+private:
+    void initialize_sampling_vectors(const int num_patches);
+    void set_equal_sample_rate_param_space(const vector<Patch*>& patches);
+    void set_equal_sample_rate_physical_space(const vector<Patch*>& patches);
 };
 
 Vec refine_function(int dof, Vec function,
