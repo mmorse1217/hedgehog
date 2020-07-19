@@ -6,13 +6,227 @@
 #include "bdry3d/patch_surf_analytic.hpp"
 #include "bie3d/solver_utils.hpp"
 #include <sampling.hpp>
+#include <vector>
 #include "common/nummat.hpp"
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
 #include "../utils/regression_utils.hpp"
 using namespace Ebi;
 
+/****************************************************************************/
+// Define configuration options for regression test cases 
+/****************************************************************************/
+// Geometry configuration
+void set_reg_options_solver_sphere() {
+  Options::set_value_petsc_opts("-bdtype", "0");
+  Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/sphere.wrl");
+  Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/sphere.wrl");
+  Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
 
+  Options::set_value_petsc_opts("-bis3d_spacing", ".15");
+  Options::set_value_petsc_opts("-bis3d_rfdspacing", ".0725");
+  Options::set_value_petsc_opts("-boundary_distance_ratio", ".07");
+  Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".07");
+  Options::set_value_petsc_opts("-qbkix_convergence_type", "classic");
+}
+
+void set_reg_options_solver_blended_cube() {
+  Options::set_value_petsc_opts("-bdtype", "1");
+  Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl");
+  Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
+  Options::set_value_petsc_opts("-bis3d_spacing", ".08");
+  Options::set_value_petsc_opts("-bis3d_rfdspacing", ".04");
+  Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+  Options::set_value_petsc_opts("-boundary_distance_ratio", ".06");
+  Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".06");
+}
+void set_reg_options_solver_face_map_cube() {
+  Options::set_value_petsc_opts("-bdtype", "2");
+  Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl");
+  Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl");
+  Options::set_value_petsc_opts("-bis3d_spacing", ".1");
+  Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
+  Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+  Options::set_value_petsc_opts("-boundary_distance_ratio", ".06");
+  Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01");
+  Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "8");
+}
+
+void set_reg_options_solver_face_map_torus(){
+  Options::set_value_petsc_opts("-bdtype", "2");
+  Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/newtorus.wrl");
+  Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/newtorus.wrl");
+  Options::set_value_petsc_opts("-bis3d_spacing", ".1");
+  Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
+  Options::set_value_petsc_opts("-bis3d_ptsmax", "500");
+  Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
+  Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
+  Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
+  Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_meshes/poly/explicit_torus_patches.poly");
+}
+// Evaluation configuration
+void set_test_options_const_density(TestConfig& test){
+    test.solution_scheme   = SolutionScheme::EXPLICIT_DENSITY;
+    test.target_type   = TargetType::COLLOCATION_POINTS;
+    test.bc_type = BoundaryDataType::CONSTANT_DENSITY;
+}
+void set_test_options_point_charges(TestConfig& test){
+    test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
+    test.target_type   = TargetType::ON_SURFACE_NON_COLLOCATION;
+    test.solver_matvec_type = EvaluationType::EXTRAPOLATION_AVERAGE;
+    
+    test.bc_type = BoundaryDataType::HARMONIC;
+    test.singularity_type= SingularityType::SPHERE;
+    test.sphere_radius_bc = 1.;
+}
+/****************************************************************************/
+// Explicit lists of vectors to store and compare against for regression tests
+/****************************************************************************/
+
+void configure_and_run_test(vector<Vec> &computed_data,
+                            vector<string> &file_names,
+                            string &test_case_prefix,
+                            bool check_simulation_error = false) {
+  Options::set_value_petsc_opts("-kt", "111");
+  Options::set_value_petsc_opts("-dom", "0");
+  Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
+  Options::set_value_petsc_opts("-bis3d_np", "6");
+
+  unique_ptr<PatchSurf> surface;
+  unique_ptr<PatchSamples> samples;
+
+  TestConfig test;
+  test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
+  test.dump_values = false;
+  string test_type;
+
+  SECTION("Test constant density") {
+    set_test_options_const_density(test);
+    test_type = "const_density";
+
+    SECTION("on blended cube") {
+      set_reg_options_solver_blended_cube();
+      Regression::setup_blended(surface, samples);
+    }
+    SECTION("on face-map cube") {
+      set_reg_options_solver_face_map_cube();
+      Regression::setup_face_map(surface, samples);
+    }
+    // SECTION("on analytic sphere"){
+    //    set_reg_options_solver_sphere();
+    //    Regression::setup_analytic(surface, samples);
+    //}
+    SECTION("on explicit face-map torus") {
+      set_reg_options_solver_face_map_torus();
+      Regression::setup_face_map(surface, samples);
+    }
+  }
+  SECTION("Test random point charges") {
+    set_test_options_point_charges(test);
+    test_type = "point_charge";
+
+    SECTION("on blended cube") {
+      set_reg_options_solver_blended_cube();
+      Regression::setup_blended(surface, samples);
+    }
+    SECTION("on face-map cube") {
+      set_reg_options_solver_face_map_cube();
+      Regression::setup_face_map(surface, samples);
+    }
+    // SECTION("on analytic sphere"){
+    //    set_reg_options_solver_sphere();
+    //    Regression::setup_analytic(surface, samples);
+    //}
+
+    SECTION("on explicit face-map torus") {
+      set_reg_options_solver_face_map_torus();
+      Regression::setup_face_map(surface, samples);
+    }
+  }
+
+  Vec true_potential;
+  Vec computed_potential;
+  Vec targets;
+  Vec boundary_data;
+  Vec solved_density;
+
+  // Solve PDE and evaluate solution
+  auto solver = setup_solver(surface.get(), test.solver_matvec_type);
+
+  NumVec<OnSurfacePoint> closest_points;
+  setup_target_data(solver, test, targets, closest_points, computed_potential,
+                    true_potential);
+
+  setup_problem_data(solver, test, boundary_data, solved_density);
+
+  solve_and_evaluate(solver, boundary_data, targets, closest_points,
+                     solved_density, computed_potential, test);
+  if (check_simulation_error) {
+    auto kernel = solver->problem_kernel();
+    const int target_dof = kernel.get_tdof();
+    const int num_target_points =
+        Petsc::get_vec_local_size(true_potential) / target_dof;
+    DblNumMat true_potential_local =
+        get_local_vector(target_dof, num_target_points, true_potential);
+    DblNumMat computed_potential_local =
+        get_local_vector(target_dof, num_target_points, computed_potential);
+
+    check_error(true_potential_local, computed_potential_local, 1e-2, 1e-2);
+
+    true_potential_local.restore_local_vector();
+    computed_potential_local.restore_local_vector();
+  }
+
+  // Store evaluated potential and solved density to files
+    
+  computed_data = {
+      solved_density,
+      computed_potential
+  };
+  file_names = {"solved_density.reg", "evaluted_potential.reg"};
+
+
+    test_case_prefix = "laplace/"+test_type;
+
+    VecDestroy(&true_potential);
+    VecDestroy(&boundary_data);
+    VecDestroy(&targets);
+}
+TEST_CASE("Regression test initialization for SolverGMRESDoubleLayer",
+          "[solver][regression-init]") {
+
+
+  // Store evaluated potential and solved density to files
+  vector<Vec> computed_data;
+  vector<string> file_names;
+  string test_case_prefix;
+  configure_and_run_test(computed_data, file_names, test_case_prefix);
+
+  Regression::dump_regression_data(
+      computed_data, file_names, "SolverGMRESDoubleLayer/" + test_case_prefix);
+
+  VecDestroy(&computed_data[0]);
+  VecDestroy(&computed_data[1]);
+}
+
+TEST_CASE("Regression test for SolverGMRESDoubleLayer", "[solver][regression]"){
+    
+    
+    // Store evaluated potential and solved density to files
+      vector<Vec> computed_data;
+      vector<string> file_names;
+      string test_case_prefix;
+    configure_and_run_test(computed_data, file_names, test_case_prefix, true);
+  
+
+  Regression::compare_to_regression_data(computed_data, file_names, "SolverGMRESDoubleLayer/"+test_case_prefix);
+
+
+    VecDestroy(&computed_data[0]);
+    VecDestroy(&computed_data[1]);
+
+
+}
 Vec run_test_get_potential(PatchSurf* surface, 
         TestConfig test_type){
     Vec true_potential;
@@ -45,20 +259,6 @@ Vec run_test_get_potential(PatchSurf* surface,
     return computed_potential;
 }
 
-void dump_regression_data(unique_ptr<SolverGMRESDoubleLayer>& solver){
-}
-
-void compare_to_regression_data(unique_ptr<SolverGMRESDoubleLayer> &solver) {
-  string prefix = Regression::build_prefix("SolverGMRESDoubleLayer");
-}
-
-TEST_CASE("Regression test initialization for SolverGMRESDoubleLayer", "[solver][regression-init]"){
-
-}
-
-TEST_CASE("Regression test for SolverGMRESDoubleLayer", "[solver][regression]"){
-
-}
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/

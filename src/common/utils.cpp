@@ -610,6 +610,7 @@ string Debug::load_file_to_string(string file){
 
 void Debug::load_mat(DblNumMat& m, string file){
     std::ifstream in(file, std::ios::in);
+    in.precision(16);
     assert(in.is_open());
     vector<double> stored_mat;
     

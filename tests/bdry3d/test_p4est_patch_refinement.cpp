@@ -224,7 +224,7 @@ TEST_CASE("Test p4est refinement", "[geom][p4est]"){
         }
     }*/
 }
-
+/*
 TEST_CASE("P4est refinement regression test initialization", "[geom][p4est][regression-init]"){
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl");
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
@@ -274,4 +274,4 @@ TEST_CASE("p4est refinement regression test: adaptive upsampling", "[geom][p4est
     Options::set_value_petsc_opts("-dom", "0");
     Options::set_value_petsc_opts("-bdtype", "2");
 }
-
+*/

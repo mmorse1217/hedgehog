@@ -49,7 +49,7 @@ void Regression::compare(DblNumMat computed_mat, DblNumMat true_mat){
     assert(computed_mat.n() == true_mat.n());
     for (int i = 0; i < computed_mat.m(); i++) {
         for (int j = 0; j < computed_mat.n(); j++) {
-           CHECK(fabs(computed_mat(i,j) - true_mat(i,j)) <= 5e-16);
+           CHECK(fabs(computed_mat(i,j) - true_mat(i,j)) <= 25*2.2204e-16);
         }
     }
 }
@@ -117,10 +117,16 @@ void Regression::test_vec(Vec vec, string file){
     Regression::compare(vec_computed, vec);
 }
 
+void setup_samples(Ebi::PatchSurf* surface,  unique_ptr<Ebi::PatchSamples>& samples){
+    vector<int> partition(surface->patches().size(), 0);
+    samples = std::move(unique_ptr<Ebi::PatchSamples>(new Ebi::PatchSamples("", "")));
+    samples->bdry() = surface;
+    samples->patch_partition() = partition;
+    samples->setup();
+}
 void Regression::setup_face_map(unique_ptr<Ebi::PatchSurf>& surface, 
         unique_ptr<Ebi::PatchSamples>& samples){
     unique_ptr<Ebi::PatchSurf> face_map(new Ebi::PatchSurfFaceMap("BD3D_", "bd3d_"));
-    //surface = std::move(unique_ptr<Ebi::PatchSurfFaceMap> (new Ebi::PatchSurfFaceMap("BD3D_", "bd3d_")));
     dynamic_cast<Ebi::PatchSurfFaceMap*>(face_map.get())->_surface_type = 
         Options::get_string_from_petsc_opts("-bd3d_filename") == "wrl_meshes/wrl/newtorus.wrl" ?
         Ebi::PatchSurfFaceMap::POLYNOMIAL :
@@ -131,25 +137,26 @@ void Regression::setup_face_map(unique_ptr<Ebi::PatchSurf>& surface,
     face_map->setup();
     dynamic_cast<Ebi::PatchSurfFaceMap*>(face_map.get())->refine_test();
     surface = std::move(face_map);
-
-    vector<int> partition(surface->patches().size(), 0);
-    samples = std::move(unique_ptr<Ebi::PatchSamples>(new Ebi::PatchSamples("", "")));
-    samples->bdry() = surface.get();
-    samples->patch_partition() = partition;
-    samples->setup();
+    
+    setup_samples(surface.get(), samples);
 }
 void Regression::setup_blended(unique_ptr<Ebi::PatchSurf>& surface, 
         unique_ptr<Ebi::PatchSamples>& samples){
-    //surface = std::move(unique_ptr<Ebi::PatchSurfBlended> (new Ebi::PatchSurfBlended("BD3D_", "bd3d_")));
     
     unique_ptr<Ebi::PatchSurf> blended(new Ebi::PatchSurfBlended("BD3D_", "bd3d_"));
     blended->setFromOptions();
     blended->setup();
     surface = std::move(blended);
+    
+    setup_samples(surface.get(), samples);
+}
+void Regression::setup_analytic(unique_ptr<Ebi::PatchSurf>& surface, 
+        unique_ptr<Ebi::PatchSamples>& samples){
 
-    vector<int> partition(surface->patches().size(), 0);
-    samples = std::move(unique_ptr<Ebi::PatchSamples>(new Ebi::PatchSamples("", "")));
-    samples->bdry() = surface.get();
-    samples->patch_partition() = partition;
-    samples->setup();
+  unique_ptr<Ebi::PatchSurf> analytic( new Ebi::PatchSurfAnalytic("BD3D_", "bd3d_"));
+  analytic->setFromOptions();
+  analytic->setup();
+  surface = std::move(analytic);
+
+  setup_samples(surface.get(), samples);
 }

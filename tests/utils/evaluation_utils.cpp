@@ -570,7 +570,7 @@ void set_target_potential(unique_ptr<SolverGMRESDoubleLayer>& solver,
         case BoundaryDataType::SPHERICAL_HARMONIC:
             assert(test_type.target_type == TargetType::COLLOCATION_POINTS );
             assert(Options::get_string_from_petsc_opts("-bd3d_meshfile") == 
-                    string("wrl_files/sphere.wrl"));
+                    string("wrl_meshes/wrl/sphere.wrl"));
             potential = Test::compute_spherical_harmonic_density(solver->mpiComm(), targets);
             break;
         default:
@@ -634,7 +634,7 @@ void setup_boundary_data(unique_ptr<SolverGMRESDoubleLayer>& solver,
         case BoundaryDataType::SPHERICAL_HARMONIC:
             assert(test.target_type == TargetType::COLLOCATION_POINTS );
             assert(Options::get_string_from_petsc_opts("-bd3d_meshfile") == 
-                    string("wrl_files/sphere.wrl"));
+                    string("wrl_meshes/wrl/sphere.wrl"));
 
             boundary_data_values = Test::compute_spherical_harmonic_bc(solver->mpiComm(), 
                     solver->patch_samples()->sample_point_3d_position());

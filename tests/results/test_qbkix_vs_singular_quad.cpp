@@ -138,8 +138,8 @@ TEST_CASE("Test singular quad vs. qbkix solver on analytic surfaces",
     Options::set_value_petsc_opts("-kt", "111"); // Laplace problem
     Options::set_value_petsc_opts("-dom", "0"); // interior problem
     Options::set_value_petsc_opts("-bdtype", "0"); // analytic surface
-    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/sphere.wrl"); // single sphere
-    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/sphere.wrl");
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/sphere.wrl"); // single sphere
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/sphere.wrl");
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
     //Options::set_value_petsc_opts("-bis3d_spacing", ".125");
     //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".03125");

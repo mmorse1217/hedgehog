@@ -1,8 +1,5 @@
 #pragma once
 #include "common/nummat.hpp"
-#include <bdry3d/patch_surf_face_map.hpp>
-#include <bdry3d/patch_surf_blended.hpp>
-#include <bdry3d/patch_surf_analytic.hpp>
 #include <bdry3d/patch_samples.hpp>
 namespace Regression {
 using Ebi::DblNumMat;
@@ -21,5 +18,7 @@ using Ebi::DblNumMat;
     void setup_face_map(unique_ptr<Ebi::PatchSurf> &surface,
                         unique_ptr<Ebi::PatchSamples> &samples);
     void setup_blended(unique_ptr<Ebi::PatchSurf> &surface,
+                       unique_ptr<Ebi::PatchSamples> &samples);
+    void setup_analytic(unique_ptr<Ebi::PatchSurf> &surface,
                        unique_ptr<Ebi::PatchSamples> &samples);
 };
