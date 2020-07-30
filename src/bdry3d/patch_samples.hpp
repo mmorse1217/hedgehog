@@ -321,6 +321,9 @@ public:
 NumVec <OnSurfacePoint> closest_points_to_qbkix_points();
 private:
     void initialize_sampling_vectors(const int num_patches);
+    void initialize_parallel_vectors(const int local_num_sample_points);
+    int initialize_sampling_indices();
+    void sample_patches();
     void set_equal_sample_rate_param_space(const vector<Patch*>& patches);
     void set_equal_sample_rate_physical_space(const vector<Patch*>& patches);
 };
