@@ -13,7 +13,7 @@
 double extrapolation_eval_point_alt(double distance_to_closest_sample, double h){
     return -h;
 }
-using namespace Ebi;
+using namespace hedgehog;
 using namespace Petsc;
 //using Petsc::Vector;
 typedef tuple<double, double, double, double> Result;

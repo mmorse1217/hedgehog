@@ -5,7 +5,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "bdry3d/patch_surf_analytic.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 TEST_CASE("Test singular eval convergence", "[results][singular-eval]"){
     Options::set_value_petsc_opts("-kt", "111"); // Laplace problem
     Options::set_value_petsc_opts("-dom", "0"); // interior problem

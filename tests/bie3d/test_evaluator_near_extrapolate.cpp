@@ -10,7 +10,7 @@
 #include "common/nummat.hpp"
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Test qbkix extrapolation of known functions", "[critical][eval][near][qbkix]"){
     Options::set_value_petsc_opts("-kt", "111"); // Laplace problem

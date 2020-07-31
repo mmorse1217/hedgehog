@@ -10,7 +10,7 @@
 #include <cstring>
 #include "common/nummat.hpp"
 #include <functional>
-using Ebi::DblNumMat;
+using hedgehog::DblNumMat;
 namespace Petsc
 {
     class Vector

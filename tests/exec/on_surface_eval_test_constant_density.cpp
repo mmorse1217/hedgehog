@@ -16,7 +16,7 @@
 #include <time.h>
 // To reinitialize the stored values for regression testing, set this to true
 using namespace std;
-using namespace Ebi;
+using namespace hedgehog;
 
 // ---------------------------------------------------------------------- 
 // A test that compares the stored mat-vec of a random vector with the 

@@ -7,7 +7,7 @@
 #include <sampling.hpp>
 #include <numeric>
 #include "bie3d/markgrid.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 using Sampling::sample_2d;
 using Sampling::equispaced;
 

@@ -6,7 +6,7 @@
 #include "bie3d/spatial_grid.hpp"
 #include <algorithm>
 
-using namespace Ebi;
+using namespace hedgehog;
 using namespace Markgrid;
 
 

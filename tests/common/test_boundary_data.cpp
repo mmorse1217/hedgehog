@@ -8,7 +8,7 @@
 #include "../utils/evaluation_utils.hpp"
 #include "common/vtk_writer.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 using Sampling::sample_2d;
 using Sampling::equispaced;
 

@@ -5,7 +5,7 @@
 #include "common/vtk_writer.hpp"
 #include "bie3d/markgrid.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Generate data for qbkix schematic", "[results][images][schematic]"){
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");

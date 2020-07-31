@@ -11,7 +11,7 @@
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
 #include "common/stats.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("", "[ybz]"){
 }

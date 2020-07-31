@@ -5,7 +5,7 @@
 #include <memory>
 #include <petscvec.h>
 #include <random>
-using namespace Ebi;
+using namespace hedgehog;
 void compute_kifmm_potential(DblNumMat interaction_matrix, DblNumMat source_densities,
         DblNumMat& kifmm_potential){
     int sdof = source_densities.m();

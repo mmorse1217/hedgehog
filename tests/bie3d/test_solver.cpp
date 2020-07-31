@@ -3,7 +3,7 @@
 #include "common/stats.hpp"
 #include "../utils/evaluation_utils.hpp"
 #include "common/vtk_writer.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Test solver", "[solver][eval]"){
     SECTION("Test smooth quadrature with single layer kernel"){

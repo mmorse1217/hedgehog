@@ -10,7 +10,7 @@
 #include "../utils/evaluation_utils.hpp"
 #include "common/vtk_writer.hpp"
 #include <time.h>
-using namespace Ebi;
+using namespace hedgehog;
 using Markgrid::SpatialGrid;
 using Markgrid::NearFieldMap;
 

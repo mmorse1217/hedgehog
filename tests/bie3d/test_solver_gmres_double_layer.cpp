@@ -11,7 +11,7 @@
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
 #include "../utils/regression_utils.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 
 /****************************************************************************/
 // Define configuration options for regression test cases 

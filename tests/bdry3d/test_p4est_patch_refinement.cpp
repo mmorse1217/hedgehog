@@ -6,7 +6,7 @@
 #include "bie3d/solver_utils.hpp"
 #include "common/ebi_uti.hpp"
 #include <bitset>
-using namespace Ebi;
+using namespace hedgehog;
 
 unique_ptr<PatchSurfFaceMap> build_surface(PatchSurfFaceMap::SurfaceType t){
         unique_ptr<PatchSurfFaceMap> surface(new PatchSurfFaceMap("BD3D_", "bd3d_"));

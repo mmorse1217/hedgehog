@@ -10,7 +10,7 @@
 #include "common/vtk_writer.hpp"
 #include "../utils/evaluation_utils.hpp"
 #include "common/stats.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 
 void check_density(unique_ptr<PatchSurfAnalytic>& surface, 
         EvaluationType solver_matvec_type,  string eval_type, 

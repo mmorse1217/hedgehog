@@ -9,10 +9,10 @@ using Sampling::base_domain;
 using Sampling::equispaced;
 
 TEST_CASE("Test nanospline interface for flat patch", "[nanospline]"){
-    unique_ptr<Ebi::PatchSurfNanospline> surface(new Ebi::PatchSurfNanospline("", ""));
+    unique_ptr<hedgehog::PatchSurfNanospline> surface(new hedgehog::PatchSurfNanospline("", ""));
     auto patch = surface->patch(0);
     const int num_samples = 20;
-    Ebi::DblNumMat parametric_samples = DblNumMat(2, num_samples*num_samples, true, 
+    hedgehog::DblNumMat parametric_samples = DblNumMat(2, num_samples*num_samples, true, 
                 sample_2d<equispaced>(num_samples, base_domain).data());
     CHECK(patch->characteristic_length() == Approx(2.));
     for (int i=0; i<num_samples; i++) {

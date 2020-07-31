@@ -4,7 +4,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "bdry3d/on_surface_point.hpp"
 #include <omp.h>
-using namespace Ebi;
+using namespace hedgehog;
 using Markgrid::NearFieldMap;
 using Markgrid::compute_closest_points_on_patches;
 

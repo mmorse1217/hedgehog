@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <string>
 #include <stdlib.h>
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Test becnhmarking and results", "[stats][common]"){
     SECTION("test timer"){

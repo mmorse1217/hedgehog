@@ -8,7 +8,7 @@
 #include <sampling.hpp>
 #include "../utils/evaluation_utils.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 using Sampling::equispaced;
 using Sampling::chebyshev1;
 using Sampling::sample_1d;

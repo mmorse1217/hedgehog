@@ -1,7 +1,7 @@
 
 #include "../catch.hpp"
 #include "bie3d/solver_gmres_double_layer.hpp"
-using namespace Ebi;
+using namespace hedgehog;
 TEST_CASE("Solver examples: blended surface", "[examples][solver][blended]"){
     // default options are listed in opt/test_cases.opt. Any options explcitly
     // set here have priority and override defaults

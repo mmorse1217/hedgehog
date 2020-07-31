@@ -5,7 +5,7 @@
 #include "../catch.hpp"
 #include "vec3t.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 
 TEST_CASE("Interpolation point generation", "[eval-near]"){

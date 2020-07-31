@@ -11,7 +11,7 @@
 #include "bdry3d/p4est_refinement.hpp"
 #include <math.h>
 #include <sstream>
-using namespace Ebi;
+using namespace hedgehog;
 void laplace_dl_potential(Vec targets, int dof,Vec& potential){
     Vec source;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, 1*DIM, source);

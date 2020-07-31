@@ -3,7 +3,7 @@
 #include "common/stats.hpp"
 #include "../utils/evaluation_utils.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 
 

@@ -22,7 +22,7 @@
 
 // To reinitialize the stored values for regression testing, set this to true
 using namespace std;
-using namespace Ebi;
+using namespace hedgehog;
 
 int main(int argc, char** argv)
 {

@@ -4,7 +4,7 @@
 #include "../utils/evaluation_utils.hpp"
 #include "common/vtk_writer.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 void test_greens_identity(PatchSurfFaceMap* surface, string output_folder, int i){
     // Set up test case

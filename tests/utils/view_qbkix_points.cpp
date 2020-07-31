@@ -5,7 +5,7 @@
 #include "common/stats.hpp"
 #include "evaluation_utils.hpp"
 #include <numeric>
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("dump qbkix points for paraview", "[qbkix-points][debug]"){
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");

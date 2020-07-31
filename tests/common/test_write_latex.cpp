@@ -2,7 +2,7 @@
 #include "common/write_latex.hpp"
 #include <string>
 #include <stdlib.h>
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Test latex table compiler", "[write_latex][common]"){
     SECTION("test constant data against tablesgenerator.com"){

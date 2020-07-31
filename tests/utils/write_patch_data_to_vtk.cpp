@@ -11,7 +11,7 @@
 extern "C" {
 #include <p4est_vtk.h>
 }
-using namespace Ebi;
+using namespace hedgehog;
 using namespace Markgrid;
 
 TEST_CASE("Visualize QBKIX point generation by dumping to vtk", "[vtk][visualize][utils]"){

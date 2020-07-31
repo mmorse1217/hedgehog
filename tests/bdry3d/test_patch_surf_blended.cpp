@@ -11,7 +11,7 @@
 #include <bdsurf.hpp>
 #include <sampling.hpp>
 #include <utils.hpp>
-using namespace Ebi;
+using namespace hedgehog;
 using Sampling::sample_2d;
 using Sampling::equispaced;
 using Sampling::base_domain;

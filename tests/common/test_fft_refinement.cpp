@@ -3,7 +3,7 @@
 #include <sampling.hpp>
 #include "common/vtk_writer.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 using namespace Sampling;
 using Sampling::equispaced;
 using Sampling::sample_2d;

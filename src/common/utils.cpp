@@ -6,9 +6,9 @@
 #include <math.h>
 #include "common/ebi_petsc.hpp"
 #include <random>
-using Ebi::DblNumMat;
-using Ebi::get_local_vector;
-using Ebi::DIM;
+using hedgehog::DblNumMat;
+using hedgehog::get_local_vector;
+using hedgehog::DIM;
 int ArgParse::parse_kernel(char*  arg){
     string args = string(arg);
     if( args == "laplace"){
@@ -143,7 +143,7 @@ Vec Test::generate_random_vector(int size, double upper, double lower){
     std::uniform_real_distribution<double> dist(upper, lower);
     Vec v;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, size, v); 
-    Ebi::DblNumVec vec(v);
+    hedgehog::DblNumVec vec(v);
     for(int i =0; i < size; i++){
         vec(i) = dist(mt);
     }
@@ -216,7 +216,7 @@ Vec Test::create_scaled_surface_target_points(vector<double> scale_factors,
 }
 Vec Test::compute_dirichlet_boundary_data(
         MPI_Comm comm,
-        Ebi::Kernel3d kernel,
+        hedgehog::Kernel3d kernel,
         Vec singularity_positions,
         //Vec singularity_normals,
         Vec singularity_densities,
@@ -267,7 +267,7 @@ Vec Test::compute_dirichlet_boundary_data(
 }
 Vec Test::compute_neumann_boundary_data(
         MPI_Comm comm,
-        Ebi::Kernel3d kernel,
+        hedgehog::Kernel3d kernel,
         Vec singularity_positions,
         //Vec singularity_normals,
         Vec singularity_densities,
@@ -357,11 +357,11 @@ string Test::get_domain(){
 string Test::get_kernel(){
     int kernel = Options::get_int_from_petsc_opts("-kt");
     switch(kernel){
-        case Ebi::KNL_LAP_S_U:
+        case hedgehog::KNL_LAP_S_U:
             return "laplace";
-        case Ebi::KNL_STK_S_U:
+        case hedgehog::KNL_STK_S_U:
             return "stokes";
-        case Ebi::KNL_NAV_S_U:
+        case hedgehog::KNL_NAV_S_U:
             return "navier";
         default:
             assert(0);

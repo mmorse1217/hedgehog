@@ -7,7 +7,7 @@
 #include "common/stats.hpp"
 #include "common/utils.hpp"
 #include <vector>
-using namespace Ebi;
+using namespace hedgehog;
 /****************************************************************************/
 // Define configuration options for regression test cases 
 /****************************************************************************/

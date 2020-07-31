@@ -7,7 +7,7 @@
 #include "bdry3d/patch_surf_analytic.hpp"
 #include "bdry3d/patch_samples.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("Compare face-map vs. blendsurf","[blendsurf][face-map][geom][no-fmm]"){
     /*

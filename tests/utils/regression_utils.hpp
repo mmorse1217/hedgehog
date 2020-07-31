@@ -2,7 +2,7 @@
 #include "common/nummat.hpp"
 #include <bdry3d/patch_samples.hpp>
 namespace Regression {
-using Ebi::DblNumMat;
+using hedgehog::DblNumMat;
     void dump(Vec v, string data_name);
     void dump(DblNumMat m, string data_name);
 
@@ -15,10 +15,10 @@ using Ebi::DblNumMat;
     void dump_regression_data(vector<Vec> computed_data, vector<string> file_names, string class_name);
     void compare_to_regression_data(vector<Vec> computed_data, vector<string> file_names, string class_name);
     void test_vec(Vec vec, string file);
-    void setup_face_map(unique_ptr<Ebi::PatchSurf> &surface,
-                        unique_ptr<Ebi::PatchSamples> &samples);
-    void setup_blended(unique_ptr<Ebi::PatchSurf> &surface,
-                       unique_ptr<Ebi::PatchSamples> &samples);
-    void setup_analytic(unique_ptr<Ebi::PatchSurf> &surface,
-                       unique_ptr<Ebi::PatchSamples> &samples);
+    void setup_face_map(unique_ptr<hedgehog::PatchSurf> &surface,
+                        unique_ptr<hedgehog::PatchSamples> &samples);
+    void setup_blended(unique_ptr<hedgehog::PatchSurf> &surface,
+                       unique_ptr<hedgehog::PatchSamples> &samples);
+    void setup_analytic(unique_ptr<hedgehog::PatchSurf> &surface,
+                       unique_ptr<hedgehog::PatchSamples> &samples);
 };

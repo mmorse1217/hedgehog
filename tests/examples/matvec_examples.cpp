@@ -1,6 +1,6 @@
 
 #include "../catch.hpp"
-//using namespace Ebi;
+//using namespace hedgehog;
 TEST_CASE("Matrix-vector product examples: stand-alone evaluators", 
         "[examples][matvec][evaluator]"){
 

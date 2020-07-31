@@ -280,12 +280,12 @@ namespace Petsc {
 
     void Vector::get_local(){
         _has_local = true;
-        _local_v = Ebi::get_local_vector(1, size(), v_);
+        _local_v = hedgehog::get_local_vector(1, size(), v_);
     }
     void Vector::get_local(int m, int n){
         assert(m*n == int(size()));
         _has_local = true;
-        _local_v = Ebi::get_local_vector(m, n, v_);
+        _local_v = hedgehog::get_local_vector(m, n, v_);
     }
     void Vector::restore_local(){
                 assert(_local_v._v == v_);

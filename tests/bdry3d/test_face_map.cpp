@@ -9,7 +9,7 @@
 #include "bdry3d/patch_surf_analytic.hpp"
 #include "bdry3d/patch_samples.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 // Initialize polynomial density \phi(y), y = (x,y,z) \in \partial\Omega
 // phi(y) = (1,1,1)*(\sum_k=0^poly_degree x^k*y^k*z^k)

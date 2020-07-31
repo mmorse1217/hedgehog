@@ -11,7 +11,7 @@
 #include "bie3d/error_estimate.hpp"
 #include "bie3d/evaluator_far.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 using ErrorEstimate::CurvatureDirection;
 using Markgrid::NearFieldMap;
 

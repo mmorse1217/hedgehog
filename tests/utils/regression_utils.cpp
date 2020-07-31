@@ -5,7 +5,7 @@
 #include <bdry3d/patch_surf_blended.hpp>
 #include <bdry3d/patch_surf_face_map.hpp>
 #include <bdry3d/patch_samples.hpp>
-using Ebi::get_local_vector;
+using hedgehog::get_local_vector;
 
 void Regression::dump(Vec v, string data_name){
     DblNumMat m = get_local_vector(1, Petsc::get_vec_size(v), v);
@@ -117,43 +117,43 @@ void Regression::test_vec(Vec vec, string file){
     Regression::compare(vec_computed, vec);
 }
 
-void setup_samples(Ebi::PatchSurf* surface,  unique_ptr<Ebi::PatchSamples>& samples){
+void setup_samples(hedgehog::PatchSurf* surface,  unique_ptr<hedgehog::PatchSamples>& samples){
     vector<int> partition(surface->patches().size(), 0);
-    samples = std::move(unique_ptr<Ebi::PatchSamples>(new Ebi::PatchSamples("", "")));
+    samples = std::move(unique_ptr<hedgehog::PatchSamples>(new hedgehog::PatchSamples("", "")));
     samples->bdry() = surface;
     samples->patch_partition() = partition;
     samples->setup();
 }
-void Regression::setup_face_map(unique_ptr<Ebi::PatchSurf>& surface, 
-        unique_ptr<Ebi::PatchSamples>& samples){
-    unique_ptr<Ebi::PatchSurf> face_map(new Ebi::PatchSurfFaceMap("BD3D_", "bd3d_"));
-    dynamic_cast<Ebi::PatchSurfFaceMap*>(face_map.get())->_surface_type = 
+void Regression::setup_face_map(unique_ptr<hedgehog::PatchSurf>& surface, 
+        unique_ptr<hedgehog::PatchSamples>& samples){
+    unique_ptr<hedgehog::PatchSurf> face_map(new hedgehog::PatchSurfFaceMap("BD3D_", "bd3d_"));
+    dynamic_cast<hedgehog::PatchSurfFaceMap*>(face_map.get())->_surface_type = 
         Options::get_string_from_petsc_opts("-bd3d_filename") == "wrl_meshes/wrl/newtorus.wrl" ?
-        Ebi::PatchSurfFaceMap::POLYNOMIAL :
-        Ebi::PatchSurfFaceMap::BLENDED;
+        hedgehog::PatchSurfFaceMap::POLYNOMIAL :
+        hedgehog::PatchSurfFaceMap::BLENDED;
 
-    dynamic_cast<Ebi::PatchSurfFaceMap*>(face_map.get())->_coarse = true;
+    dynamic_cast<hedgehog::PatchSurfFaceMap*>(face_map.get())->_coarse = true;
     face_map->setFromOptions();
     face_map->setup();
-    dynamic_cast<Ebi::PatchSurfFaceMap*>(face_map.get())->refine_test();
+    dynamic_cast<hedgehog::PatchSurfFaceMap*>(face_map.get())->refine_test();
     surface = std::move(face_map);
     
     setup_samples(surface.get(), samples);
 }
-void Regression::setup_blended(unique_ptr<Ebi::PatchSurf>& surface, 
-        unique_ptr<Ebi::PatchSamples>& samples){
+void Regression::setup_blended(unique_ptr<hedgehog::PatchSurf>& surface, 
+        unique_ptr<hedgehog::PatchSamples>& samples){
     
-    unique_ptr<Ebi::PatchSurf> blended(new Ebi::PatchSurfBlended("BD3D_", "bd3d_"));
+    unique_ptr<hedgehog::PatchSurf> blended(new hedgehog::PatchSurfBlended("BD3D_", "bd3d_"));
     blended->setFromOptions();
     blended->setup();
     surface = std::move(blended);
     
     setup_samples(surface.get(), samples);
 }
-void Regression::setup_analytic(unique_ptr<Ebi::PatchSurf>& surface, 
-        unique_ptr<Ebi::PatchSamples>& samples){
+void Regression::setup_analytic(unique_ptr<hedgehog::PatchSurf>& surface, 
+        unique_ptr<hedgehog::PatchSamples>& samples){
 
-  unique_ptr<Ebi::PatchSurf> analytic( new Ebi::PatchSurfAnalytic("BD3D_", "bd3d_"));
+  unique_ptr<hedgehog::PatchSurf> analytic( new hedgehog::PatchSurfAnalytic("BD3D_", "bd3d_"));
   analytic->setFromOptions();
   analytic->setup();
   surface = std::move(analytic);

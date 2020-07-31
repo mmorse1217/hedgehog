@@ -522,103 +522,7 @@ int PatchSamples::setup(bool refined)
         cout<<_num_sample_points[pi]<<" ";  cout<<endl;
 
     //2. patch_sampling_index, num_sample_points_in_patch, sample_point_starting_index
-    /*int local_num_sample_points = 0;
-
-    // over all patches assigned to this partition
-    for(int pi=0; pi<num_patches; pi++) {
-        if(_patch_partition[pi] == mpiRank()) {
-            Patch* curpch = patches[pi];
-            double bnd = curpch->bnd();
-            double init = -bnd;
-            int num_samples = _num_sample_points[pi];		
-            double step = _step_size[pi];
-
-            IntNumMat& patch_sampling_index = _patch_sampling_index[pi];
-            patch_sampling_index.resize(num_samples,num_samples);
-            setvalue(patch_sampling_index, -1); //initial value is -1
-            //reg ord := regular order of grid. index of sampled points in 
-            //bounding box contained in the current patch
-            int cnt = 0;
-            for(int j=0; j<num_samples; j++) {
-                for(int i=0; i<num_samples; i++) {
-                    Point2 xy;
-                    if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
-                        xy = Point2(parametric_samples.clmdata(j*num_samples+i));
-                    } else {
-                        // MJM 1/2018 non-standard spacing for blendsurf points.
-                        // leaving this alone.
-                        //xy[0] = init + i*step;
-                        //xy[1] = init + j*step;
-                        xy = init*Point2(1) + Point2(i,j)*step;
-                    }
-                    bool is_valid;
-                    // check if (i,j) sample is inside the star-shaped patch domain
-                    curpch->is_xy_valid(xy.array(), is_valid);
-
-                    if(is_valid) {
-                        patch_sampling_index(i,j) = cnt++;
-                    }
-                }
-            }
-            _num_sample_points_in_patch[pi] = cnt;
-            local_num_sample_points += cnt;
-        }
-    } 
-    int cnt = 0;
-    for(const auto num_points : _num_sample_points_in_patch)
-        cnt += num_points;
-    if(refined)
-    stats.add_result("total refined samples", cnt);
-    else
-    stats.add_result("total coarse samples", cnt);
-    int num_local_valid_samples;
-    // compute global starting index for this partition
-    MPI_Scan( &local_num_sample_points, 
-            &num_local_valid_samples, 
-            1,
-            MPI_INT, 
-            MPI_SUM, 
-            mpiComm());
-    num_local_valid_samples -= local_num_sample_points;
-
-    // number of local valid samples on other processors
-    int actual_num_local_valid_samples = num_local_valid_samples;
-
-    if(dynamic_cast<PatchSurfFaceMap*>(_bdry) != NULL){
-        // face-map
-        for(int i =0; i < _sample_point_starting_index.size(); i++){
-            _sample_point_starting_index[i] = actual_num_local_valid_samples + 
-                     i*_num_sample_points[i]*_num_sample_points[i];
-            _num_sample_points_in_patch[i] = _num_sample_points[i]*_num_sample_points[i];
-
-        }
-    } else{
-        // blendsurf + analytic
-        for(int pi=0; pi<num_patches; pi++) {
-            if(_patch_partition[pi]==mpiRank()) {
-                _sample_point_starting_index[pi] = num_local_valid_samples;
-                num_local_valid_samples += _num_sample_points_in_patch[pi];
-            }
-        }
-        vector<int> tmp_uniform_num_samples_vec(_num_sample_points_in_patch);
-        // get number of samples and starting indices of other partitions
-        MPI_Allreduce( &(tmp_uniform_num_samples_vec[0]), 
-                &(_num_sample_points_in_patch[0]),
-                num_patches, 
-                MPI_INT, 
-                MPI_SUM, 
-                mpiComm() );
-
-        vector<int> tmp_sample_point_starting_index(_sample_point_starting_index);
-
-        MPI_Allreduce( &(tmp_sample_point_starting_index[0]),
-                &(_sample_point_starting_index[0]), 
-                num_patches, 
-                MPI_INT,
-                MPI_SUM, 
-                mpiComm() );
-    }
-    cout << "making vecs." << endl;*/
+    
     int local_num_sample_points = initialize_sampling_indices();
 
     //3. create all per sample point distrib storage
@@ -642,6 +546,7 @@ int PatchSamples::setup(bool refined)
             }
             num_samples = _num_sample_points[0];
     } 
+    _sample_point_as_on_surface_point.resize(num_patches*num_samples*num_samples);
 
     //DblNumMat lagrange_basis_integrals = integrate_tensor_product_lagrange_basis_funcs(num_samples);
 
@@ -652,7 +557,6 @@ int PatchSamples::setup(bool refined)
     bool qbkix_adaptive_conv = qbkix_convergence_type == "adaptive";
     assert(qbkix_classical_conv || qbkix_adaptive_conv);
 
-    _sample_point_as_on_surface_point.resize(num_patches*num_samples*num_samples);
     // initialize per sample point quantities: face_point representations, 
     // 3d positions, normals, jacobians, blending func values, quad weights, 
     // combined weights, dominant tags
@@ -677,183 +581,8 @@ int PatchSamples::setup(bool refined)
     
     
     double max_patch_size = -DBL_MAX;
-    sample_patches();/*
-#pragma omp parallel for
-    for(int pi=0; pi<num_patches; pi++) {
-        // for patches assigned to this partition
-        if(_patch_partition[pi]==mpiRank()) {
-            Patch* curpch = patches[pi];
-            //auto subpatch = dynamic_cast<FaceMapSubPatch*>(curpch);
-            double bnd = curpch->bnd();
-            // [-bnd,bnd]^2 for blendsurf
-            double init = -bnd;
-            
-            //[0,1]^2 for face-map
+    sample_patches();
 
-            int num_samples = _num_sample_points[pi];
-            double step = _step_size[pi];
-
-            IntNumMat& patch_sampling_index = _patch_sampling_index[pi];
-
-            DblNumMat face_point          = sample_as_face_point(pi);
-            DblNumMat position            = sample_point_3d_position(pi);
-            DblNumMat normal              = sample_point_normal(pi);
-            DblNumMat parametric_preimage = sample_point_parametric_preimage(pi);
-
-            DblNumVec jacobian            = sample_point_jacobian(pi);
-            DblNumVec blend_func_value    = sample_point_blend_func_value(pi);
-            DblNumVec quad_weight         = sample_point_quad_weight(pi);
-            DblNumVec combined_weight     = sample_point_combined_weight(pi);
-            DblNumVec properties          = sample_point_props(pi);
-            DblNumVec far_field           = sample_point_far_field(pi);
-            DblNumVec interpolant_spacing = sample_point_interpolant_spacing(pi);
-
-            //FaceMapSubPatch* patch = dynamic_cast<FaceMapSubPatch*>(_bdry->patches()[pi]);
-            //patch->compute_surface_area();
-            //double max_sample_spacing;
-
-            // Compute distance between further samples
-            double patch_size = 0.;
-            for(int j=0; j<num_samples; j++) {
-                for(int i=0; i<num_samples; i++) {
-                    int index = patch_sampling_index(i,j);
-                    if(index!=-1) {
-                        Point2 xy;
-                        if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
-                            xy = Point2(parametric_samples.clmdata(j*num_samples+i));
-                        } else {
-                            // MJM 1/2018 non-standard spacing for blendsurf points.
-                            // leaving this alone.
-                            //xy[0] = init + i*step;
-                            //xy[1] = init + j*step;
-                            xy = init*Point2(1) + Point2(i,j)*step;
-                        }
-
-                        FacePointOverlapping* face_point_arr = (FacePointOverlapping*)(face_point.clmdata(index));			 
-                        curpch->xy_to_face_point(xy.array(), face_point_arr);
-
-                        double alpha;  
-                        Point3 pdd[3];
-                        // DZ: bad name for xy_to_patch_coords -- produces 3d position?
-                        // MJM: Suggestions for alternative? produces 3d position on
-                        // surface (pdd[0]) and 1st partial derivatives in x/y
-                        // direction 
-                        curpch->xy_to_patch_coords(xy.array(), EVAL_VL|EVAL_FD, (double*)pdd);
-                        // blending function value at xy
-                        curpch->xy_to_patch_value(xy.array(), EVAL_VL, &alpha);
-                        blend_func_value(index) = alpha;
-
-                        // 3d position 
-                        for(int d=0; d<dim(); d++) 
-                            position(d,index) = pdd[0](d);
-
-                        // normal
-                        Point3 cn(cross(pdd[1],pdd[2]));
-                        double len = cn.l2();
-
-                        for(int d=0; d<dim(); d++)
-                            normal(d,index) = cn[d]/len;
-                        // jacobian
-                        jacobian(index) = len;
-
-                        // trapezoidal quadrature weight
-                        quad_weight(index) = step*step;
-
-                        if(dynamic_cast<PatchSurfFaceMap*>(_bdry) != NULL){
-                            int on_surface_point_index = pi*num_samples*num_samples + index;
-                            OnSurfacePoint on_surface_point(
-                                    pi,         //parent patch
-                                    1e-16,      // distance to target
-                                    Point2(xy), // (u,v) coordinates
-                                    NEAR,       // region marking
-                                    on_surface_point_index); // corr. target id
-                            on_surface_point.inside_domain = INSIDE; 
-                            _sample_point_as_on_surface_point(on_surface_point_index) = 
-                                on_surface_point;
-                            
-                            int level = FaceMapSubPatch::as_subpatch(curpch)->_level;
-                            quad_weight(index) = lagrange_basis_integrals(i,j)/double(pow(4,level));
-                            alpha = 1.;
-                        }
-                        patch_size += jacobian(index)*quad_weight(index);
-                       // For face-map only:
-                       // approximate the discrete density samples of \phi on a patch by
-                       // 
-                       // \phi(x_k, y_k) = \phi_k = 
-                       //     \sum_i=0^n \sum_j=0^n \phi_ij*L_i(x_k)*L_j(x_k)
-                       // 
-                       // where L_i(x) is the ith lagrange basis polynomial.
-                       //
-                       // weight needs an additional multplicative factor of 
-                       // \int_P L_i(x)L_j(y) dP.
-                       //
-
-                        //far_field(index) = _spacing;
-                        // assumes spacing and distance are hard coded
-                        far_field(index) = _boundary_distance_ratio;
-                        interpolant_spacing(index) = _interpolation_spacing_ratio;
-                        
-                        //combined integration weight
-                        combined_weight(index) = len * alpha * quad_weight(index) ; //jac * alf * wgt
-
-                        // combined integration weight
-                        //combined_weight(index) = len * alpha * step*step; //jac * alf * wgt
-
-                        parametric_preimage(0,index) = xy.x();
-                        parametric_preimage(1,index) = xy.y();
-
-                        // dominant flags
-                        Tag* tagptr = (Tag*)&(properties(index));
-                        tagptr->_gid = curpch->group_id();
-
-                        bool dominant;
-                        curpch->is_xy_dominant(xy.array(), dominant);
-
-                        tagptr->_dmt = dominant;
-                        sum += combined_weight(index);
-                    }
-                }
-            }
-            
-            // computing patch size
-            curpch->characteristic_length() = sqrt(patch_size);
-            for(int j=0; j<num_samples; j++) {
-                for(int i=0; i<num_samples; i++) {
-                    //Integral of basis function L_i(x)*L_i(y)
-                    int index = patch_sampling_index(i,j);
-                    if(index!=-1) {
-                        double L;
-                        if(dynamic_cast<PatchSurfFaceMap*>(_bdry)){
-                            L = curpch->characteristic_length(); // spacing is param space chebyshev spacing
-                        } else {
-                            L = 1.; // spacing is blendsurf direct 3 spacing
-                        }
-
-                        // For patch refinement of a large face-map patch,
-                        // one must scale the contribution of a subpatch to
-                        // be be proportional to it's size. Since the domain
-                        // of a subpatch is still [0,1]^2, we need to scale 
-                        // the quadrature weight by 1/(4^level).
-                        if(!qbkix_classical_conv && qbkix_adaptive_conv){
-                            // scale point spacing with L
-                            far_field(index) = L*_boundary_distance_ratio;
-                            interpolant_spacing(index) = L*_interpolation_spacing_ratio;
-                        } else if(qbkix_classical_conv && !qbkix_adaptive_conv){
-                            // scale point spacing with sqrt(L)
-                            far_field(index) = sqrt(L)*_boundary_distance_ratio;
-                            interpolant_spacing(index) = sqrt(L)*_interpolation_spacing_ratio;
-                        } else{
-                            assert(0);
-                        }
-                    }
-
-                }
-            }
-
-        }
-
-    }// end of patch loop
-    cout <<"SUM "<<sum<<endl;*/
     if(!refined){
         stats.stop_timer("PatchSamples::setup()");
     }

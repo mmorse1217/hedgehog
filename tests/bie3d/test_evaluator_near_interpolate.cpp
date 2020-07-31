@@ -7,7 +7,7 @@
 #include "bie3d/solver_utils.hpp"
 
 
-using namespace Ebi;
+using namespace hedgehog;
 
 TEST_CASE("EvaluatorNearInterpolate tests", "[eval-near]"){
 

@@ -8,7 +8,7 @@
 #include "bie3d/solver_utils.hpp"
 #include "common/ebi_uti.hpp"
 #include <bitset>
-using namespace Ebi;
+using namespace hedgehog;
 
 bool are_intervals_equal(Interval i1, Interval i2){
     return fabs(i1.first - i2.first) <= 1e-15 &&

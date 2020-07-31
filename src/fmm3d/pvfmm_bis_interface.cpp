@@ -35,7 +35,7 @@ using std::vector;
 typedef std::vector<real_t> vec;
 typedef pvfmm::FMM_Node<pvfmm::MPI_Node<real_t> > Node_t;
 
-class Ebi::PvFMM::PVFMMImpl{
+class hedgehog::PvFMM::PVFMMImpl{
   public:
   typedef pvfmm::FMM_Pts<Node_t> Mat_t;
   typedef pvfmm::FMM_Tree<Mat_t> Tree_t;
@@ -83,38 +83,38 @@ class Ebi::PvFMM::PVFMMImpl{
 };
 
 const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
-                                              Ebi::KernelOptions _kernel_opts) {
+                                              hedgehog::KernelOptions _kernel_opts) {
   const pvfmm::Kernel<double>* kernel;
   switch (_kernel_type) {
-  case Ebi::KNL_STK_S_U:
+  case hedgehog::KNL_STK_S_U:
     kernel = &pvfmm::StokesKernel<double>::velocity();
     break;
-  case Ebi::KNL_STK_S_P:
+  case hedgehog::KNL_STK_S_P:
     kernel = &pvfmm::StokesKernel<double>::pressure();
     break;
-  case Ebi::KNL_STK_D_U:
+  case hedgehog::KNL_STK_D_U:
     kernel = &ker_stokes_dl;
     break;
-  case Ebi::KNL_STK_D_P:
+  case hedgehog::KNL_STK_D_P:
     // kernel = &pvfmm::StokesKernel<double>::pressure();
     kernel = &ker_stokes_pressure_dl;
     break;
-  case Ebi::KNL_LAP_D_U:
+  case hedgehog::KNL_LAP_D_U:
     // kernel = &pvfmm::LaplaceKernel<double>::potential();
     kernel = &ker_laplace_dl;
     break;
-  case Ebi::KNL_LAP_S_U:
+  case hedgehog::KNL_LAP_S_U:
     // kernel = &pvfmm::LaplaceKernel<double>::potential();
     kernel = &ker_laplace_sl;
     break;
-  case Ebi::KNL_MODHEL_D_U:
+  case hedgehog::KNL_MODHEL_D_U:
     assert(_kernel_opts.initialized);
 
     helmholtz_frequency(_kernel_opts.helmholtz_frequency);
     kernel = &ker_mod_helmholtz_dl;
     const_cast<std::string &>(kernel->ker_name) = helmholtz_name(false);
     break;
-  case Ebi::KNL_MODHEL_S_U:
+  case hedgehog::KNL_MODHEL_S_U:
     assert(_kernel_opts.initialized);
 
     helmholtz_frequency(_kernel_opts.helmholtz_frequency);
@@ -122,7 +122,7 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
     const_cast<std::string &>(kernel->ker_name) = helmholtz_name(true);
 
     break;
-  case Ebi::KNL_NAV_D_U:
+  case hedgehog::KNL_NAV_D_U:
     assert(_kernel_opts.initialized);
 
     navier_mu(_kernel_opts.navier_mu);
@@ -134,7 +134,7 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
     const_cast<std::string &>(kernel->ker_name) = navier_name(false);
     // kernel->ker_poten = navier_sl;
     break;
-  case Ebi::KNL_NAV_S_U:
+  case hedgehog::KNL_NAV_S_U:
     assert(_kernel_opts.initialized);
     navier_mu(_kernel_opts.navier_mu);
     navier_nu(_kernel_opts.navier_nu);
@@ -150,7 +150,7 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
   return kernel;
 }
 
-void Ebi::PvFMM::_unscale_potential(int ntrg, int target_dof, real_t *pot) {
+void hedgehog::PvFMM::_unscale_potential(int ntrg, int target_dof, real_t *pot) {
   int omp_p = omp_get_max_threads();
 
   Kernel3d temp(_kernel_type, vector<double>());
@@ -169,7 +169,7 @@ void Ebi::PvFMM::_unscale_potential(int ntrg, int target_dof, real_t *pot) {
   }
 }
 
-void Ebi::PvFMM::_copy_potential(int ntrg, int target_dof, std::vector<real_t> potv,
+void hedgehog::PvFMM::_copy_potential(int ntrg, int target_dof, std::vector<real_t> potv,
                     real_t *pot, bool rescale) {
   int omp_p = omp_get_max_threads();
 
@@ -198,7 +198,7 @@ void Ebi::PvFMM::_copy_potential(int ntrg, int target_dof, std::vector<real_t> p
 BEGIN_EBI_NAMESPACE
 
 using namespace std;
-using namespace Ebi;
+using namespace hedgehog;
 
 
 PvFMM::PvFMM() {

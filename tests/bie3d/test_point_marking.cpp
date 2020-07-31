@@ -5,7 +5,7 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include "bdry3d/patch_samples.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 
 // create list of factors to scale the on-surface samples by, in such a fashion
 // that in/out is known

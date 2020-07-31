@@ -3,7 +3,7 @@
 #include "ebi.hpp"
 #include "kernel3d.hpp"
 #include "vec3t.hpp"
-using Ebi::DblNumMat;
+using hedgehog::DblNumMat;
 //class PatchSamples;
 namespace ArgParse {
 
@@ -24,14 +24,14 @@ namespace Test {
     Vec generate_random_vector(int size, double upper=0, double lower=1);
     Vec compute_dirichlet_boundary_data(
             MPI_Comm comm,
-            Ebi::Kernel3d kernel,
+            hedgehog::Kernel3d kernel,
             Vec singularity_positions,
             Vec singularity_densities,
             Vec target_positions,
             Vec target_normals);
     Vec compute_neumann_boundary_data(
             MPI_Comm comm,
-            Ebi::Kernel3d kernel,
+            hedgehog::Kernel3d kernel,
             Vec singularity_positions,
             Vec singularity_densities,
             Vec target_positions,

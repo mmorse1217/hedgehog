@@ -4,7 +4,7 @@
 #include "../utils/evaluation_utils.hpp"
 #include "bdry3d/patch_surf_face_map.hpp"
 
-using namespace Ebi;
+using namespace hedgehog;
 void curvature_test_base_options(){
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".25");

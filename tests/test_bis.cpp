@@ -9,7 +9,7 @@
 #include "bdry3d/geogram_interface.hpp"
 #include <profile.hpp>
 using namespace std;
-using namespace Ebi;
+using namespace hedgehog;
 
 int main( int argc, char**  argv ) {
 
