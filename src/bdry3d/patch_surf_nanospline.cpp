@@ -194,11 +194,10 @@ public:
     Eigen::MatrixXd least_squares_matrix =
         Eigen::MatrixXd::Zero(num_constraints, num_control_pts);
     cout << "evaluate basis functions" << endl;
-#pragma omp parallel for
     for (int j = 0; j < _num_control_pts_u; j++) {
         for (int k = 0; k < _num_control_pts_v; k++) {
             int index = j * _num_control_pts_v + k; // TODO bug prone
-            basis_func_control_pts.row(index) << 1.;
+            basis_func_control_pts(index) = 1.;
             basis_function.set_control_grid(basis_func_control_pts);
             basis_function.initialize();
             for (int i = 0; i < num_constraints; i++) {
@@ -207,17 +206,19 @@ public:
                 Scalar bezier_value = basis_function.evaluate(u, v)(0);
                 least_squares_matrix(i, index) = bezier_value;
             }
-            basis_func_control_pts.row(index) << 0.;
+            //basis_func_control_pts.row(index) << 0.;
+            basis_func_control_pts.setZero();
         }
     }
+    //cout << "least_squares_matrix : "<<  endl << least_squares_matrix << endl;
     // 2. get selection matrices to select control points
     /* We need to extract the p_u+1/p_v+1  control points along the edges of the patch 
      * in order to enforce periodicity. If our spline patch has u-degree p_u, and 
      * v-degree p_v, and is given by 
      *      P(u,v) = \sum_i^{N_u}\sum_j^{N_v} c_ij B_ij^p(u,v), 
      * Then we have the constraint that 
-     *      c_ij = c_{N_u-i,j} + d_1, i=0, ... p_u+1, for all j
-     *      c_ij = c_{i,N_v-j} + d_2, j=0, ... p_v+1, for all i 
+     *      c_ij = c_{N_u-p_u + i,j} + d_1, i=0, ... p_u+1, for all j
+     *      c_ij = c_{i,N_v - p_v +j} + d_2, j=0, ... p_v+1, for all i 
      * where d_1/d_2 is the size of the periodic cell. For example if the cell
      * is periodic in x/y and has size width k_x and k_y, then 
      *      d_1 = (k_x,0,0), d_2 = * (0,k_y,0)
@@ -282,11 +283,11 @@ public:
         top_left_selector(iter, ctrl_pt_index) = -1.;
         bottom_right_selector(iter, ctrl_pt_periodic_index) = 1.;
         cell_size_constraint.row(iter) = periodic_cell_size_v;
-        cout << "indices: " << ui << ", " << vj << "; ctrl_pt_indices: "<< ctrl_pt_index << ", "<< ctrl_pt_periodic_index << endl;
-        cout << "checking constraint " << iter << endl;
-        cout << "true points: " << cp.row(ctrl_pt_index) << ", " << cp.row(ctrl_pt_periodic_index) << endl;
-        cout << "diff: " << cp.row(ctrl_pt_index) - cp.row(ctrl_pt_periodic_index) << endl;
-        cout << "expected diff: " << cell_size_constraint.row(iter) << endl;
+        //cout << "indices: " << ui << ", " << vj << "; ctrl_pt_indices: "<< ctrl_pt_index << ", "<< ctrl_pt_periodic_index << endl;
+        //cout << "checking constraint " << iter << endl;
+        //cout << "true points: " << cp.row(ctrl_pt_index) << ", " << cp.row(ctrl_pt_periodic_index) << endl;
+        //cout << "diff: " << cp.row(ctrl_pt_index) - cp.row(ctrl_pt_periodic_index) << endl;
+        //cout << "expected diff: " << cell_size_constraint.row(iter) << endl;
 
         iter++;
       }
@@ -353,7 +354,7 @@ public:
     Eigen::JacobiSVD<Eigen::MatrixXd> svd3(normal_equations);
     cond = svd3.singularValues()(0)
     / svd3.singularValues()(svd3.singularValues().size()-1);
-    cout << "condition number of A: " << cond << endl;
+    cout << "condition number of A^TA: " << cond << endl;
     cout << "normal_equations: "  << endl << normal_equations<< endl;
     Eigen::JacobiSVD<Eigen::MatrixXd> svd2(full_least_sq_system);
     cond = svd2.singularValues()(0)
@@ -363,6 +364,7 @@ public:
     
     right_hand_side.topLeftCorner(num_control_pts, DIM) = 2*least_squares_matrix.transpose()*changes_in_position;
     right_hand_side.bottomLeftCorner(num_periodic_control_pts, DIM) = cell_size_constraint;
+    cout << "least_squares_matrix" << endl << least_squares_matrix << endl;
     cout << "solve full system" << endl;
     Eigen::MatrixXd control_point_updates= 
         full_least_sq_system.fullPivLu().solve(right_hand_side);
@@ -606,7 +608,7 @@ void NanosplinePatch::bounding_box(Point3 &bounding_box_min,
   copy_eigen_to_point(min, bounding_box_min);
 }
 void NanosplinePatch::deform_periodic(DblNumMat parametric_coordinates, DblNumMat changes_in_position){
-    Eigen::VectorXd cell_size = Eigen::VectorXd::Constant(DIM, .8);
+    Eigen::VectorXd cell_size = Eigen::VectorXd::Constant(DIM, 2./3.);
     _surface->deform_periodic(parametric_coordinates, changes_in_position, cell_size, 0, 1);
 }
 

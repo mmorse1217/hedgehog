@@ -1,5 +1,6 @@
 
 #include "../catch.hpp"
+#include "Eigen/src/Core/products/Parallelizer.h"
 #include <bdry3d/patch_surf_nanospline.hpp>
 #include <memory>
 #include <random>
@@ -41,15 +42,21 @@ TEST_CASE("Test nanospline deform for flat patch", "[nanospline][deform]"){
     std::uniform_real_distribution<double> unif(0., 1.);
     std::default_random_engine re(0);
 
-    int num_constraints = 5000;
+    //int num_constraints = 5000;
+    int num_constraints_x = 10;
+    int num_constraints_y = 10;
+    int num_constraints = num_constraints_x*num_constraints_y;
     DblNumMat changes_in_position(3, num_constraints);
     DblNumMat parameter_values(2, num_constraints);
-    for (int i =0; i < num_constraints; i++) {
-        changes_in_position(0,i) = .1;
-        changes_in_position(1,i) = 0;
-        changes_in_position(2,i) = 0;
-        parameter_values(0,i) = unif(re); 
-        parameter_values(1,i) = unif(re); 
+    for (int i =0; i < num_constraints_x; i++) {
+    for (int j =0; j < num_constraints_y; j++) {
+        int index = i*num_constraints_x + j;
+        changes_in_position(0,index) = 0;
+        changes_in_position(1,index) = 0;
+        changes_in_position(2,index) = .1;
+        parameter_values(0,index) =  double(i)/double(num_constraints_x);
+        parameter_values(1,index) = double(j)/double(num_constraints_y);
+    }
     }
     Point3 p;
     Point2 uv(0.);
