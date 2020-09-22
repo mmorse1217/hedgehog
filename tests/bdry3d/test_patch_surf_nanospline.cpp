@@ -2,6 +2,7 @@
 #include "../catch.hpp"
 #include <bdry3d/patch_surf_nanospline.hpp>
 #include <memory>
+#include <random>
 #include <sampling.hpp>
 
 using Sampling::sample_2d;
@@ -33,4 +34,39 @@ TEST_CASE("Test nanospline interface for flat patch", "[nanospline]"){
           }
       }
     }
+}
+TEST_CASE("Test nanospline deform for flat patch", "[nanospline][deform]"){
+    unique_ptr<hedgehog::PatchSurfNanospline> surface(new hedgehog::PatchSurfNanospline("", ""));
+    auto patch = dynamic_cast<hedgehog::NanosplinePatch*>(surface->patch(0));
+    std::uniform_real_distribution<double> unif(0., 1.);
+    std::default_random_engine re(0);
+
+    int num_constraints = 5000;
+    DblNumMat changes_in_position(3, num_constraints);
+    DblNumMat parameter_values(2, num_constraints);
+    for (int i =0; i < num_constraints; i++) {
+        changes_in_position(0,i) = .1;
+        changes_in_position(1,i) = 0;
+        changes_in_position(2,i) = 0;
+        parameter_values(0,i) = unif(re); 
+        parameter_values(1,i) = unif(re); 
+    }
+    Point3 p;
+    Point2 uv(0.);
+    patch->xy_to_patch_coords(uv.array(), patch->EVAL_VL, p.array());
+    cout << "0,0: " << p << endl;
+    uv.x() = 1.;
+    patch->xy_to_patch_coords(uv.array(), patch->EVAL_VL, p.array());
+    cout << "1,0: " << p << endl;
+    uv.x() = 0.;
+    uv.y() = 1.;
+    patch->xy_to_patch_coords(uv.array(), patch->EVAL_VL, p.array());
+    cout << "0,1: " << p << endl;
+    uv.x() = 1.;
+    uv.y() = 1.;
+    patch->xy_to_patch_coords(uv.array(), patch->EVAL_VL, p.array());
+    cout << "1,1: " << p << endl;
+    patch->deform_periodic(parameter_values, changes_in_position);
+
+
 }

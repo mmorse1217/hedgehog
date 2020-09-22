@@ -34,6 +34,7 @@ Eigen::MatrixXd get_greville_abscissae(const Eigen::MatrixXd knots, const int de
         }
     }
     greville_abscissae /= degree;
+    cout << "greville_abscissae : " << greville_abscissae << endl;
     return greville_abscissae;
 }
 
@@ -42,6 +43,26 @@ Eigen::MatrixXd initialize_flat_patch_knots(const int num_control_points_1D,
   const int num_knots = num_control_points_1D + degree + 1;
   Eigen::MatrixXd knots(num_knots, 1);
   int counter = 0;
+  const double knot_spacing = 1. / (num_control_points_1D - degree - 1 + 1);
+  for (int i = 0; i < degree + 1; i++) {
+    knots(counter) = (i-(degree) )*knot_spacing;
+    counter++;
+  }
+
+
+  // uniform knots for now.
+  for (int i = 0; i < num_control_points_1D - degree - 1; i++) {
+    knots(counter) = (i+1) * knot_spacing;
+    counter++;
+  }
+
+  for (int i = 0; i < degree + 1; i++) {
+    knots(counter) = (num_control_points_1D - degree + i)*knot_spacing;
+    counter++;
+  }
+
+  assert(counter == num_knots);
+  /*int counter = 0;
   for (int i = 0; i < degree + 1; i++) {
     knots(counter) = 0.;
     counter++;
@@ -57,12 +78,13 @@ Eigen::MatrixXd initialize_flat_patch_knots(const int num_control_points_1D,
     knots(counter) = 1.;
     counter++;
   }
-  assert(counter == num_knots);
+  assert(counter == num_knots);*/
   // uniform knots for now.
   /*const double knot_spacing = 1. / (num_knots - 1);
   for (int i = 0; i < num_knots; i++) {
     knots(i) = (i) * knot_spacing;
   }*/
+  cout << "knots: "<< knots << endl;
   return knots;
 }
 
@@ -73,8 +95,8 @@ Eigen::MatrixXd initialize_flat_patch_control_grid(const int num_control_points_
 
     Eigen::MatrixXd knots_u = initialize_flat_patch_knots(num_control_points_1D, degree_u);
     Eigen::MatrixXd knots_v = initialize_flat_patch_knots(num_control_points_1D, degree_v);
-    Eigen::MatrixXd greville_u = get_greville_abscissae(knots_u, degree_u);
-    Eigen::MatrixXd greville_v = get_greville_abscissae(knots_v, degree_v);
+    //Eigen::MatrixXd greville_u = get_greville_abscissae(knots_u, degree_u);
+    //Eigen::MatrixXd greville_v = get_greville_abscissae(knots_v, degree_v);
 
     // identify x,y in R^3 with (u,v) in spline parameter space
     // Place control points  equispaced on [-1,1] x [-1,1] x {0}
@@ -84,8 +106,10 @@ Eigen::MatrixXd initialize_flat_patch_control_grid(const int num_control_points_
           
           // x and y spacing are the same
           const double spacing = 2./(num_control_points_1D-1);
-          const double x = 2.*greville_u(ci) - 1.;
-          const double y = 2.*greville_u(cj) - 1.;
+          //const double x = 2.*greville_u(ci) - 1.;
+          //const double y = 2.*greville_v(cj) - 1.;
+          const double x = spacing*ci - 1.;
+          const double y = spacing*cj - 1.;
           const double z = 0.; 
           control_grid.row(index) << x, y, z;
       }
@@ -96,35 +120,266 @@ Eigen::MatrixXd initialize_flat_patch_control_grid(const int num_control_points_
 }
 
 class NanosplinePatch::NanosplineInterface {
-    public:
-        nanospline::BSplinePatch<Scalar, DIM, -1, -1>  _patch;
-  NanosplineInterface() {
+private:
+  const int _num_control_pts_u;
+  const int _num_control_pts_v;
+  const int _degree_u;
+  const int _degree_v;
+  Eigen::MatrixXd _knots_u;
+  Eigen::MatrixXd _knots_v;
+
+public:
+  nanospline::BSplinePatch<Scalar, DIM, -1, -1> _patch;
+  NanosplineInterface()
+      : _degree_u(2), _degree_v(2), _num_control_pts_u(4),
+        _num_control_pts_v(4) {
     // 1. Get the name of surface we want to load
     // For now: load a flat surface, all weights = 1, uniform knots
-        const int num_control_points_1D = 15;
-        const int degree = 3;
-        const int degree_u = degree;
-        const int degree_v = degree;
-        const int num_control_points = num_control_points_1D*num_control_points_1D;
+    //
+    assert(_num_control_pts_u == _num_control_pts_v);
+    const int num_control_points = _num_control_pts_u * _num_control_pts_v;
 
-        // 2. Load surface data with obj reader
-        // For now: explicitly generate control points, knots and weights.
-        Eigen::MatrixXd control_grid = 
-            initialize_flat_patch_control_grid(num_control_points_1D, degree_u, degree_v);
-        _patch.set_control_grid(control_grid);
+    // 2. Load surface data with obj reader
+    // For now: explicitly generate control points, knots and weights.
+    Eigen::MatrixXd control_grid = initialize_flat_patch_control_grid(
+        _num_control_pts_u, _degree_u, _degree_v);
+    _patch.set_control_grid(control_grid);
 
-        Eigen::MatrixXd knots_u = initialize_flat_patch_knots(num_control_points_1D, degree_u);
-        Eigen::MatrixXd knots_v = initialize_flat_patch_knots(num_control_points_1D, degree_v);
-        _patch.set_knots_u(knots_u);
-        _patch.set_knots_v(knots_v);
+    _knots_u = initialize_flat_patch_knots(_num_control_pts_u, _degree_u);
+    _knots_v = initialize_flat_patch_knots(_num_control_pts_v, _degree_v);
+    _patch.set_knots_u(_knots_u);
+    _patch.set_knots_v(_knots_v);
 
-        _patch.set_degree_u(degree_u);
-        _patch.set_degree_v(degree_v);
-        _patch.initialize();
-        //nanospline::save_patch_obj("flat_patch.obj", _patch);
+    _patch.set_degree_u(_degree_u);
+    _patch.set_degree_v(_degree_v);
+    cout << "u bound " <<  _patch.get_u_lower_bound() << ", "<<_patch.get_u_upper_bound() << endl;
+    cout << "v bound " <<  _patch.get_v_lower_bound() << ", "<<_patch.get_v_upper_bound() << endl;
+    _patch.initialize();
+    nanospline::save_patch_obj("flat_patch.obj", _patch);
   }
-  ~NanosplineInterface() {
+  void deform_periodic(DblNumMat _parametric_coordinates, DblNumMat _changes_in_position, 
+          Eigen::Vector<double, DIM> cell_size, int periodic_dim_u, int periodic_dim_v){
+    assert(_parametric_coordinates.n() == _changes_in_position.n());
+    assert(_parametric_coordinates.m() == 2);
+    assert(_changes_in_position.m() == DIM);
+    assert(periodic_dim_u >= 0 && periodic_dim_u <= 2);
+    assert(periodic_dim_v >= 0 && periodic_dim_v <= 2);
+    // 0. copy into eigen matrices
+
+    const int num_constraints = _parametric_coordinates.n();
+    Eigen::MatrixXd parametric_coordinates(num_constraints, 2);
+    Eigen::MatrixXd changes_in_position(num_constraints, DIM);
+    
+    for (int i =0; i < num_constraints; i++) {
+        parametric_coordinates.row(i) << _parametric_coordinates(0,i), _parametric_coordinates(1,i);
+        changes_in_position.row(i) << _changes_in_position(0,i), _changes_in_position(1,i), _changes_in_position(2,i);
+    }
+      
+    // 1. get vanilla least squares matrix
+    const int num_control_pts = _num_control_pts_u * _num_control_pts_v;
+    Eigen::Matrix<Scalar, Eigen::Dynamic, 1> basis_func_control_pts(num_control_pts, 1);
+    nanospline::BSplinePatch<Scalar, 1, -1, -1> basis_function;
+    basis_func_control_pts.setZero();
+    basis_function.set_knots_u(_knots_u);
+    basis_function.set_knots_v(_knots_v);
+    basis_function.set_degree_u(_degree_u);
+    basis_function.set_degree_v(_degree_v);
+
+    // Suppose we are fitting samples p_0, ..., p_n of a function f, with
+    // parameter values (u_0,v_0) ..., (u_n,v_n). If B_q^n(u,v) is the
+    // jth basis function value at (u,v), then
+    // least_squares_matrix(i,q) = B_q^n(u_i, v_i),
+    // where q is the linearized index over basis elements:
+    // q = i*num_control_pts_v + j
+    Eigen::MatrixXd least_squares_matrix =
+        Eigen::MatrixXd::Zero(num_constraints, num_control_pts);
+    cout << "evaluate basis functions" << endl;
+#pragma omp parallel for
+    for (int j = 0; j < _num_control_pts_u; j++) {
+        for (int k = 0; k < _num_control_pts_v; k++) {
+            int index = j * _num_control_pts_v + k; // TODO bug prone
+            basis_func_control_pts.row(index) << 1.;
+            basis_function.set_control_grid(basis_func_control_pts);
+            basis_function.initialize();
+            for (int i = 0; i < num_constraints; i++) {
+                Scalar u = parametric_coordinates(i, 0);
+                Scalar v = parametric_coordinates(i, 1);
+                Scalar bezier_value = basis_function.evaluate(u, v)(0);
+                least_squares_matrix(i, index) = bezier_value;
+            }
+            basis_func_control_pts.row(index) << 0.;
+        }
+    }
+    // 2. get selection matrices to select control points
+    /* We need to extract the p_u+1/p_v+1  control points along the edges of the patch 
+     * in order to enforce periodicity. If our spline patch has u-degree p_u, and 
+     * v-degree p_v, and is given by 
+     *      P(u,v) = \sum_i^{N_u}\sum_j^{N_v} c_ij B_ij^p(u,v), 
+     * Then we have the constraint that 
+     *      c_ij = c_{N_u-i,j} + d_1, i=0, ... p_u+1, for all j
+     *      c_ij = c_{i,N_v-j} + d_2, j=0, ... p_v+1, for all i 
+     * where d_1/d_2 is the size of the periodic cell. For example if the cell
+     * is periodic in x/y and has size width k_x and k_y, then 
+     *      d_1 = (k_x,0,0), d_2 = * (0,k_y,0)
+     *
+     * The number of constraints that we need to enforce are shown below. We
+     * need a matrix of 0/1 that when applied the vector of control points,
+     * produces the above periodic constraints. We will make two selection
+     * matrices: one for the top and left control points and another for the
+     * bottom and right control points. We will double count the corners for
+     * clarity. TODO remove double counting if slow
+     *
+     *          _degree_u+1 
+     *              |
+     *              |
+     *              |         _num_control_pts_u
+     *              |          |
+     *             |----|      | 
+     *             |--------------| 
+     *             ---------------- - -
+     *             |    |         | | |
+     *             |    |    T    | | | ---- _degree_v+1
+     *             ---------------- | -
+     *             |    |         | |
+     *             |    |         | |
+     *             | L  |         | |
+     *          ^  |    |         | | ----- _num_control_pts_v
+     *          |  |    |         | |
+     *          v  ---------------- -
+     *              u ->
+     *
+     */
+
+    cout << "construct selection matrices u " << endl;
+    // Get the periodic cell size corresponding to u/v periodicity.
+    Eigen::VectorXd periodic_cell_size_u = Eigen::Vector<double, DIM>::Zero();
+    Eigen::VectorXd periodic_cell_size_v = Eigen::Vector<double, DIM>::Zero();
+    periodic_cell_size_u(periodic_dim_u) = cell_size(periodic_dim_u);
+    periodic_cell_size_v(periodic_dim_v) = cell_size(periodic_dim_v);
+
+    //const int num_periodic_control_pts = (_degree_v+1)*_num_control_pts_u + 
+    //                (_degree_u + 1)*_num_control_pts_v;
+    const int num_periodic_control_pts = (_degree_u )*_num_control_pts_u + 
+                    ( _degree_v )*_num_control_pts_v;
+    Eigen::MatrixXd top_left_selector(num_periodic_control_pts, num_control_pts);
+    Eigen::MatrixXd bottom_right_selector(num_periodic_control_pts, num_control_pts);
+    Eigen::MatrixXd cell_size_constraint(num_periodic_control_pts, DIM);
+    
+    top_left_selector.setZero();
+    bottom_right_selector.setZero();
+    cell_size_constraint.setZero();
+    int iter = 0;
+    // iterate over control points in the section T above (up to change of origin location);
+    // find ctrl pts in T that should match ctrl points in B, (not shown)
+    // initialize both selection matrices
+    Eigen::MatrixXd cp = _patch.get_control_grid();
+    for (int ui =0; ui< _num_control_pts_u; ui++) {
+      for (int vj = 0; vj < _degree_v; vj++) {
+        // TODO bug prone
+        const int ctrl_pt_index = ui * _num_control_pts_v + vj; 
+        //const int ctrl_pt_periodic_index = (_num_control_pts_u-1 - ui) * _num_control_pts_v + vj; 
+        const int ctrl_pt_periodic_index = ui * _num_control_pts_v + (_num_control_pts_v -1 -_degree_v +vj); 
+        top_left_selector(iter, ctrl_pt_index) = -1.;
+        bottom_right_selector(iter, ctrl_pt_periodic_index) = 1.;
+        cell_size_constraint.row(iter) = periodic_cell_size_v;
+        cout << "indices: " << ui << ", " << vj << "; ctrl_pt_indices: "<< ctrl_pt_index << ", "<< ctrl_pt_periodic_index << endl;
+        cout << "checking constraint " << iter << endl;
+        cout << "true points: " << cp.row(ctrl_pt_index) << ", " << cp.row(ctrl_pt_periodic_index) << endl;
+        cout << "diff: " << cp.row(ctrl_pt_index) - cp.row(ctrl_pt_periodic_index) << endl;
+        cout << "expected diff: " << cell_size_constraint.row(iter) << endl;
+
+        iter++;
+      }
+    }
+    cout << "construct selection matrices v " << endl;
+    // iterate over control points in the section L above (up to change of var);
+    // find ctrl pts in L that should match ctrl points in R, (not shown)
+    // initialize both selection matrices
+    for (int ui =0; ui< _degree_u; ui++) {
+      for (int vj = 0; vj < _num_control_pts_v; vj++) {
+        // TODO bug prone
+        const int ctrl_pt_index = ui * _num_control_pts_v + vj; 
+        //const int ctrl_pt_periodic_index = ui * _num_control_pts_v + (_num_control_pts_v-1 - vj); 
+        const int ctrl_pt_periodic_index = (_num_control_pts_u -1 - _degree_u + ui )* _num_control_pts_v + vj; 
+        top_left_selector(iter, ctrl_pt_index) = -1.;
+        bottom_right_selector(iter, ctrl_pt_periodic_index) = 1.;
+        cell_size_constraint.row(iter) = periodic_cell_size_u;
+        iter++;
+      }
+    }
+
+    /*
+     * The final system we want to form is 
+     * [2*A^T*A  E^T ]*[c]   [2*A^Tp]
+     * [E        0   ] [y] = [     d]
+     * E = top_left_selector  + bottom_right_selector (note minus signs)
+     *  size: num_periodic_control_pts x num_control_pts
+     * A = least_squares_matrix for a standard least squares solve with BSplines
+     *  size: num_constraints x num_control_pts  
+     *  (A^T*A = num_control_pts x *  num_control_pts)
+     * p = points (or deformations) we want to fit 
+     *  size: num_constraints x DIM
+     * c = control points (or changes in control points) of the final patch
+     *  size: num_control_pts x DIM
+     * y = lagrange multiplier for the periodic constraint imposed by E
+     *  size: num_periodic_control_pts x DIM
+     * d = vector of d_1/d_2 values from above in the appropriate place
+     *  size: num_periodic_control_pts x DIM
+     */
+    cout << "form full system" << endl;
+    Eigen::MatrixXd normal_equations = least_squares_matrix.transpose()*least_squares_matrix;
+    Eigen::MatrixXd periodic_constraints = top_left_selector + bottom_right_selector;
+
+    cout << "test selection matrix: "<<endl << periodic_constraints*_patch.get_control_grid() << endl;
+    cout << "constraint: "<<endl << cell_size_constraint << endl;
+    
+    const int constrained_system_size = num_control_pts + num_periodic_control_pts;
+    Eigen::MatrixXd right_hand_side(constrained_system_size, DIM);
+    Eigen::MatrixXd full_least_sq_system(constrained_system_size, constrained_system_size);
+    full_least_sq_system.setZero();
+    right_hand_side.setZero();
+    
+    full_least_sq_system.topLeftCorner(num_control_pts, num_control_pts) = 
+                        2*normal_equations;
+    full_least_sq_system.topRightCorner(num_control_pts, num_periodic_control_pts) = 
+                        periodic_constraints.transpose();
+    full_least_sq_system.bottomLeftCorner(num_periodic_control_pts,num_control_pts) = 
+                        periodic_constraints;
+
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd(least_squares_matrix);
+    double cond = svd.singularValues()(0)
+    / svd.singularValues()(svd.singularValues().size()-1);
+    cout << "condition number of A: " << cond << endl;
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd3(normal_equations);
+    cond = svd3.singularValues()(0)
+    / svd3.singularValues()(svd3.singularValues().size()-1);
+    cout << "condition number of A: " << cond << endl;
+    cout << "normal_equations: "  << endl << normal_equations<< endl;
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd2(full_least_sq_system);
+    cond = svd2.singularValues()(0)
+    / svd2.singularValues()(svd2.singularValues().size()-1);
+    cout << "condition number of full system: " << cond << endl;
+    //cout << "full_least_sq_system : "  << endl << full_least_sq_system << endl;
+    
+    right_hand_side.topLeftCorner(num_control_pts, DIM) = 2*least_squares_matrix.transpose()*changes_in_position;
+    right_hand_side.bottomLeftCorner(num_periodic_control_pts, DIM) = cell_size_constraint;
+    cout << "solve full system" << endl;
+    Eigen::MatrixXd control_point_updates= 
+        full_least_sq_system.fullPivLu().solve(right_hand_side);
+    cout << "full solutions: " << control_point_updates << endl;
+    control_point_updates = control_point_updates.topLeftCorner(num_control_pts, DIM);
+    cout << "original cps: " << endl << _patch.get_control_grid()<< endl;
+    cout << "deformations: " << endl <<  control_point_updates << endl;
+    Eigen::MatrixXd original_control_points = _patch.get_control_grid();
+    cout << "original: " << original_control_points.rows() << ", "  << original_control_points.cols() << endl;
+    cout << "updates: " << control_point_updates.rows() << ", "  << control_point_updates.cols() << endl;
+    Eigen::MatrixXd deformed_control_points = cp + control_point_updates;
+    _patch.set_control_grid(deformed_control_points);
+    cout << "deformed cps: " << endl << _patch.get_control_grid()<< endl;
+    nanospline::save_patch_obj("deformed_flat_patch.obj", _patch);
+    //return least_squares_matrix;
   }
+  ~NanosplineInterface() {}
 };
 
 PatchSurfNanospline::~PatchSurfNanospline(){};
@@ -349,6 +604,10 @@ void NanosplinePatch::bounding_box(Point3 &bounding_box_min,
   Eigen::MatrixXd min = control_grid.colwise().minCoeff();
   copy_eigen_to_point(max, bounding_box_max);
   copy_eigen_to_point(min, bounding_box_min);
+}
+void NanosplinePatch::deform_periodic(DblNumMat parametric_coordinates, DblNumMat changes_in_position){
+    Eigen::VectorXd cell_size = Eigen::VectorXd::Constant(DIM, .8);
+    _surface->deform_periodic(parametric_coordinates, changes_in_position, cell_size, 0, 1);
 }
 
 /*void NanosplinePatch::principal_curvatures(Point2 xy, double& k1, double& k2){

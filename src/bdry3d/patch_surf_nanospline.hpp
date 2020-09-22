@@ -1,5 +1,4 @@
-#ifndef _PATCH_SURF_FACE_MAP_HPP_
-#define _PATCH_SURF_FACE_MAP_HPP_
+#pragma once 
 
 #include "patch_surf.hpp"
 #include "vec3t.hpp"
@@ -243,6 +242,8 @@ class NanosplinePatch: public Patch
         //void principal_curvatures(Point2 xy, double& k1, double& k2);
 
         //static double _UB;
+        void deform(DblNumMat parametric_coordinates, DblNumMat changes_in_position){};
+        void deform_periodic(DblNumMat parametric_coordinates, DblNumMat changes_in_position);
 };
 //----------------------------------------------------------
 class FacePointNanospline: public FacePointOverlapping
@@ -270,4 +271,3 @@ class FacePointNanospline: public FacePointOverlapping
 
 END_EBI_NAMESPACE
 
-#endif
