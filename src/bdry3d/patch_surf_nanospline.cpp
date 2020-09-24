@@ -131,8 +131,8 @@ private:
 public:
   nanospline::BSplinePatch<Scalar, DIM, -1, -1> _patch;
   NanosplineInterface()
-      : _degree_u(2), _degree_v(2), _num_control_pts_u(4),
-        _num_control_pts_v(4) {
+      : _degree_u(2), _degree_v(2), _num_control_pts_u(3),
+        _num_control_pts_v(3) {
     // 1. Get the name of surface we want to load
     // For now: load a flat surface, all weights = 1, uniform knots
     //
@@ -279,7 +279,7 @@ public:
         // TODO bug prone
         const int ctrl_pt_index = ui * _num_control_pts_v + vj; 
         //const int ctrl_pt_periodic_index = (_num_control_pts_u-1 - ui) * _num_control_pts_v + vj; 
-        const int ctrl_pt_periodic_index = ui * _num_control_pts_v + (_num_control_pts_v -1 -_degree_v +vj); 
+        const int ctrl_pt_periodic_index = ui * _num_control_pts_v + (_num_control_pts_v -_degree_v +vj); 
         top_left_selector(iter, ctrl_pt_index) = -1.;
         bottom_right_selector(iter, ctrl_pt_periodic_index) = 1.;
         cell_size_constraint.row(iter) = periodic_cell_size_v;
@@ -298,10 +298,12 @@ public:
     // initialize both selection matrices
     for (int ui =0; ui< _degree_u; ui++) {
       for (int vj = 0; vj < _num_control_pts_v; vj++) {
+          //if(vj < _num_control_pts_v/2-1)
+          //    continue;
         // TODO bug prone
         const int ctrl_pt_index = ui * _num_control_pts_v + vj; 
         //const int ctrl_pt_periodic_index = ui * _num_control_pts_v + (_num_control_pts_v-1 - vj); 
-        const int ctrl_pt_periodic_index = (_num_control_pts_u -1 - _degree_u + ui )* _num_control_pts_v + vj; 
+        const int ctrl_pt_periodic_index = (_num_control_pts_u - _degree_u + ui )* _num_control_pts_v + vj; 
         top_left_selector(iter, ctrl_pt_index) = -1.;
         bottom_right_selector(iter, ctrl_pt_periodic_index) = 1.;
         cell_size_constraint.row(iter) = periodic_cell_size_u;
@@ -351,33 +353,47 @@ public:
     double cond = svd.singularValues()(0)
     / svd.singularValues()(svd.singularValues().size()-1);
     cout << "condition number of A: " << cond << endl;
+
     Eigen::JacobiSVD<Eigen::MatrixXd> svd3(normal_equations);
     cond = svd3.singularValues()(0)
     / svd3.singularValues()(svd3.singularValues().size()-1);
     cout << "condition number of A^TA: " << cond << endl;
-    cout << "normal_equations: "  << endl << normal_equations<< endl;
+    //cout << "normal_equations: "  << endl << normal_equations<< endl;
+
     Eigen::JacobiSVD<Eigen::MatrixXd> svd2(full_least_sq_system);
     cond = svd2.singularValues()(0)
     / svd2.singularValues()(svd2.singularValues().size()-1);
     cout << "condition number of full system: " << cond << endl;
-    //cout << "full_least_sq_system : "  << endl << full_least_sq_system << endl;
+    
+    Eigen::MatrixXd E = periodic_constraints.transpose();
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd_constraints(E);
+    Eigen::FullPivLU<Eigen::MatrixXd> lu_constraints(E);
+    cond = svd_constraints.singularValues()(0)
+    / svd_constraints.singularValues()(svd_constraints.singularValues().size()-1);
+    cout << "condition number of E^T: " << cond << endl;
+    cout << "rank of E: " << svd_constraints.rank()<< endl;
+    cout << "size of E: " << E.rows() << ", "<< E.cols() << endl;
+    cout << "E: "  << endl << E<< endl;
+    cout << "kernel(E): "  << endl << lu_constraints.kernel() << endl;
+    cout << "image(E): "  << endl << lu_constraints.image(E) << endl;
+    //cout << lu_constraints.image(E) * lu_constraints.kernel()<< endl;
     
     right_hand_side.topLeftCorner(num_control_pts, DIM) = 2*least_squares_matrix.transpose()*changes_in_position;
     right_hand_side.bottomLeftCorner(num_periodic_control_pts, DIM) = cell_size_constraint;
-    cout << "least_squares_matrix" << endl << least_squares_matrix << endl;
+    //cout << "least_squares_matrix" << endl << least_squares_matrix << endl;
     cout << "solve full system" << endl;
     Eigen::MatrixXd control_point_updates= 
         full_least_sq_system.fullPivLu().solve(right_hand_side);
-    cout << "full solutions: " << control_point_updates << endl;
+    //cout << "full solutions: " << control_point_updates << endl;
     control_point_updates = control_point_updates.topLeftCorner(num_control_pts, DIM);
-    cout << "original cps: " << endl << _patch.get_control_grid()<< endl;
-    cout << "deformations: " << endl <<  control_point_updates << endl;
+    //cout << "original cps: " << endl << _patch.get_control_grid()<< endl;
+    //cout << "deformations: " << endl <<  control_point_updates << endl;
     Eigen::MatrixXd original_control_points = _patch.get_control_grid();
-    cout << "original: " << original_control_points.rows() << ", "  << original_control_points.cols() << endl;
-    cout << "updates: " << control_point_updates.rows() << ", "  << control_point_updates.cols() << endl;
+    //cout << "original: " << original_control_points.rows() << ", "  << original_control_points.cols() << endl;
+    //cout << "updates: " << control_point_updates.rows() << ", "  << control_point_updates.cols() << endl;
     Eigen::MatrixXd deformed_control_points = cp + control_point_updates;
     _patch.set_control_grid(deformed_control_points);
-    cout << "deformed cps: " << endl << _patch.get_control_grid()<< endl;
+    //cout << "deformed cps: " << endl << _patch.get_control_grid()<< endl;
     nanospline::save_patch_obj("deformed_flat_patch.obj", _patch);
     //return least_squares_matrix;
   }

@@ -1,6 +1,5 @@
 
 #include "../catch.hpp"
-#include "Eigen/src/Core/products/Parallelizer.h"
 #include <bdry3d/patch_surf_nanospline.hpp>
 #include <memory>
 #include <random>
