@@ -42,21 +42,23 @@ TEST_CASE("Test nanospline deform for flat patch", "[nanospline][deform]"){
     std::default_random_engine re(0);
 
     //int num_constraints = 5000;
-    int num_constraints_x = 10;
-    int num_constraints_y = 10;
+    int num_constraints_x = 20;
+    int num_constraints_y = 20;
     int num_constraints = num_constraints_x*num_constraints_y;
     DblNumMat changes_in_position(3, num_constraints);
     DblNumMat parameter_values(2, num_constraints);
+    setvalue(changes_in_position, 0.);
     for (int i =0; i < num_constraints_x; i++) {
     for (int j =0; j < num_constraints_y; j++) {
         int index = i*num_constraints_x + j;
-        changes_in_position(0,index) = 0;
-        changes_in_position(1,index) = 0;
-        changes_in_position(2,index) = .1;
         parameter_values(0,index) =  double(i)/double(num_constraints_x);
         parameter_values(1,index) = double(j)/double(num_constraints_y);
+        changes_in_position(0,index) = parameter_values(0,index);
+        changes_in_position(1,index) = parameter_values(1,index);
+        changes_in_position(2,index) = 0.;
     }
     }
+    //changes_in_position(2,26) = 1.;
     Point3 p;
     Point2 uv(0.);
     patch->xy_to_patch_coords(uv.array(), patch->EVAL_VL, p.array());
