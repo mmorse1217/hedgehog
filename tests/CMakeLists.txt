@@ -9,12 +9,14 @@ add_subdirectory(utils)
 
 set(Hedgehog_test_dirs
     ${Hedgehog_test_quadrature}
+    ${Hedgehog_test_quadrature}
     ${Hedgehog_test_geometry}
     ${Hedgehog_test_common}
     ${Hedgehog_test_dep}
     ${Hedgehog_test_fmm}
     ${Hedgehog_test_utils}
     ${Hedgehog_test_results}
+    ${Hedgehog_test_examples}
     )
 add_executable(test_hedgehog test_bis.cpp ${Hedgehog_test_dirs})
 target_link_libraries(test_hedgehog Hedgehog)
