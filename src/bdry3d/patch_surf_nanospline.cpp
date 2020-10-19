@@ -133,8 +133,8 @@ private:
 public:
   nanospline::BSplinePatch<Scalar, DIM, -1, -1> _patch;
   NanosplineInterface()
-      : _degree_u(3), _degree_v(3), _num_control_pts_u(6),
-        _num_control_pts_v(6) {
+      : _degree_u(7), _degree_v(7), _num_control_pts_u(12),
+        _num_control_pts_v(12) {
     // 1. Get the name of surface we want to load
     // For now: load a flat surface, all weights = 1, uniform knots
     //
@@ -346,168 +346,42 @@ public:
     periodic_constraints.setZero();
     cell_size_constraint.setZero();
 
-    auto fill_constraint_matrix =
-        [this, &iter, &periodic_constraints, &cell_size_constraint](
-            int ui_min, int ui_max, int vj_min, int vj_max,
-            std::function<int(int)> ui_index, std::function<int(int)> vj_index,
-            Eigen::MatrixXd periodic_cell_size) {
-
-            assert(int(periodic_cell_size.rows()) == 1);
-            assert(int(periodic_cell_size.cols()) == 3);
-
-          for (int ui = ui_min; ui <= ui_max; ui++) {
-            for (int vj = vj_min; vj <= vj_max; vj++) {
-              const int dependent_ctrl_pt_index = ui * _num_control_pts_v + vj;
-              const int independent_ctrl_pt_index = ui_index(ui) * _num_control_pts_v + vj_index(vj);
-              cout << "dependent: " << ui << ", "<< vj << endl;
-              cout << "independent: " << ui_index(ui) << ", "<< vj_index(vj) << endl;
+    // Make a list of constraints
+    // enumerate all control points then select the non-trivial ones
+    for (int ui=0; ui < _num_control_pts_v; ui++) {
+        for (int vj=0; vj < _num_control_pts_u; vj++) {
+          const int ui_indep = (ui + num_internal_knots_u) % num_internal_knots_u;
+          const int vj_indep = (vj + num_internal_knots_v) % num_internal_knots_v;
+          const int dependent_ctrl_pt_index = ui * _num_control_pts_v + vj;
+          const int independent_ctrl_pt_index = ui_indep * _num_control_pts_v + vj_indep;
+          if(dependent_ctrl_pt_index != independent_ctrl_pt_index){
               periodic_constraints(iter, dependent_ctrl_pt_index) = 1.;
               periodic_constraints(iter, independent_ctrl_pt_index) = -1.;
-              cell_size_constraint.row(iter) << periodic_cell_size;
               iter++;
-              cout << ui << ", " << vj << ", " << iter << endl;
-            }
           }
-        };
-    Eigen::MatrixXd control_points(_patch.get_control_grid().rows(),_patch.get_control_grid().cols());
-    auto fill_dependent_cps=
-        [this, &iter2, &control_points](
-            int ui_min, int ui_max, int vj_min, int vj_max,
-            std::function<int(int)> ui_index, std::function<int(int)> vj_index,
-            Eigen::MatrixXd periodic_cell_size) {
 
-            assert(int(periodic_cell_size.rows()) == 1);
-            assert(int(periodic_cell_size.cols()) == 3);
-
-          for (int ui = ui_min; ui <= ui_max; ui++) {
-            for (int vj = vj_min; vj <= vj_max; vj++) {
-              const int dependent_ctrl_pt_index = ui * _num_control_pts_v + vj;
-              const int independent_ctrl_pt_index = ui_index(ui) * _num_control_pts_v + vj_index(vj);
-              cout << "dependent: " << ui << ", "<< vj << ", " << dependent_ctrl_pt_index << ": " << control_points.row(dependent_ctrl_pt_index)<<endl;
-              cout << "independent: " << ui_index(ui) << ", "<< vj_index(vj)<< ", " << independent_ctrl_pt_index << ": " << control_points.row(independent_ctrl_pt_index)<< endl;
-              cout << "shift : " << periodic_cell_size << endl;
-              cout << "before: " << control_points.row(dependent_ctrl_pt_index) << endl;
-              control_points.row(dependent_ctrl_pt_index)  = control_points.row(independent_ctrl_pt_index) + periodic_cell_size;
-              cout << "before: " << control_points.row(dependent_ctrl_pt_index) << endl;
+        }
+    }
+    cout << iter << " ?= " << num_dependent_ctrl_pts << endl;
+    // make rhs
+    for (int ui=0; ui < _num_control_pts_v; ui++) { 
+        for (int vj=0; vj < _num_control_pts_u; vj++) {
+          const int ui_indep = (ui + num_internal_knots_u) % num_internal_knots_u;
+          const int vj_indep = (vj + num_internal_knots_v) % num_internal_knots_v;
+          const int dependent_ctrl_pt_index = ui * _num_control_pts_v + vj;
+          const int independent_ctrl_pt_index = ui_indep * _num_control_pts_v + vj_indep;
+          if(dependent_ctrl_pt_index != independent_ctrl_pt_index){
+              const double period_width_u_unscaled = double( (ui + num_internal_knots_u) / num_internal_knots_u);
+              const double period_width_v_unscaled = double( (vj + num_internal_knots_v) / num_internal_knots_v);
+              const double period_width_u = d_u*(period_width_u_unscaled-1);
+              const double period_width_v = d_v*(period_width_v_unscaled-1);
+              cell_size_constraint.row(iter2) << period_width_u, period_width_v, 0. ;
               iter2++;
-              cout << ui << ", " << vj << ", " << iter2 << endl;
-            }
+
           }
-        };
-
-
-    /*  
-     *  S1: i = 0 
-     *      j = 0 
-     *  S1: c_{ij} = c_{i+p_u, j+p_v}   + (-d_u,-d_v, 0)
-     */
-    cout << "padding_u: "<< padding_u << endl;
-    cout << "padding_v: "<< padding_v << endl;
-    Eigen::MatrixXd temp(1,3);
-    temp << -d_u, -d_v, 0.;
-    fill_constraint_matrix(0, padding_u-1, 
-            0, padding_v-1, 
-            [this](int ui){return _degree_u + ui;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    /*
-     *  S2: 1 <= i <= num_control_pts_u - degree_u-1
-     *      j = 0
-     *  S2: c_{ij} = c_{i, j+p_v}       + (   0,-d_v, 0)
-     */
-    
-    temp << 0., -d_v, 0.;
-    fill_constraint_matrix(padding_u, _num_control_pts_u- padding_u- 1-1, 
-            0, padding_v-1, 
-            [this](int ui){return ui;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "min: "<< padding_u << ", max: "<< _num_control_pts_u - padding_u -1-1 << endl;
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    /*
-     *  S3: num_control_pts_u-degree_u <= i <=num_control_pts_u-1
-     *      j = 0
-     *  S3: c_{ij} = c_{i-p_u, j+p_v}   + ( d_u,-d_v, 0)
-    */
-    
-    temp << d_u, -d_v, 0.;
-    fill_constraint_matrix(_num_control_pts_u- padding_u-1,_num_control_pts_u - 1,
-            0, padding_v-1, 
-            [this](int ui){return ui-_degree_u;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    /*
-     *  S4: i = 0 
-     *      1 <= j <= num_control_pts_v - _degree_u - 1 
-     *  S4: c_{ij} = c_{i+p_u, j}       + (-d_u,   0, 0)
-     */
-    
-    temp << -d_u, 0., 0.;
-    fill_constraint_matrix(0, padding_u-1, 
-            padding_v, _num_control_pts_v- padding_v-1-1,
-            [this](int ui){return ui+_degree_u;}, 
-            [this](int vj){return vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    /*
-     *  S5: num_control_pts_u-degree_u <= i <=num_control_pts_u-1
-     *      1 <= j <= num_control_pts_v - _degree_u - 1
-     *  S5: c_{ij} = c_{i-p_u, j}       + ( d_u,   0, 0)
-     */
-    
-    temp << d_u, 0., 0.;
-    fill_constraint_matrix(_num_control_pts_u - padding_u-1, _num_control_pts_u - 1, 
-            padding_v, _num_control_pts_v - padding_v- 1-1,
-            [this](int ui){return ui - _degree_u;}, 
-            [this](int vj){return vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "S6" << endl;
-    /*
-     *  S6:  i = 0
-     *      num_control_pts_v-degree_v <= j <=num_control_pts_v -1 
-     *  S6: c_{ij} = c_{i+p_u, j-p_v}   + (-d_u, d_v, 0)
-     */
-    
-    temp << -d_u, d_v, 0.;
-    fill_constraint_matrix(0, padding_u-1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui + _degree_u;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "S7" << endl;
-    /*
-     *  S7: 1 <= i <= num_control_pts_u - degree_u-1
-     *      num_control_pts_v-degree_v <= j <=num_control_pts_v -1
-     *  S7: c_{ij} = c_{i, j-p_v}       + (   0, d_v, 0)
-     */
-    
-    temp << 0., d_v, 0.;
-    fill_constraint_matrix(padding_u, _num_control_pts_u - padding_u- 1-1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui ;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "S8" << endl;
-    /*
-     *  S8: num_control_pts_u-degree_u -1 <= i <=num_control_pts_u -1
-     *      num_control_pts_v-degree_v -1 <= j <=num_control_pts_v -1
-     *  S8: c_{ij} = c_{i-p_u, j-p_v}   + ( d_u, d_v, 0)
-     */
-    
-    temp << d_u, d_v, 0.;
-    fill_constraint_matrix(_num_control_pts_u - padding_u-1, _num_control_pts_u - 1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui - _degree_u;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "constraint matrix " << endl << periodic_constraints << endl;
-   
+        }
+    }
+    cout << iter2 << " ?= " << num_dependent_ctrl_pts << endl;
 
     /*
      * The final system we want to form is 
@@ -544,36 +418,6 @@ public:
     full_least_sq_system.topLeftCorner(num_control_pts, num_control_pts)          = 2*normal_equations;
     full_least_sq_system.topRightCorner(num_control_pts, num_dependent_ctrl_pts)  = periodic_constraints.transpose();
     full_least_sq_system.bottomLeftCorner(num_dependent_ctrl_pts,num_control_pts) = periodic_constraints;
-    cout << "full system: " << endl << full_least_sq_system << endl;
-    ofstream file("temp_cpp.csv");
-    const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
-    file << full_least_sq_system.format(CSVFormat);
-    file.close();
-
-    Eigen::FullPivLU<Eigen::MatrixXd> lu(periodic_constraints);
-    auto rank = lu.rank(); 
-    cout << "constraint matrix rank: " << rank << endl;
-    cout << "constraint matrix size: " << periodic_constraints.rows() << ", "<< periodic_constraints.cols() << endl;
-    Eigen::FullPivLU<Eigen::MatrixXd> lu2(full_least_sq_system);
-    rank = lu2.rank(); 
-    cout << "full system rank: " << rank << endl;
-    cout << "full system size: " << full_least_sq_system.rows() << ", "<< full_least_sq_system.cols() << endl;
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd(least_squares_matrix);
-    double cond = svd.singularValues()(0)
-    / svd.singularValues()(svd.singularValues().size()-1);
-    cout << "condition number of A: " << cond << endl;
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd3(normal_equations);
-    cond = svd3.singularValues()(0)
-    / svd3.singularValues()(svd3.singularValues().size()-1);
-    cout << "condition number of A^TA: " << cond << endl;
-    //cout << "normal_equations: "  << endl << normal_equations<< endl;
-
-    Eigen::JacobiSVD<Eigen::MatrixXd> svd2(full_least_sq_system);
-    cond = svd2.singularValues()(0)
-    / svd2.singularValues()(svd2.singularValues().size()-1);
-    cout << "condition number of full system: " << cond << endl;
     
 
 
@@ -593,162 +437,13 @@ public:
     cout << periodic_constraints*control_point_updates<< endl;
 
 
-    ////////////////////////////////////////////////////////////////////////////////////////
-    // Debugging attempt
-    ////////////////////////////////////////////////////////////////////////////////////////
-    // 1. fill independent cps explicitly
-    for (int ui = padding_u; ui < _num_control_pts_u - padding_u - 1; ui++) {
-      for (int vj = padding_v; vj < _num_control_pts_v - padding_v - 1; vj++) {
-          const double spacing_u = 1./(_num_control_pts_u - 2*padding_u - 1-1);
-          const double spacing_v = 1./(_num_control_pts_v - 2*padding_v - 1-1);
-        const int index = ui * _num_control_pts_v + vj;
-        cout << "dependent: " << ui << ", " << vj << ", " << (ui-padding_u)*spacing_u << ", "<<  (vj-padding_v)* spacing_v << ", "<< endl;
-        control_points.row(index) << (ui-padding_u)*spacing_u , (vj-padding_v)* spacing_v , 0.;
-        //iter2++;
-        cout << ui << ", " << vj << ", " << iter2 << endl;
-      }
-    }
-    cout << "independent cp's: " << endl << control_points << endl;
-    // 2. fill dependent cps explicitly
-    temp << -d_u, -d_v, 0.;
-    fill_dependent_cps(0, padding_u-1, 
-            0, padding_v-1, 
-            [this](int ui){return _degree_u + ui;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    /*
-     *  S2: 1 <= i <= num_control_pts_u - degree_u-1
-     *      j = 0
-     *  S2: c_{ij} = c_{i, j+p_v}       + (   0,-d_v, 0)
-     */
-    
-    temp << 0., -d_v, 0.;
-    fill_dependent_cps(padding_u, _num_control_pts_u- padding_u- 1-1, 
-            0, padding_v-1, 
-            [this](int ui){return ui;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "min: "<< padding_u << ", max: "<< _num_control_pts_u - padding_u -1-1 << endl;
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    /*
-     *  S3: num_control_pts_u-degree_u <= i <=num_control_pts_u-1
-     *      j = 0
-     *  S3: c_{ij} = c_{i-p_u, j+p_v}   + ( d_u,-d_v, 0)
-    */
-    
-    temp << d_u, -d_v, 0.;
-    fill_dependent_cps(_num_control_pts_u- padding_u-1,_num_control_pts_u - 1,
-            0, padding_v-1, 
-            [this](int ui){return ui-_degree_u;}, 
-            [this](int vj){return _degree_v + vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    /*
-     *  S4: i = 0 
-     *      1 <= j <= num_control_pts_v - _degree_u - 1 
-     *  S4: c_{ij} = c_{i+p_u, j}       + (-d_u,   0, 0)
-     */
-    
-    temp << -d_u, 0., 0.;
-    fill_dependent_cps(0, padding_u-1, 
-            padding_v, _num_control_pts_v- padding_v-1-1,
-            [this](int ui){return ui+_degree_u;}, 
-            [this](int vj){return vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    /*
-     *  S5: num_control_pts_u-degree_u <= i <=num_control_pts_u-1
-     *      1 <= j <= num_control_pts_v - _degree_u - 1
-     *  S5: c_{ij} = c_{i-p_u, j}       + ( d_u,   0, 0)
-     */
-    
-    temp << d_u, 0., 0.;
-    fill_dependent_cps(_num_control_pts_u - padding_u-1, _num_control_pts_u - 1, 
-            padding_v, _num_control_pts_v - padding_v- 1-1,
-            [this](int ui){return ui - _degree_u;}, 
-            [this](int vj){return vj;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    cout << "S6" << endl;
-    /*
-     *  S6:  i = 0
-     *      num_control_pts_v-degree_v <= j <=num_control_pts_v -1 
-     *  S6: c_{ij} = c_{i+p_u, j-p_v}   + (-d_u, d_v, 0)
-     */
-    
-    temp << -d_u, d_v, 0.;
-    fill_dependent_cps(0, padding_u-1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui + _degree_u;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    cout << "S7" << endl;
-    /*
-     *  S7: 1 <= i <= num_control_pts_u - degree_u-1
-     *      num_control_pts_v-degree_v <= j <=num_control_pts_v -1
-     *  S7: c_{ij} = c_{i, j-p_v}       + (   0, d_v, 0)
-     */
-    
-    temp << 0., d_v, 0.;
-    fill_dependent_cps(padding_u, _num_control_pts_u - padding_u- 1-1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui ;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    cout << "S8" << endl;
-    /*
-     *  S8: num_control_pts_u-degree_u -1 <= i <=num_control_pts_u -1
-     *      num_control_pts_v-degree_v -1 <= j <=num_control_pts_v -1
-     *  S8: c_{ij} = c_{i-p_u, j-p_v}   + ( d_u, d_v, 0)
-     */
-    
-    temp << d_u, d_v, 0.;
-    fill_dependent_cps(_num_control_pts_u - padding_u-1, _num_control_pts_u - 1, 
-            _num_control_pts_v - padding_v-1, _num_control_pts_v - 1,
-            [this](int ui){return ui - _degree_u;}, 
-            [this](int vj){return vj - _degree_v;}, 
-            temp);
-    cout << "iter: "<< iter << ", " << periodic_constraints.rows() << " x  " << periodic_constraints.cols() << endl;
-    cout << "cp's: " << endl << control_points << endl;
-    cout << "do control points satisfy constraints" << endl << periodic_constraints*control_points - cell_size_constraint << endl;
-    cout << "L2 error computed control points: " << endl << full_least_sq_system*solution- right_hand_side << endl;
-    Eigen::MatrixXd temp_solution = solution;
-    temp_solution.topLeftCorner(num_control_pts, DIM) = control_points;
-    cout << "L2 error explicit control points: " << endl << full_least_sq_system*temp_solution- right_hand_side << endl;
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     _patch.set_control_grid(deformed_control_points);
-    ////////////////////////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    /*// shift periodic eval
-    const int num_samples = 300;
-    const double spacing = 1./double(num_samples-1);
-    for (int i =0; i< num_samples; i++) {
-        for (int j=0; j<num_samples; j++) {
-            const double min_u = -3.;
-            const double min_v = -3.;
-            const double width_u = 6.;
-            const double width_v = 6.;
-            const double u = min_u + i*spacing*width_u;
-            const double v = min_v + i*spacing*width_v;
-        
-        }
-    }*/
-    ////////////////////////////////////////////////////////////////////////////
+    
     nanospline::save_patch_obj("deformed_flat_patch.obj", _patch);
+
     DblNumMat temp_control_points(DIM, num_control_pts);
     NumVec<OnSurfacePoint> temp_closest_points(num_control_pts);
     for (int i = 0; i < num_control_pts; i++) {
