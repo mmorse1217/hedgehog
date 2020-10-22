@@ -86,7 +86,7 @@ TEST_CASE("Test nanospline deform for periodicity", "[nanospline][deform]"){
     }
     patch->deform_periodic(parameter_values, changes_in_position);
 
-    const int num_samples = 100;
+    const int num_samples = 200;
     for (int i = 0 ; i < num_samples; i++) {
            const double spacing = 1./double(num_samples-1);
            
@@ -95,7 +95,7 @@ TEST_CASE("Test nanospline deform for periodicity", "[nanospline][deform]"){
            Point3 p, p_mirror;
            patch->xy_to_patch_coords(uv.array(), hedgehog::NanosplinePatch::EVAL_VL, p.array());
            patch->xy_to_patch_coords(uv_mirror.array(), hedgehog::NanosplinePatch::EVAL_VL, p_mirror.array());
-           CHECK( fabs(p_mirror.x()-p.x()) - 1. < 1e-5);
+           CHECK( fabs(p_mirror.x()-p.x()) - 1. < 1e-14);
 
        
            uv = Point2(0., i*spacing);
@@ -103,7 +103,7 @@ TEST_CASE("Test nanospline deform for periodicity", "[nanospline][deform]"){
            patch->xy_to_patch_coords(uv.array(), hedgehog::NanosplinePatch::EVAL_VL, p.array());
            patch->xy_to_patch_coords(uv_mirror.array(), hedgehog::NanosplinePatch::EVAL_VL, p_mirror.array());
 
-           CHECK( fabs(p_mirror.y()-p.y()) - 1. < 1e-5);
+           CHECK( fabs(p_mirror.y()-p.y()) - 1. < 1e-14);
     }
 
 
