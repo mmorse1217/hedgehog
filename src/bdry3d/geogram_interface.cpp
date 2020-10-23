@@ -108,10 +108,9 @@ void AABBTree::mesh_patches_and_build_tree(vector<Patch*> patches){
         }
     }
     // dump triangle mesh for visualization
-    vector<int> pids;
-    pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
-    write_triangle_mesh_to_vtk(
-            _surface_vertices, _surface_triangles, 0, "data/surface", pids);
+    //vector<int> pids;
+    //pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
+    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/surface", pids);
 
     initialize_mesh(_surface_vertices, _surface_triangles);
     //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
@@ -213,10 +212,9 @@ void AABBTree::mesh_near_zone_and_build_tree(vector<Patch*> patches){
             _triangle_ids_to_patch_ids[triangle_id] = pi;
         }
     }*/
-    vector<int> pids;
-    pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
-    write_triangle_mesh_to_vtk(
-            _surface_vertices, _surface_triangles, 0, "data/", pids);
+    //vector<int> pids;
+    //pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
+    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/", pids);
 
     initialize_mesh(_surface_vertices, _surface_triangles);
     //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
@@ -302,8 +300,7 @@ AABBTree::AABBTree(PatchSurf* surface){
             _triangle_ids_to_patch_ids[triangle_id] = pi;
         }
     }
-    write_triangle_mesh_to_vtk(
-            _surface_vertices, _surface_triangles, 0, "data/");
+    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/");
 
     initialize_mesh(_surface_vertices, _surface_triangles);
     //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));

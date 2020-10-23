@@ -10,6 +10,7 @@ set(Hedgehog_geometry_src
     p4est_refinement.cpp
     patch_surf_face_map.cpp
     patch_surf_nanospline.cpp
+    BoundingBoxGrid.cpp
 )
 set(Hedgehog_geometry_header
     analytic_surf.hpp
@@ -24,6 +25,7 @@ set(Hedgehog_geometry_header
     patch_surf_face_map.hpp
     p4est_refinement.hpp
     patch_surf_nanospline.hpp
+    BoundingBoxGrid.hpp
 )
 
 PREPEND(Hedgehog_geometry_src)

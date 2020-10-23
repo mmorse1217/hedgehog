@@ -30,6 +30,15 @@ class OnSurfacePoint {
 
         // (u,v) coordinates on patch for closest point
         Point2 parametric_coordinates;
+        
+        // 3d position of closest point (coord = P(parametric_coordinates) )
+        double coord[3];
+
+        // interior normal vector at closest point
+        double direction[3];
+
+        // characteristic length of patch with id parent_patch.
+        double patch_char_length;
 
         // Region identifier
         Region region;
@@ -66,6 +75,12 @@ class OnSurfacePoint {
             region = o.region;
             inside_domain = o.inside_domain;
             target_index = o.target_index;
+            for(int i=0; i<3; i++)
+            {
+                coord[i] = o.coord[i];
+                direction[i] = o.direction[i];
+            }
+            patch_char_length = o.patch_char_length;
         }
         OnSurfacePoint& operator =(const OnSurfacePoint &o){
             parent_patch = o.parent_patch;
@@ -74,6 +89,12 @@ class OnSurfacePoint {
             region = o.region;
             inside_domain = o.inside_domain;
             target_index = o.target_index;
+            for(int i=0; i<3; i++)
+            {
+                coord[i] = o.coord[i];
+                direction[i] = o.direction[i];
+            }
+            patch_char_length = o.patch_char_length;
             return *this;
         }
 

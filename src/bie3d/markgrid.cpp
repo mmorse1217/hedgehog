@@ -1,4 +1,5 @@
 #include "markgrid.hpp"
+#include "bdry3d/BoundingBoxGrid.hpp"
 #include "bie3d/solver_gmres_double_layer.hpp"
 #include <sampling.hpp>
 #include <string>
@@ -51,7 +52,8 @@ NumVec<OnSurfacePoint> Markgrid::mark_target_points(
     */
 
     // Mark all remaining unmarked points by near marking
-    mark_near_field(input_points, face_map, on_surface_points);
+    //mark_near_field(input_points, face_map, on_surface_points);
+    mark_near_field_parallel(input_points, face_map, on_surface_points);
 
     check_all_points_are_marked(input_points, on_surface_points);
     return  on_surface_points;
@@ -73,6 +75,7 @@ void Markgrid::mark_target_points(
 
     // Mark all points by near marking algorithm
     mark_near_field(input_points, face_map, on_surface_point_map);
+    //mark_near_field_parallel(input_points, face_map, on_surface_point_map);
 
     check_all_points_are_marked(input_points, on_surface_point_map);
     //return  on_surface_points;
@@ -173,6 +176,231 @@ cout << "marking qbkix points" << endl;
     cout << "marked near field" << endl;
     cout << "total time spent marking: "<< total_mark_time << endl;
 }
+
+void Markgrid::mark_near_field_parallel(DblNumMat input_points, PatchSurfFaceMap* face_map, 
+        NumVec<OnSurfacePoint>& on_surface_points){
+    
+    MPI_Comm comm=MPI_COMM_WORLD;
+    BoundingBoxGrid<double> bb_grid(-1, comm);
+    BoundingBoxGrid<double>::PVFMMVec_t bbmin;
+    BoundingBoxGrid<double>::PVFMMVec_t bbmax;
+    bbmin.Resize(face_map->num_patches()*3);
+    bbmax.Resize(face_map->num_patches()*3);
+    cout<<"total num of patches: "<<face_map->num_patches()<<"\n";
+    cout<<"total num of points: "<<input_points.n()<<"\n";
+    // get bounding box of each patch with near zone
+    // call FaceMapSubPatch bounding_box() ? or FaceMapPatch bounding_box() + charlen*first_point_ratio
+    #pragma omp parallel for
+    for(size_t i=0; i<face_map->num_patches(); i++)
+    {
+        //cout<<"begin patch: "<<i<<"\n";
+        auto patch = dynamic_cast<FaceMapSubPatch*>(face_map->patches()[i]);
+        Point3 min, max;
+        //patch->inflated_bounding_box(min, max);
+        patch->bounding_box(min, max);
+        //min = patch->bmin_test;
+        //max = patch->bmax_test;
+        
+        for(size_t j=0; j<3; j++)
+        {
+            bbmin[i*3 + j] = min[j] - 1e-8 - 0.2*patch->characteristic_length();
+            bbmax[i*3 + j] = max[j] + 1e-8 + 0.2*patch->characteristic_length();
+        }
+        
+        /*
+        cout<<"patch: "<<i<<", "<<"x: "<<bbmin[i*3+0]<<", "<<bbmax[i*3+0]<<", ";
+        cout<<"y: "<<bbmin[i*3+1]<<", "<<bbmax[i*3+1]<<", ";
+        cout<<"z: "<<bbmin[i*3+2]<<", "<<bbmax[i*3+2]<<"\n";
+        */
+        //cout<<"end patch: "<<i<<"\n";
+    }
+    cout<<"finish inflated bounding box\n";
+    bb_grid.SetBoundingBoxGrid(bbmin, bbmax);
+    bb_grid.SetTrgCoord(input_points.data(), input_points.n());
+    bb_grid.ConstructBoundingBoxGrid();
+    
+    pvfmm::Vector<size_t> near_patch_id, near_trg_id, near_trg_scatter;
+    BoundingBoxGrid<double>::PVFMMVec_t near_trg_coord;
+    bb_grid.FindTargetNearPair(near_patch_id, near_trg_id, near_trg_coord, near_trg_scatter);
+    
+    size_t patch_id_offset;
+    {
+        long long disp = 0;
+        long long size = face_map->num_patches();
+        MPI_Scan(&size, &disp, 1, MPI_LONG_LONG, MPI_SUM, comm);
+        patch_id_offset = disp - size;
+    }
+    size_t trg_id_offset;
+    {
+        long long disp = 0;
+        long long size = input_points.n();
+        MPI_Scan(&size, &disp, 1, MPI_LONG_LONG, MPI_SUM, comm);
+        trg_id_offset = disp - size;
+    }
+
+    int num_near_pairs = near_trg_coord.Dim()/3;
+    BoundingBoxGrid<double>::PVFMMVec_t near_trg_data;
+    // data consists: on surface point coord, qbkix point direction, patch characteristic length and min distance, parent_patch, and uv coordinates
+    near_trg_data.Resize(num_near_pairs*12);
+        int parent_patch;
+
+        // distance to P(u,v) from ith sample
+        double distance_from_target;
+
+        // (u,v) coordinates on patch for closest point
+        Point2 parametric_coordinates;
+    cout<<"num of near pairs: "<<num_near_pairs<<"\n";
+    /*
+    for(size_t i=0;i<num_near_pairs;i++)
+    {
+        cout<<"i: "<<i;
+        Point3 target_point;
+        target_point[0] = near_trg_coord[i*3 + 0];
+        target_point[1] = near_trg_coord[i*3 + 1];
+        target_point[2] = near_trg_coord[i*3 + 2];
+        int patch_id = near_patch_id[i] - patch_id_offset;
+        if( target_point[0]<=bbmax[patch_id*3+0] && target_point[0]>=bbmin[patch_id*3+0] 
+         && target_point[1]<=bbmax[patch_id*3+1] && target_point[1]>=bbmin[patch_id*3+1] 
+         && target_point[2]<=bbmax[patch_id*3+2] && target_point[2]>=bbmin[patch_id*3+2] 
+                )
+            cout<<", good";
+        else
+            cout<<", bad marking";
+        cout<<"\n";
+    }
+    */
+       cout << "before scatter" << endl; 
+    size_t omp_p = omp_get_max_threads();
+    #pragma omp parallel for
+    for(size_t tid=0; tid<omp_p; tid++)
+    {
+        size_t a = (tid+0)*num_near_pairs/omp_p;
+        size_t b = (tid+1)*num_near_pairs/omp_p;
+        for(size_t i=a; i<b; i++)
+        {
+            int patch_id = near_patch_id[i] - patch_id_offset;
+            //cout<<"marking pair i: "<<i<<", patch id: "<<patch_id<<", trg id: "<<near_trg_id[i]<<"\n";
+            Point3 target_point;
+            target_point[0] = near_trg_coord[i*3 + 0];
+            target_point[1] = near_trg_coord[i*3 + 1];
+            target_point[2] = near_trg_coord[i*3 + 2];
+
+            FaceMapSubPatch* patch = face_map->subpatch(patch_id);
+            OnSurfacePoint closest_point = closest_point_on_patch_to_target(target_point, patch);
+            populate_closest_point_data(
+                    i,
+                    target_point,
+                    patch,
+                    closest_point);
+            // MJM 10/2020 commented out...
+            /*if(closest_point.distance_from_target > 0.2*closest_point.patch_char_length){
+                closest_point.distance_from_target = DBL_MAX;
+            }*/
+
+            // debug
+            Point3 c_point;
+            c_point[0] = closest_point.coord[0];
+            c_point[1] = closest_point.coord[1];
+            c_point[2] = closest_point.coord[2];
+            //cout<<"t coord: "<<target_point[0]<<", "<<target_point[1]<<", "<<target_point[2]<<"\n";
+            //cout<<"c coord: "<<c_point[0]<<", "<<c_point[1]<<", "<<c_point[2]<<"\n";
+            //cout<<"t-c : "<< (c_point-target_point).l2()<<"\n";
+            //cout<<"mind: "<<closest_point.distance_from_target<<"\n";
+            //cout<<"in/out: "<<closest_point.inside_domain<<"\n";
+
+
+            // add on surface point to near_trg_data;
+            // on surface point data structure should contain: on surface point 3d coord, interpolation direction,
+            // min distane and closest patch characteristic length
+            near_trg_data[i*12 + 0] = closest_point.coord[0];
+            near_trg_data[i*12 + 1] = closest_point.coord[1];
+            near_trg_data[i*12 + 2] = closest_point.coord[2];
+            near_trg_data[i*12 + 3] = closest_point.direction[0];
+            near_trg_data[i*12 + 4] = closest_point.direction[1];
+            near_trg_data[i*12 + 5] = closest_point.direction[2];
+            near_trg_data[i*12 + 6] = closest_point.patch_char_length;
+            near_trg_data[i*12 + 7] = closest_point.distance_from_target;
+            near_trg_data[i*12 + 8] = closest_point.parent_patch;
+            near_trg_data[i*12 + 9] = closest_point.parametric_coordinates.x();
+            near_trg_data[i*12 +10] = closest_point.parametric_coordinates.y();
+            near_trg_data[i*12 +11] = int(closest_point.inside_domain);
+        }
+    }
+    cout << "data loaded" << endl;
+    pvfmm::par::ScatterForward(near_trg_id, near_trg_scatter, comm);
+    pvfmm::par::ScatterForward(near_trg_data, near_trg_scatter, comm);
+       cout << "after scatter" << endl; 
+
+    assert(near_trg_id.Dim()*12 == near_trg_data.Dim());
+
+    //compute onsurfacepoint locally
+    #pragma omp parallel for
+    for(size_t tid=0; tid<omp_p; tid++)
+    {
+        size_t a = (tid+0)*near_trg_id.Dim()/omp_p;
+        size_t b = (tid+1)*near_trg_id.Dim()/omp_p;
+        while(a>0 && a < near_trg_id.Dim() && near_trg_id[a-1] == near_trg_id[a]) a++;
+        while(b>0 && b < near_trg_id.Dim() && near_trg_id[b-1] == near_trg_id[b]) b++;
+        for(size_t i=a; i<b; i++)
+        {
+            int trg_id = near_trg_id[i] - trg_id_offset;
+            on_surface_points(trg_id).target_index = trg_id;
+            double min_di = near_trg_data[i*12 + 7];
+            //cout<<"trg id: "<<trg_id<<"\n";
+            //cout<<"min_di: "<<min_di<<"\n";
+            //cout<<"min_ond: "<<on_surface_points(trg_id).distance_from_target<<"\n";
+            Point3 target_point_tmp(input_points.clmdata(trg_id));
+            //cout<<"t coord: "<<target_point_tmp[0]<<", "<<target_point_tmp[1]<<", "<<target_point_tmp[2]<<"\n";
+            //cout<<"c coord: "<<near_trg_data[i*12+0]<<", "<<near_trg_data[i*12+1]<<", "<<near_trg_data[i*12+2]<<"\n";
+            // NOTE: need to determine near zone size to mark it near, right now it mark every target point in the near zone's bounding box as near.
+            if(min_di < on_surface_points(trg_id).distance_from_target)
+            {
+                on_surface_points(trg_id).region = NEAR;
+                // update on_surface_point(trg_id) to near point with on surf point, dir, char len, and min dis
+                on_surface_points(trg_id).coord[0] = near_trg_data[i*12 + 0];
+                on_surface_points(trg_id).coord[1] = near_trg_data[i*12 + 1];
+                on_surface_points(trg_id).coord[2] = near_trg_data[i*12 + 2];
+                on_surface_points(trg_id).direction[0] = near_trg_data[i*12 + 3];
+                on_surface_points(trg_id).direction[1] = near_trg_data[i*12 + 4];
+                on_surface_points(trg_id).direction[2] = near_trg_data[i*12 + 5];
+                on_surface_points(trg_id).patch_char_length = near_trg_data[i*12 + 6];
+                on_surface_points(trg_id).distance_from_target = min_di;
+                on_surface_points(trg_id).parent_patch=  near_trg_data[i*12 + 8];
+                on_surface_points(trg_id).parametric_coordinates = Point2(near_trg_data[i*12 + 9],near_trg_data[i*12 +10]);
+                //cout << "region as float: " << near_trg_data[i*12 + 11] << endl;
+                on_surface_points(trg_id).inside_domain= DomainMembership(int(near_trg_data[i*12 + 11]));
+                {
+                    Point3 n(&on_surface_points(trg_id).direction[0]);
+                    Point3 check_point(&on_surface_points(trg_id).coord[0]);
+                    double residual_proj_onto_normal = dot(n, target_point_tmp-check_point);
+                    if(fabs(residual_proj_onto_normal) <=1e-8){
+                        on_surface_points(trg_id).inside_domain = ON_SURFACE;
+                    } else if (residual_proj_onto_normal < 0){
+                        on_surface_points(trg_id).inside_domain = INSIDE;
+                    } else {
+                        on_surface_points(trg_id).inside_domain = OUTSIDE;
+                    }
+                }
+                
+                
+                
+            }
+        }
+    }
+    // mark all other points to far
+    //#pragma omp parallel for
+    for(int i=0; i<input_points.n(); i++)
+    {
+        if(on_surface_points(i).region != NEAR)
+            on_surface_points(i).region = FAR;
+        //cout << "point " << i << "'s region: " << on_surface_points(i).region << endl;
+        //cout << "point " << i << "'s domain: " << on_surface_points(i).inside_domain<< endl;
+    }
+
+    cout<<"end of parallel marking\n";
+}
+
+
 
 void Markgrid::mark_near_field(DblNumMat input_points, PatchSurfFaceMap* face_map, 
         NearFieldMap& on_surface_point_map){
@@ -386,7 +614,7 @@ Vec Markgrid::evaluate_fmm_with_constant_density(DblNumMat input_points, PatchSu
     return potential;
 }
 
-NumVec<OnSurfacePoint> Markgrid::compute_closest_on_surface_points(
+/*NumVec<OnSurfacePoint> Markgrid::compute_closest_on_surface_points(
         DblNumMat input_points, 
         PatchSurfFaceMap* surface){
 
@@ -430,7 +658,7 @@ NumVec<OnSurfacePoint> Markgrid::compute_closest_on_surface_points(
 
     }
     return closest_points;
-}
+}*/
 
 OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point, 
         FaceMapSubPatch* patch){
@@ -457,6 +685,12 @@ OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point,
                 target_point,
                 patch,
                 PLANE);
+//    cout << "target_point: " << target_point << endl;
+//    cout << "patch" << endl;
+//    cout << "closest point: " << closest_point_on_polynomial_face.parametric_coordinates << endl;
+//    for (int i =0; i < 3; i++) {
+//    cout << "closest point 3d position " << i << ": " << closest_point_on_polynomial_face.coord[i] << endl;
+//    }
     //min_distance = closest_point_on_polynomial_face.distance_from_target;
     bool is_valid;
     patch->is_xy_valid(
@@ -472,6 +706,12 @@ OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point,
             closest_point_along_patch_edges(
                     target_point,
                     patch);//,closest_point_on_polynomial_face.parametric_coordinates);
+//        cout << "edge" << endl;
+//    cout << "closest point: " << closest_point_on_polynomial_edge.parametric_coordinates << endl;
+//    cout << "closest point 3d position: " << closest_point_on_polynomial_edge.coord << endl;
+//    for (int i =0; i < 3; i++) {
+//    cout << "closest point 3d position " << i << ": " << closest_point_on_polynomial_edge.coord[i] << endl;
+//    }
 
         patch->is_xy_valid(
                 closest_point_on_polynomial_edge.parametric_coordinates.array(), 
@@ -490,6 +730,12 @@ OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point,
 
             ebiAssert(is_valid);
             closest_point = closest_polynomial_patch_corner;
+//            cout << "corner" << endl;
+//    cout << "closest point: " << closest_polynomial_patch_corner.parametric_coordinates << endl;
+//    for (int i =0; i < 3; i++) {
+//    cout << "closest point 3d position " << i << ": " << closest_polynomial_patch_corner.coord[i] << endl;
+//    }
+
 
         } else {
             // The closest point is contained in one of the patch edges,
@@ -500,6 +746,13 @@ OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point,
         // The closest point we found is inside the patch face, all done
         closest_point = closest_point_on_polynomial_face;
     }
+    // MARK
+//    cout << "closest point: " << closest_point.parametric_coordinates << endl;
+//    cout << "closest point 3d position: " << closest_point.coord << endl;
+//    for (int i =0; i < 3; i++) {
+//    cout << "closest point 3d position " << i << ": " << closest_point.coord[i] << endl;
+//    }
+    closest_point.parent_patch = patch->_id;
     return closest_point;
 }
 
@@ -642,7 +895,7 @@ NearFieldMap Markgrid::find_points_near_patch(
 }
 
 // TODO need patch neighbor information first
-//
+/*
 Markgrid::NearFieldMap Markgrid::find_patches_near_point(
         Point3 target_point,
         int target_index,
@@ -699,7 +952,7 @@ Markgrid::NearFieldMap Markgrid::find_patches_near_point(
     //cout << "number of near_patches: " << near_patches.size() << endl;
 
     return near_patches_to_point;
-}
+}*/
 Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_aabb_tree(
         Point3 target_point,
         int target_index,
@@ -743,7 +996,7 @@ Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_aabb_tree(
 
 }
 
-Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_via_bfs(
+/*Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_via_bfs(
         Point3 target_point,
         int target_index,
         PatchSurfFaceMap* face_map,
@@ -762,18 +1015,17 @@ Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_via_bfs(
     // of the patch bounding boxes found, determine the closest one
     OnSurfacePoint closest_point = find_closest_on_surface_point_in_list(closest_point_map[target_index]);
 
-    /*
-     * Since the closest bounding box doesn't necessarily contain the closest
-     * patch (e.g. consider an axis aligned flat patch two grid levels away, and a patch 
-     * of higher curvature whose bounding box intersects grid level zero or one), 
-     * we need determine how many more levels of grid searching need to be
-     * done. 
-     *
-     * This can be accelerated in the future (only need to search
-     * ceil(d/box_size - level of bfs termination) ), but for now, we'll search
-     * levels i=0, ..., grid_levels_to_search =
-     * distance_to_closest_point/grid->box_size().
-     */
+     // Since the closest bounding box doesn't necessarily contain the closest
+     // patch (e.g. consider an axis aligned flat patch two grid levels away, and a patch 
+     // of higher curvature whose bounding box intersects grid level zero or one), 
+     // we need determine how many more levels of grid searching need to be
+     // done. 
+     //
+     // This can be accelerated in the future (only need to search
+     // ceil(d/box_size - level of bfs termination) ), but for now, we'll search
+     // levels i=0, ..., grid_levels_to_search =
+     // distance_to_closest_point/grid->box_size().
+     
     int grid_levels_to_search = int(ceil(closest_point.distance_from_target/grid->box_size()))+1;
 
     // determine which patches that we've already searched in 
@@ -838,7 +1090,7 @@ Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_via_bfs(
    }
 
     return closest_point_map;
-}
+}*/
 
 
 
@@ -906,7 +1158,7 @@ Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
     return near_patches_to_point;
 }
 
-Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
+/*Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
         Point3 target_point,
         int target_index,
         PatchSurfFaceMap* face_map,
@@ -931,7 +1183,7 @@ Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
 
 
     return near_patches_to_point;
-}
+}*/
 
 Markgrid::NearFieldMap Markgrid::compute_closest_points_on_patches(
         Point3 target_point,
@@ -1002,10 +1254,10 @@ void Markgrid::populate_closest_point_data(
     if (fabs(residual_proj_onto_normal) < threshold){
         closest_point.inside_domain = ON_SURFACE; 
     } else if(dot(normal, target_point-ret[0]) < 0){
-        //cout << "NEAR MARKING INSIDE: " <<  target_index << ", " << dot(normal, target_point-ret[0]) <<  endl;
+        //cout << "NEAR MARKING INSIDE: " <<  normal << ", " << target_point - ret[0] << ", " << dot(normal, target_point-ret[0]) <<  endl;
         closest_point.inside_domain = INSIDE; 
     } else {
-        //cout << "NEAR MARKING OUTSIDE: " <<  target_index << ", " << dot(normal, target_point-ret[0]) <<  endl;
+        //cout << "NEAR MARKING OUTSIDE: " <<   normal << ", " << target_point - ret[0] << ", " << dot(normal, target_point-ret[0]) <<  endl;
         closest_point.inside_domain = OUTSIDE; 
     }
 
@@ -1058,7 +1310,7 @@ OnSurfacePoint Markgrid::closest_point_patch_corners(
     for(int i = 0; i < corners.size(); i++){
         OnSurfacePoint corner = corners[i];
         
-        Point3 position[1];
+        Point3 position[3];
         patch->xy_to_patch_coords(corner.parametric_coordinates,
                 PatchSamples::EVAL_VL,
                 (double*) position);
@@ -1067,6 +1319,13 @@ OnSurfacePoint Markgrid::closest_point_patch_corners(
         if(closest_point_corners.distance_from_target > corner_to_target_distance){
             closest_point_corners = corner;
             closest_point_corners.distance_from_target = corner_to_target_distance;
+            Point3 n = cross(position[1], position[2]);  n /= n.l2();
+            
+            for(int i=0;i<3;i++){
+                closest_point_corners.coord[i] = position[0][i];
+                closest_point_corners.direction[i] = n[i]; // n is exterior normal, -n is interior normal
+            }
+            closest_point_corners.patch_char_length = patch->characteristic_length();
         }
     }
     return closest_point_corners;
@@ -1280,7 +1539,7 @@ OnSurfacePoint Markgrid::closest_on_surface_point_on_extended_patch(
 
     double pn = dot(p, n);
     bool is_valid = true;
-    int max_iter = 250;
+    int max_iter = 1000;
     
     int iter = 0;
     double eval_time =omp_get_wtime();
@@ -1289,7 +1548,6 @@ OnSurfacePoint Markgrid::closest_on_surface_point_on_extended_patch(
             is_xy_in_neighborhood_of_domain(xyc)) { 
         
         Point2 xyd = newton_direction(u, v, X_uu, X_uv, X_vv, n, p, descent_type);
-
 
         double step_size = Markgrid::backtracking_line_search(patch, xyc, xyd, target_point); 
         
@@ -1347,6 +1605,10 @@ OnSurfacePoint Markgrid::closest_on_surface_point_on_extended_patch(
 
     closest_on_surface_point.parametric_coordinates= xyc;
     closest_on_surface_point.distance_from_target = (ret[0] - target_point).l2();
+    for(int i=0;i<3;i++){
+        closest_on_surface_point.coord[i] = ret[0][i];
+        closest_on_surface_point.direction[i] = n[i]; // n is exterior normal, -n is interior normal
+    }
 
     return closest_on_surface_point;
 }

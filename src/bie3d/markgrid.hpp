@@ -248,6 +248,8 @@ namespace Markgrid{
     
     void mark_near_field(DblNumMat input_points, PatchSurfFaceMap* face_map, 
             NearFieldMap& on_surface_point_map);
+    void mark_near_field_parallel(DblNumMat input_points, PatchSurfFaceMap* face_map, 
+            NumVec<OnSurfacePoint>& on_surface_points);
     void check_all_points_are_marked(DblNumMat input_points, 
             NumVec<OnSurfacePoint>& on_surface_point);
 
