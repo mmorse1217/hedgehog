@@ -122,7 +122,6 @@ void Markgrid::mark_near_field(DblNumMat input_points, PatchSurfFaceMap* face_ma
         NumVec<OnSurfacePoint>& on_surface_points){
 
     int NN = input_points.n();
-    //unique_ptr<SpatialGrid> grid(new SpatialGrid(face_map, input_points));
     unique_ptr<AABBTree> aabb_tree(new AABBTree(face_map));
     
     vector<int> qbkix_indices(NN);
@@ -406,8 +405,6 @@ void Markgrid::mark_near_field(DblNumMat input_points, PatchSurfFaceMap* face_ma
         NearFieldMap& on_surface_point_map){
 
     int NN = input_points.n();
-    //SpatialGrid* grid = new SpatialGrid(face_map, input_points);
-    //unique_ptr<SpatialGrid> grid(new SpatialGrid(face_map, input_points));
     unique_ptr<AABBTree> aabb_tree(new AABBTree(face_map));
     // Need near_patches_buffer for thread safety in loop below
     vector<NearFieldMap> near_field_map_buffer(NN);
@@ -614,51 +611,7 @@ Vec Markgrid::evaluate_fmm_with_constant_density(DblNumMat input_points, PatchSu
     return potential;
 }
 
-/*NumVec<OnSurfacePoint> Markgrid::compute_closest_on_surface_points(
-        DblNumMat input_points, 
-        PatchSurfFaceMap* surface){
 
-    int NN = input_points.n();
-    SpatialGrid* grid = new SpatialGrid(surface);
-   
-    // point all targets into the grid
-    for (int i = 0; i < NN; i++){
-        Point3 target_point(input_points.clmdata(i));
-        grid->insert(i, target_point);
-    }
-    
-    NumVec<OnSurfacePoint> closest_points(NN);
-    setvalue(closest_points, OnSurfacePoint());
-#pragma omp parallel for
-    for (int i = 0; i < NN; i++){
-        //cout << "i: " << i << endl;
-        
-        Point3 target_point(input_points.clmdata(i));
-        //NearFieldMap patches_near_target_point = 
-            //find_patches_near_point(target_point, i, surface, grid);
-        NearFieldMap patches_near_target_point = 
-            find_patches_closest_to_point(target_point, i, surface, grid);
-
-        int num_possible_closest_points = patches_near_target_point[i].size();
-        if(num_possible_closest_points == 0){
-            //cout << target_point << endl;
-            OnSurfacePoint dummy_point;
-            dummy_point.region = FAR;
-            closest_points(i) = dummy_point;
-        } else { 
-            for(int si= 0; si < num_possible_closest_points; si++){
-                OnSurfacePoint possible_closest_point = 
-                    patches_near_target_point[i][si];
-                
-                closest_points(i) = 
-                    possible_closest_point.distance_from_target < closest_points(i).distance_from_target ?
-                    possible_closest_point : closest_points(i);
-            }
-        }
-
-    }
-    return closest_points;
-}*/
 
 OnSurfacePoint Markgrid::closest_point_on_patch_to_target(Point3 target_point, 
         FaceMapSubPatch* patch){
@@ -894,65 +847,6 @@ NearFieldMap Markgrid::find_points_near_patch(
     return near_points_to_patch;
 }
 
-// TODO need patch neighbor information first
-/*
-Markgrid::NearFieldMap Markgrid::find_patches_near_point(
-        Point3 target_point,
-        int target_index,
-        PatchSurfFaceMap* face_map,
-        SpatialGrid* grid){
-    NearFieldMap near_patches_to_point;
-    near_patches_to_point[target_index] = vector<OnSurfacePoint>();
-
-
-    // TODO update loop over all patches to a grid query for near patches and
-    // loop over the result
-    vector<uint> near_patches;
-    if(grid != NULL){
-        near_patches = (*grid->boxes_near_points())[target_index];
-        //near_patches = grid->boxes_closest_to_point(target_index);
-    } else {
-        //near_patches = vector<uint>(face_map->num_patches());
-        for(int i = 0; i < face_map->num_patches(); i++){
-            near_patches.push_back(i);
-        }
-    }
-    for(int npi = 0; npi < near_patches.size(); npi++){
-        int pi = near_patches[npi];
-        FaceMapSubPatch* patch = (FaceMapSubPatch*) face_map->patches()[pi];
-
-        OnSurfacePoint closest_point = 
-            closest_point_on_patch_to_target(target_point, patch);
-        closest_point.parent_patch = pi;// patch->V();
-        closest_point.target_index = target_index;
-
-
-        Point3 ret[3];
-        patch->xy_to_patch_coords(closest_point.parametric_coordinates,
-                PatchSamples::EVAL_VL|PatchSamples::EVAL_FD,
-                (double*) ret);
-        Point3 normal = cross(ret[1], ret[2]).dir();
-        cout << "dot prod " << dot(normal, target_point-ret[0]) << endl;
-        if (dot(normal, target_point-ret[0]) < 0){
-            //cout << "inside" << endl;
-            closest_point.inside_domain = INSIDE; 
-        }  else {
-            //cout << "outside" << endl;
-            closest_point.inside_domain = OUTSIDE; 
-        }
-
-        if( closest_point.distance_from_target <  .5*patch->characteristic_length()){
-            // We've found a near point; we need to know if it's inside or
-            // outside; NOTE need more robust in/out test here
-
-            closest_point.region = NEAR;
-            near_patches_to_point[target_index].push_back(closest_point);
-        } 
-    }
-    //cout << "number of near_patches: " << near_patches.size() << endl;
-
-    return near_patches_to_point;
-}*/
 Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_aabb_tree(
         Point3 target_point,
         int target_index,
@@ -995,104 +889,6 @@ Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_aabb_tree(
     return closest_point_map;
 
 }
-
-/*Markgrid::NearFieldMap Markgrid::find_closest_patch_to_point_via_bfs(
-        Point3 target_point,
-        int target_index,
-        PatchSurfFaceMap* face_map,
-        SpatialGrid* grid){
-    NearFieldMap near_patches_to_point;
-    near_patches_to_point[target_index] = vector<OnSurfacePoint>();
-
-    assert(grid != NULL); // we can't do this without the patches in a grid already!
-
-    // Find the closest patch bounding boxes to the target via bfs, terminating at the first
-    // level containing >= 1 bounding box.
-    NearFieldMap closest_point_map = 
-        find_patches_closest_to_point(target_point, target_index, face_map, grid);
-
-
-    // of the patch bounding boxes found, determine the closest one
-    OnSurfacePoint closest_point = find_closest_on_surface_point_in_list(closest_point_map[target_index]);
-
-     // Since the closest bounding box doesn't necessarily contain the closest
-     // patch (e.g. consider an axis aligned flat patch two grid levels away, and a patch 
-     // of higher curvature whose bounding box intersects grid level zero or one), 
-     // we need determine how many more levels of grid searching need to be
-     // done. 
-     //
-     // This can be accelerated in the future (only need to search
-     // ceil(d/box_size - level of bfs termination) ), but for now, we'll search
-     // levels i=0, ..., grid_levels_to_search =
-     // distance_to_closest_point/grid->box_size().
-     
-    int grid_levels_to_search = int(ceil(closest_point.distance_from_target/grid->box_size()))+1;
-
-    // determine which patches that we've already searched in 
-    // find_patches_closest_to_point() above
-    vector<uint> patches_processed;
-    vector<OnSurfacePoint> closest_on_surface_points = closest_point_map[target_index];
-    for(int i =0; i < closest_on_surface_points.size(); i++){
-        OnSurfacePoint point = closest_on_surface_points[i];
-        patches_processed.push_back(point.parent_patch);
-    }
-
-    for(int grid_level = 0; grid_level < grid_levels_to_search; grid_level++){
-        // Get all bounding boxes on current grid_level
-        vector<uint> patch_ids = 
-            grid->bounding_boxes_level_l_from_target_point(target_index, grid_level);
-        sort(patch_ids.begin(), patch_ids.end());
-        
-        
-        // only compute the new patches
-        vector<uint> new_patch_ids;
-        std::set_difference(patch_ids.begin(), patch_ids.end(), 
-                patches_processed.begin(), patches_processed.end(),
-                    std::inserter(new_patch_ids, new_patch_ids.begin()));
-        //checking...
-        for(auto new_id : new_patch_ids){
-            // new id should be in returned by the grid search
-            assert(std::find(patch_ids.begin(), patch_ids.end(), new_id) != patch_ids.end());
-            // new id should NOT have already been processed.
-            assert(std::find(patches_processed.begin(), patches_processed.end(), new_id) == patches_processed.end());
-        }
-        
-      
-        // add the ids we've found into the set of patch ids we've already seen
-        std::copy(patch_ids.begin(),patch_ids.end(),std::inserter(patches_processed, patches_processed.end()));
-        for(auto new_id : new_patch_ids){
-            // new id should have been added to patches_processed
-            assert(std::find(patches_processed.begin(), patches_processed.end(), new_id) != patches_processed.end());
-        }
-        sort(patches_processed.begin(), patches_processed.end());
-        
-        // Compute the closest point on each patch (with a bounding box on this
-        // level) to the target.
-        NearFieldMap near_patches_to_point_current_level = 
-            compute_closest_points_on_patches(
-                    target_point, 
-                    target_index, 
-                    face_map,
-                    new_patch_ids);
-
-        // List of on-surface points of nearby patches to target_point
-        vector<OnSurfacePoint> on_surface_points_current_level = 
-            near_patches_to_point_current_level[target_index];
-
-        // Compute the closest on surface point to target_point
-        //OnSurfacePoint closest_point_current_level = 
-        //    find_closest_on_surface_point_in_list(on_surface_points_current_level);
-        
-        for(int i = 0; i < on_surface_points_current_level.size(); i++){
-            closest_point_map[target_index].push_back(on_surface_points_current_level[i]);
-        }
-
-   }
-
-    return closest_point_map;
-}*/
-
-
 
 OnSurfacePoint Markgrid::find_closest_on_surface_point_in_list(
         vector<OnSurfacePoint> on_surface_points){
@@ -1158,32 +954,6 @@ Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
     return near_patches_to_point;
 }
 
-/*Markgrid::NearFieldMap Markgrid::find_patches_closest_to_point(
-        Point3 target_point,
-        int target_index,
-        PatchSurfFaceMap* face_map,
-        SpatialGrid* grid){
-    // TODO update loop over all patches to a grid query for near patches and
-    // loop over the result
-    vector<uint> near_patches;
-    if(grid != NULL){
-        near_patches = grid->bounding_boxes_closest_to_point(target_index);
-
-    } else {
-        //near_patches = vector<uint>(face_map->num_patches());
-        for(int i = 0; i < face_map->num_patches(); i++){
-            near_patches.push_back(i);
-        }
-    }
-    NearFieldMap near_patches_to_point = 
-        compute_closest_points_on_patches(target_point, 
-                target_index, 
-                face_map,
-                near_patches);
-
-
-    return near_patches_to_point;
-}*/
 
 Markgrid::NearFieldMap Markgrid::compute_closest_points_on_patches(
         Point3 target_point,
