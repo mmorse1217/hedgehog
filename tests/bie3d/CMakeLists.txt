@@ -10,7 +10,6 @@ set(Hedgehog_test_quadrature_src
     test_point_marking.cpp
     test_solver.cpp
     test_solver_gmres_double_layer.cpp
-    test_spatial_grid.cpp
 )
 set(Hedgehog_test_quadrature_header
     test_lagrange_interpolation.hpp

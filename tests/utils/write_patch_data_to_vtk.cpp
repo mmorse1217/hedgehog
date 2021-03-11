@@ -5,7 +5,6 @@
 #include "common/utils.hpp"
 #include "bie3d/evaluator_near.hpp"
 #include "bie3d/markgrid.hpp"
-#include "bie3d/spatial_grid.hpp"
 #include "bdry3d/p4est_interface.hpp"
 #include "common/vtk_writer.hpp"
 extern "C" {

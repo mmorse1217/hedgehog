@@ -4,7 +4,6 @@
 #include "bdry3d/patch_samples.hpp"
 #include "bie3d/evaluator_near.hpp"
 #include "bie3d/markgrid.hpp"
-#include "bie3d/spatial_grid.hpp"
 #include "bdry3d/p4est_interface.hpp"
 #include "bdry3d/p4est_refinement.hpp"
 #include "common/nummat.hpp"

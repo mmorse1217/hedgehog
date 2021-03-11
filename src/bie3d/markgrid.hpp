@@ -16,7 +16,6 @@
 #include "common/ebiobject.hpp"
 #include <map>
 #include "common/stats.hpp"
-#include "spatial_grid.hpp"
 
 BEGIN_EBI_NAMESPACE
 class AABBTree;
@@ -71,17 +70,6 @@ namespace Markgrid{
             DblNumMat input_points,
             FaceMapSubPatch* patch);
     
-    NearFieldMap find_patches_near_point(
-            Point3 target_point,
-            int target_index,
-            PatchSurfFaceMap* face_map,
-            SpatialGrid* grid=NULL);
-    
-    NearFieldMap find_closest_patch_to_point_via_bfs(
-            Point3 target_point,
-            int target_index,
-            PatchSurfFaceMap* face_map,
-            SpatialGrid* grid);
 
     NearFieldMap find_patches_closest_to_point(
             Point3 target_point,
@@ -153,12 +141,6 @@ namespace Markgrid{
             OnSurfacePoint closest_point, 
             double eps);
     
-
-    NearFieldMap find_patches_closest_to_point(
-            Point3 target_point,
-            int target_index,
-            PatchSurfFaceMap* face_map,
-            SpatialGrid* grid=NULL);
 
     OnSurfacePoint closest_point_on_patch_to_target(Point3 target_point, 
         FaceMapSubPatch* patch);
