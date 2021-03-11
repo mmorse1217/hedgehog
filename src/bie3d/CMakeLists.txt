@@ -12,7 +12,6 @@ set(Hedgehog_quadrature_src
     solver_gmres_double_layer.cpp
     solver_interface.cpp
     solver_utils.cpp
-    spatial_grid.cpp
 )
 set(Hedgehog_quadrature_header
     collocation_patch_samples.hpp
@@ -28,7 +27,6 @@ set(Hedgehog_quadrature_header
     solver_gmres_double_layer.hpp
     solver_interface.hpp
     solver_utils.hpp
-    spatial_grid.hpp
 )
 
 
