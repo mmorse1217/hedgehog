@@ -103,25 +103,32 @@ RUN cd /libs && \
 
 
 
-RUN cd /libs && \
-    git clone https://gitlab.com/libeigen/eigen.git && \
-    cd eigen && \
-    mkdir -p build/ && \
-    cd build && \
-    cmake .. && \
-    make && \ 
-    make install
-
 # Install nanospline
 RUN cd /libs && \
     git clone https://github.com/qnzhou/nanospline/ && \
     cd nanospline/ && \
     mkdir -p build/ && \
     cd build/ && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make 
-    #make install
-
+    cmake .. -DNANOSPLINE_HEADER_ONLY=Off -DCMAKE_BUILD_TYPE=Release && \
+    make && \
+    make install
+WORKDIR /libs
+RUN git clone https://github.com/wenyan4work/pvfmm.git pvfmm_newBC && \
+    cd pvfmm_newBC/ && \
+    mkdir -p build/ && \
+    cd build/ && \
+    cmake .. -DCMAKE_INSTALL_PREFIX=/libs/pvfmm_newBC/install -DCMAKE_BUILD_TYPE=Release && \
+    make  && \
+    make install
+RUN git clone https://github.com/wenyan4work/STKFMM.git && \
+    cd STKFMM/ && \
+    mkdir -p build/ && \
+    mkdir -p install/ && \
+    cd build/ && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/libs/pvfmm_newBC/install -Dpvfmm_DIR=/libs/pvfmm_newBC/install -DCMAKE_CXX_COMPILER=mpicxx .. && \
+    make && \ 
+    make install
+# TODO uncomment
 COPY patchwork/ /libs/patchwork
 
 #Install patchwork via copy
@@ -145,31 +152,32 @@ ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
     TERM=xterm-256color 
 WORKDIR /terraform 
 
-RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && \
-    bash dotfiles/setup.sh && \
-    bash programs/python.sh && \
-    bash vim/build_from_source.sh && \  
-    bash vim/lang-servers/setup.sh && \  
-    bash vim/lang-servers/python-language-server.sh && \  
-    bash vim/lang-servers/clangd.sh   && \
-    bash vim/install_plugins.sh && \
-    mkdir -p /hedgehog
-#RUN apt-get update -y && apt install -y sudo git
-#RUN bash dotfiles/setup.sh 
-#
-#RUN bash programs/python.sh 
-#
-## build vim
-#RUN bash vim/build_from_source.sh  
-#
-## setup language servers for c++/python
-#RUN bash vim/lang-servers/setup.sh  
-#RUN bash vim/lang-servers/python-language-server.sh  
-#RUN bash vim/lang-servers/clangd.sh  
-#
-## install plugins
-#RUN bash vim/install_plugins.sh
-#RUN mkdir /hedgehog
+#RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && \
+#    apt-get update -y && \
+#    bash dotfiles/setup.sh && \
+#    bash programs/python.sh && \
+#    bash vim/build_from_source.sh && \  
+#    bash vim/lang-servers/setup.sh && \  
+#    bash vim/lang-servers/python-language-server.sh && \  
+#    bash vim/lang-servers/clangd.sh   && \
+#    bash vim/install_plugins.sh && \
+#    mkdir -p /hedgehog
+RUN apt-get update -y && apt install -y sudo git
+RUN bash dotfiles/setup.sh 
+
+RUN bash programs/python.sh 
+
+# build vim
+RUN bash vim/build_from_source.sh  
+
+# setup language servers for c++/python
+RUN bash vim/lang-servers/setup.sh  
+RUN bash vim/lang-servers/python-language-server.sh  
+RUN bash vim/lang-servers/clangd.sh  
+
+# install plugins
+RUN bash vim/install_plugins.sh
+RUN mkdir /hedgehog
 WORKDIR /hedgehog
 
 CMD ["/bin/bash"]
