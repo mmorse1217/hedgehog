@@ -1,10 +1,12 @@
 set(Hedgehog_fmm_src
     fmm_interface.cpp
     pvfmm_bis_interface.cpp
+    stkfmm_interface.cpp
 )
 set(Hedgehog_fmm_header
     fmm_interface.hpp
     pvfmm_bis_interface.hpp
+    stkfmm_interface.hpp
     pvfmm/pvfmm_laplace_kernel.hpp
     pvfmm/pvfmm_stks_kernel.hpp
     pvfmm/pvfmm_navier_kernel.hpp
