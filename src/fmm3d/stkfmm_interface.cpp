@@ -1,13 +1,138 @@
 #include "stkfmm_interface.hpp"
-
+#include "common/utils.hpp"
+#include "common/kernel3d.hpp"
+#include <StokesLayerKernel.hpp>
+#include <STKFMM.hpp>
+#define COUT(str) (std::cout<<str<<std::endl)
+#define CERR(str,action) (std::cerr<<"[ERROR]["<< __FUNCTION__ <<"] "<<str<<std::endl, action)
+#define ASSERT(expr, msg) ( (expr) ? assert(true) : CERR(msg,abort()))
+#define COUTDEBUG(str) (std::cout<<"[DEBUG] "<<str<<std::endl)
+const stkfmm::KERNEL get_stkfmm_kernel(int _kernel_type) {
+  //const pvfmm::Kernel<double>* kernel;
+  stkfmm::KERNEL kernel;
+  switch (_kernel_type) {
+  case hedgehog::KNL_STK_S_U:
+    //kernel = &pvfmm::StokesLayerKernel<double>::Vel();
+    kernel = stkfmm::KERNEL::Stokes;
+    break;
+  case hedgehog::KNL_STK_S_P:
+    //kernel = &pvfmm::StokesLayerKernel<double>::PVel();
+    kernel = stkfmm::KERNEL::Stokes;
+    break;
+  case hedgehog::KNL_STK_D_U:
+    //kernel = &ker_stokes_dl;
+    //kernel = &pvfmm::StokesLayerKernel<double>::Vel();
+    kernel = stkfmm::KERNEL::Stokes;
+    break;
+  case hedgehog::KNL_STK_D_P:
+    // kernel = &pvfmm::StokesKernel<double>::pressure();
+    //kernel = &ker_stokes_pressure_dl;
+    //kernel = &pvfmm::StokesLayerKernel<double>::PVel();
+    kernel = stkfmm::KERNEL::PVel;
+    break;
+  case hedgehog::KNL_LAP_D_U:
+    // kernel = &pvfmm::LaplaceKernel<double>::potential();
+    //kernel = &ker_laplace_dl;
+    //kernel = &pvfmm::LaplaceKernel<double>::potential();
+    kernel = stkfmm::KERNEL::LapPGrad;
+    break;
+  case hedgehog::KNL_LAP_S_U:
+    // kernel = &pvfmm::LaplaceKernel<double>::potential();
+    //kernel = &ker_laplace_sl;
+    //kernel = &pvfmm::LaplaceKernel<double>::potential();
+    kernel = stkfmm::KERNEL::LapPGrad;
+    break;
+  default:
+    ASSERT(false, "KernelNotImplementedError");
+  }
+  return kernel;
+}
 
 class hedgehog::STKFMM::STKFMMImpl{
+  //typedef pvfmm::FMM_Pts<Node_t> Mat_t;
+  //typedef pvfmm::FMM_Tree<Mat_t> Tree_t;
+  int mult_order;
+  int max_pts;
+  int max_depth;
+  int sl;
+  int dl;
+  int periodic;
+  int source_dof;
+  int target_dof;
+  int dense_eval;
+  stkfmm::PAXIS periodicity_type;
+  MPI_Comm comm;
+
+  //pvfmm::BoundaryType boundary;
+  //const pvfmm::Kernel<real_t>* ker;
+
+  std::unique_ptr<stkfmm::STKFMM> fmm;
+  public:
+
+  STKFMMImpl(Kernel3d legacy_kernel)  {
+
+    max_depth = Options::get_int_from_petsc_opts("-bis3d_maxlevel");
+    mult_order = Options::get_int_from_petsc_opts("-bis3d_np");
+    max_pts = Options::get_int_from_petsc_opts("-bis3d_ptsmax");
+    periodic = false;
+    string periodicity_type_str = Options::get_string_from_petsc_opts("-stkfmm_periodicity_type");
+    dense_eval = Options::get_int_from_petsc_opts("-direct_eval");
+    
+    if (periodicity_type_str == "none") {
+      // free space
+      periodicity_type = stkfmm::PAXIS::NONE;
+    } else if (periodicity_type_str == "x") {
+      // x-axis periodicity
+      periodicity_type = stkfmm::PAXIS::PX;
+    } else if (periodicity_type_str == "xy") {
+      // x- and y-axis periodicity
+      periodicity_type = stkfmm::PAXIS::PXY;
+    } else if (periodicity_type_str == "xyz") {
+      // x-, y- and z-axis periodicity
+      periodicity_type = stkfmm::PAXIS::PXYZ;
+    } else {
+      ASSERT(false, "NoSuchPeriodicityType");
+    }
+
+    source_dof = legacy_kernel.srcDOF();
+    target_dof = legacy_kernel.trgDOF();
+
+
+    // TODO factor this out when user specified communicators are added
+    comm = MPI_COMM_WORLD;
+    using namespace stkfmm;
+    Equation_type equation_type;
+    Kernel_type kernel_type;
+    Kernel_variable kernel_variable;
+    Kernel3d::parse_kernel_enum((int) legacy_kernel.kernelType(), equation_type, 
+          kernel_type,  kernel_variable);
+
+    stkfmm::KERNEL kernel = get_stkfmm_kernel(kernel_type);
+    const int maxPoints = max_pts;
+    fmm = std::make_unique<stkfmm::Stk3DFMM>(mult_order, max_pts, periodicity_type, static_cast<unsigned int>(kernel));
+    fmm->showActiveKernels();
+
+  };
+
+  ~STKFMMImpl(){
+  };
 };
 hedgehog::STKFMM::~STKFMM(){
 }
+hedgehog::STKFMM::STKFMM(Vec source_positions, Vec source_normals,
+        Vec target_positions, Kernel3d kernel){
+    /*_store_problem_data(source_positions, source_normals, target_positions, kernel);
+  
+    _setup_context();
+  
+    // Scale sources and targets to [0,1] x [0,1] x [0,1]
+    //Note: resulting scaled positions are restored in _src_positions and
+    //_trg_positions in order to provide access to points in wrapper lib
+    _scale_factor = scale_sources_and_targets(_src_positions, _trg_positions);
+    
+    _kernel_opts.scale_factor = _scale_factor;*/
+}
 
-void hedgehog::STKFMM::collect_fmm_data(Vec source_positions, Vec source_normals,
-		Vec target_positions, Kernel3d kernel){}
 int hedgehog::STKFMM::setFromOptions(){}
 int hedgehog::STKFMM::setup(){}
 

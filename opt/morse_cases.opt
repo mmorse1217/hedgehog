@@ -42,6 +42,13 @@
 -pbname pbname
 
 
+# STKFMM related parameters
+# none: free space
+# x: x-axis periodicity
+# xy: x- and y-axis periodicity
+# xyz: x-, y- and z-axis periodicity
+-stkfmm_periodicity_type x
+
 -markgrid_on_surface_threshold 1e-13
 -markgrid_closest_point_opt_threshold 1e-14
 -dirichlet 0 

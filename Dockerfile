@@ -152,6 +152,7 @@ ENV VIM_DEV=1 DEBIAN_FRONTEND=noninteractive \
     TERM=xterm-256color 
 WORKDIR /terraform 
 
+RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform 
 #RUN git clone https://github.com/mmorse1217/terraform --recursive /terraform && \
 #    apt-get update -y && \
 #    bash dotfiles/setup.sh && \
@@ -162,10 +163,11 @@ WORKDIR /terraform
 #    bash vim/lang-servers/clangd.sh   && \
 #    bash vim/install_plugins.sh && \
 #    mkdir -p /hedgehog
-RUN apt-get update -y && apt install -y sudo git
+RUN apt-get update -y && apt install -y git gdb
 RUN bash dotfiles/setup.sh 
 
 RUN bash programs/python.sh 
+RUN bash programs/tmux.sh 
 
 # build vim
 RUN bash vim/build_from_source.sh  
@@ -177,7 +179,7 @@ RUN bash vim/lang-servers/clangd.sh
 
 # install plugins
 RUN bash vim/install_plugins.sh
-RUN mkdir /hedgehog
+#RUN mkdir /hedgehog
 WORKDIR /hedgehog
 
 CMD ["/bin/bash"]

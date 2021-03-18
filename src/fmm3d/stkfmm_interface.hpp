@@ -10,6 +10,8 @@ namespace hedgehog {
 			unique_ptr<STKFMMImpl> _impl;
 		public:
 			STKFMM();
+            STKFMM(Vec source_positions, Vec source_normals,
+                    Vec target_positions, Kernel3d kernel);
 			~STKFMM();
 
 			void collect_fmm_data(Vec source_positions, Vec source_normals,

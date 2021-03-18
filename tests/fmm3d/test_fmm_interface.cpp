@@ -1,5 +1,6 @@
 #include "../catch.hpp"
 #include "fmm3d/pvfmm_bis_interface.hpp"
+#include "fmm3d/stkfmm_interface.hpp"
 #include "common/kernel3d.hpp"
 #include "common/utils.hpp"
 #include <memory>
@@ -48,9 +49,8 @@ void check_error(DblNumMat kifmm_potential, DblNumMat pvfmm_potential, double ep
     }
 
 }
-
-void setup_single_source_target_problem(
-        Kernel3d kernel){
+template <class Summation>
+void setup_single_source_target_problem( Kernel3d kernel){
     Options::set_value_petsc_opts("-bis3d_np", "6");
 
 
@@ -84,7 +84,7 @@ void setup_single_source_target_problem(
 
 
 
-        unique_ptr<PvFMM> fmm (new PvFMM(source_positions,
+        unique_ptr<Summation> fmm (new Summation(source_positions,
                 source_normals,
                 target_positions, 
                 kernel));
@@ -116,7 +116,7 @@ void setup_single_source_target_problem(
         kernel.kernel(source_position_local,source_normal_local,target_position_local, interaction_matrix);
 
         DblNumMat kifmm_potential(tdof, num_targets);
-        
+       
         compute_kifmm_potential(interaction_matrix, 
                 source_density_local, kifmm_potential);
 
@@ -132,6 +132,8 @@ void setup_single_source_target_problem(
         Petsc::destroy_vec(target_potential);
 
 }
+template void setup_single_source_target_problem<PvFMM>( Kernel3d kernel);
+template void setup_single_source_target_problem<STKFMM>( Kernel3d kernel);
 void setup_near_singular_problem(
         Kernel3d kernel){
 
@@ -398,13 +400,13 @@ TEST_CASE("Test PvFMM Laplace kernel interface", "[kernel][fmm][laplace][pvfmm]"
     SECTION("Laplace Single layer"){
 
         Kernel3d kernel(LAPLACE + SINGLE_LAYER+ VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
         setup_near_singular_problem(kernel);
     }
     SECTION("Laplace Double layer"){
 
         Kernel3d kernel(LAPLACE + DOUBLE_LAYER + VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
         setup_near_singular_problem(kernel);
     }
 }
@@ -413,13 +415,13 @@ TEST_CASE("Test PvFMM Stokes kernel interface", "[kernel][fmm][stokes][pvfmm]"){
 
     Options::set_value_petsc_opts("-bis3d_np","4");
         Kernel3d kernel(STOKES + SINGLE_LAYER+ VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
     SECTION("Stokes Double layer velocity"){
 
     Options::set_value_petsc_opts("-bis3d_np","4");
         Kernel3d kernel(STOKES + DOUBLE_LAYER + VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
 }
 
@@ -428,12 +430,12 @@ TEST_CASE("Test PvFMM Stokes pressure kernel interface", "[kernel][fmm][stokes-p
     SECTION("Stokes Single layer pressure"){
 
         Kernel3d kernel(STOKES + SINGLE_LAYER+ VAR_P, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
     SECTION("Stokes Double layer pressure"){
 
         Kernel3d kernel(STOKES + DOUBLE_LAYER + VAR_P, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
 }
 TEST_CASE("Test PvFMM Navier  kernel interface", "[kernel][fmm][navier][pvfmm]"){
@@ -444,14 +446,14 @@ TEST_CASE("Test PvFMM Navier  kernel interface", "[kernel][fmm][navier][pvfmm]")
         equation_coeffs[0] = .7;
         equation_coeffs[1] = .4;
         Kernel3d kernel(NAVIER + SINGLE_LAYER+ VAR_U, equation_coeffs);
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
     SECTION("Navier Double layer displacement"){
         vector<double> equation_coeffs(2,1.);
         equation_coeffs[0] = .7;
         equation_coeffs[1] = .4;
         Kernel3d kernel(NAVIER + DOUBLE_LAYER + VAR_U, equation_coeffs);
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
 }
 TEST_CASE("Test PvFMM Modified Helmholtz kernel interface", "[kernel][fmm][mod-helm][pvfmm]"){
@@ -461,14 +463,14 @@ TEST_CASE("Test PvFMM Modified Helmholtz kernel interface", "[kernel][fmm][mod-h
         equation_coeffs[0] = .5;
 
         Kernel3d kernel(MOD_HELMHOLTZ + SINGLE_LAYER+ VAR_U, equation_coeffs);
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
     SECTION("Modified Helmholtz Double layer"){
         vector<double> equation_coeffs(2,1.);
         equation_coeffs[0] = .5;
 
         Kernel3d kernel(MOD_HELMHOLTZ + DOUBLE_LAYER + VAR_U, equation_coeffs);
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<PvFMM>(kernel);
     }
 
 }
@@ -517,22 +519,22 @@ TEST_CASE("Test Pvfmm direct summation via interface", "[fmm][pvfmm][direct]"){
 //  STKFMM tests
 // ----------------------------------------------------------------------------
 
-TEST_CASE("Test PvFMM Laplace kernel interface", "[kernel][fmm][laplace][stkfmm]"){
+TEST_CASE("Test STKFMM Laplace kernel interface", "[kernel][fmm][laplace][stkfmm]"){
 
     SECTION("Laplace Single layer"){
 
         Kernel3d kernel(LAPLACE + SINGLE_LAYER+ VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<STKFMM>(kernel);
         setup_near_singular_problem(kernel);
     }
     SECTION("Laplace Double layer"){
 
         Kernel3d kernel(LAPLACE + DOUBLE_LAYER + VAR_U, vector<double>(2,1.));
-        setup_single_source_target_problem(kernel);
+        setup_single_source_target_problem<STKFMM>(kernel);
         setup_near_singular_problem(kernel);
     }
 }
-/*TEST_CASE("Test PvFMM Stokes kernel interface", "[kernel][fmm][stokes][stkfmm]"){
+/*TEST_CASE("Test STKFMM Stokes kernel interface", "[kernel][fmm][stokes][stkfmm]"){
     SECTION("Stokes Single layer velocity"){
 
     Options::set_value_petsc_opts("-bis3d_np","4");
@@ -547,7 +549,7 @@ TEST_CASE("Test PvFMM Laplace kernel interface", "[kernel][fmm][laplace][stkfmm]
     }
 }
 
-TEST_CASE("Test PvFMM Stokes pressure kernel interface", "[kernel][fmm][stokes-press][stkfmm]"){
+TEST_CASE("Test STKFMM Stokes pressure kernel interface", "[kernel][fmm][stokes-press][stkfmm]"){
     Options::set_value_petsc_opts("-bis3d_np","4");
     SECTION("Stokes Single layer pressure"){
 
