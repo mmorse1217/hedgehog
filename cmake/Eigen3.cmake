@@ -1,6 +1,7 @@
 include_guard()
-
+message("getting Eigen...")
 if (NOT TARGET Eigen3::Eigen)
+    message("downloading Eigen...")
     FetchContent_Declare(
         Eigen
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
@@ -11,6 +12,7 @@ if (NOT TARGET Eigen3::Eigen)
     FetchContent_GetProperties(Eigen)
     if(NOT eigen_POPULATED)
         FetchContent_Populate(Eigen)
+        # Eigen is header-only, so no need for target_link_libraries
         add_library(Eigen3::Eigen INTERFACE IMPORTED)
         target_include_directories(Eigen3::Eigen SYSTEM INTERFACE
             ${eigen_SOURCE_DIR})

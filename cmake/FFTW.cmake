@@ -15,6 +15,7 @@ if (NOT TARGET FFTW::FFTW)
         INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/FFTWFloat
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DENABLE_FLOAT=On -DENABLE_THREADS=On -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
     )
+    
     # Compile FFTW for doubles
     ExternalProject_Add(
         FFTWDouble
@@ -25,12 +26,21 @@ if (NOT TARGET FFTW::FFTW)
     )
     # make an imported library target 
     add_library(FFTW::FFTW INTERFACE IMPORTED)
-#    set(FFTW_FLOAT_INCLUDE_DIR ${CMAKE_BINARY_DIR}/_deps/FFTWFloat/include)
-#    set(FFTW_DOUBLE_INCLUDE_DIR ${CMAKE_BINARY_DIR}/_deps/FFTWDouble/include)
-#    target_include_directories(FFTW::FFTW
-#        INTERFACE ${FFTW_FLOAT_INCLUDE_DIR} 
-#        INTERFACE ${FFTW_DOUBLE_INCLUDE_DIR}
-#        )
+
+    # Touch include directories for FFTWfloat and FFTWdouble to pass 
+    # generation phase without causing an error because the directory doesn't exist
+    ExternalProject_Get_Property(FFTWFloat INSTALL_DIR)
+    file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
+    set(FFTW_FLOAT_INCLUDE_DIR ${INSTALL_DIR}/include)
+
+    ExternalProject_Get_Property(FFTWDouble INSTALL_DIR)
+    file(MAKE_DIRECTORY ${INSTALL_DIR}/include)
+    set(FFTW_DOUBLE_INCLUDE_DIR ${INSTALL_DIR}/include)
+
+    target_include_directories(FFTW::FFTW
+        INTERFACE ${FFTW_FLOAT_INCLUDE_DIR} 
+        INTERFACE ${FFTW_DOUBLE_INCLUDE_DIR}
+        )
 
     # set link library locations
     target_link_libraries(FFTW::FFTW
