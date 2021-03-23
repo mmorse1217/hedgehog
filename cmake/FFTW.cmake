@@ -32,12 +32,24 @@ if (NOT TARGET FFTW::FFTW)
 #        INTERFACE ${FFTW_DOUBLE_INCLUDE_DIR}
 #        )
 
-    # TODO refactor to optionally compile static libs
+    # set link library locations
     target_link_libraries(FFTW::FFTW
         INTERFACE ${CMAKE_BINARY_DIR}/_deps/FFTWFloat/lib/libfftw3f.${FFTW_LIB_SUFFIX}
         INTERFACE ${CMAKE_BINARY_DIR}/_deps/FFTWFloat/lib/libfftw3f_threads.${FFTW_LIB_SUFFIX}
         INTERFACE ${CMAKE_BINARY_DIR}/_deps/FFTWDouble/lib/libfftw3.${FFTW_LIB_SUFFIX}
         INTERFACE ${CMAKE_BINARY_DIR}/_deps/FFTWDouble/lib/libfftw3_threads.${FFTW_LIB_SUFFIX}
         )
+    
+    # Set explicit include/library variables (just in case)
+    set(FFTW_INCLUDE_DIRS 
+        "${CMAKE_BINARY_DIR}/_deps/FFTWDouble/include" 
+        "${CMAKE_BINARY_DIR}/_deps/FFTWFloat/include"
+        )
+    set(FFTW_LIBRARIES 
+         "${CMAKE_BINARY_DIR}/_deps/FFTWFloat/lib/libfftw3f.${FFTW_LIB_SUFFIX}"
+         "${CMAKE_BINARY_DIR}/_deps/FFTWFloat/lib/libfftw3f_threads.${FFTW_LIB_SUFFIX}"
+         "${CMAKE_BINARY_DIR}/_deps/FFTWDouble/lib/libfftw3.${FFTW_LIB_SUFFIX}"
+         "${CMAKE_BINARY_DIR}/_deps/FFTWDouble/lib/libfftw3_threads.${FFTW_LIB_SUFFIX}"
+         )
 endif() 
         
