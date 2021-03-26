@@ -1,5 +1,6 @@
 include_guard()
 if (NOT TARGET Eigen3::Eigen)
+    message("Downloading Eigen3...")
     FetchContent_Declare(
         Eigen
         GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git

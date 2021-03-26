@@ -1,5 +1,6 @@
 include_guard()
 if (NOT TARGET FFTW::FFTW)
+    message("Downloading FFTW...")
     if(BUILD_SHARED_LIBS)
         set(FFTW_LIB_SUFFIX "so")
     else()

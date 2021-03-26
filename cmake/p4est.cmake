@@ -7,6 +7,7 @@ if (NOT TARGET p4est::p4est)
     endif()
 
 
+    message("Downloading p4est...")
     # Compile p4est
     ExternalProject_Add(
         p4est

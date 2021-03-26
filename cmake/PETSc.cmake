@@ -1,7 +1,7 @@
 include_guard()
 if (NOT DEFINED PETSC_LIBRARIES)
     # Download and unpack PETSc at configure time
-    message("CMAKE_BINARY_DIR " ${CMAKE_BINARY_DIR})
+    message("Downloading PETSc...")
     set(CMAKE_PETSC_DIR ${CMAKE_BINARY_DIR}/_deps/PETSc)
     configure_file(cmake/PETSc-configure.cmake ${CMAKE_PETSC_DIR}/CMakeLists.txt)
     execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
@@ -13,7 +13,6 @@ if (NOT DEFINED PETSC_LIBRARIES)
 
     # lines 16-38, taken from Jed Brown's FindPETSc.cmake in cmake/
     # Make a temporary makefile to probe the PETSc configuration
-    message("INSTALL_DIR " ${INSTALL_DIR})
     set (petsc_config_makefile "${CMAKE_PETSC_DIR}/Makefile.petsc")
     set (petsc_conf_variables "${CMAKE_PETSC_DIR}/lib/petsc/conf/variables")
     file (WRITE "${petsc_config_makefile}"
