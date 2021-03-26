@@ -1,7 +1,8 @@
 include_guard()
 if (NOT DEFINED PETSC_LIBRARIES)
-    # Download and unpack PETSc at configure time
     message("Downloading PETSc...")
+
+    # Download and unpack PETSc at configure time
     set(CMAKE_PETSC_DIR ${CMAKE_BINARY_DIR}/_deps/PETSc)
     configure_file(cmake/PETSc-configure.cmake ${CMAKE_PETSC_DIR}/CMakeLists.txt)
     execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
