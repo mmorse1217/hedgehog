@@ -8,12 +8,12 @@ option(BUILD_SHARED_LIBS "Build shared libraries" OFF)
 
 include(FetchContent)
 include(ExternalProject)
+
 find_package(OpenMP REQUIRED)
-find_package(Blendsurf REQUIRED)
 find_package(Patchwork REQUIRED)
-find_package(Geogram REQUIRED)
 find_package(STKFMM REQUIRED)
 find_package(VTK 7 REQUIRED)
+
 find_package(PETSc)
 include(cmake/PETSc.cmake)
 
@@ -31,6 +31,12 @@ include(cmake/p4est.cmake)
 
 find_package(PVFMM)
 include(cmake/PVFMM.cmake)
+
+find_package(Blendsurf)
+include(cmake/Blendsurf.cmake)
+
+find_package(Geogram)
+include(cmake/Geogram.cmake)
 #include(cmake/Eigen3.cmake)
 #include(cmake/Nanospline.cmake)
 #include(cmake/Blendsurf.cmake)

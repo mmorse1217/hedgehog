@@ -12,8 +12,6 @@ if (NOT TARGET Blendsurf::Blendsurf)
     )
     
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL  "Release or debug mode")
-    set(NANOSPLINE_HEADER_ONLY OFF CACHE INTERNAL  "Blendsurf header only mode")
-    set(NANOSPLINE_BUILD_TESTS OFF CACHE INTERNAL  "Build blendsurf unit tests")
 
     FetchContent_GetProperties(Blendsurf)
     if(NOT blendsurf_POPULATED)

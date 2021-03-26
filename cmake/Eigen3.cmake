@@ -1,5 +1,4 @@
 include_guard()
-# TODO check this; eigen is always being downloaded
 if (NOT TARGET Eigen3::Eigen)
     message("Downloading Eigen3...")
     FetchContent_Declare(
