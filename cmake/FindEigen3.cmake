@@ -94,3 +94,7 @@ else (EIGEN3_INCLUDE_DIR)
   mark_as_advanced(EIGEN3_INCLUDE_DIR)
 
 endif(EIGEN3_INCLUDE_DIR)
+# Eigen is header-only, so no need for target_link_libraries
+add_library(Eigen3::Eigen INTERFACE IMPORTED)
+target_include_directories(Eigen3::Eigen SYSTEM INTERFACE
+    ${EIGEN3_INCLUDE_DIR})
