@@ -15,7 +15,7 @@ if (NOT TARGET STKFMM::STKFMM)
     ExternalProject_Add(
         PVFMM_newBC
         GIT_REPOSITORY https://github.com/wenyan4work/pvfmm.git
-        GIT_TAG        af175f382320e6de8c73afa8133b9ec32a433145
+        GIT_TAG        origin/new_BC
         GIT_SHALLOW TRUE
         PREFIX ${PVFMM_DIR} 
         INSTALL_DIR ${PVFMM_DIR}
@@ -26,7 +26,7 @@ if (NOT TARGET STKFMM::STKFMM)
     ExternalProject_Add(
         STKFMM
         GIT_REPOSITORY https://github.com/wenyan4work/STKFMM.git
-        GIT_TAG        cd4b8fac7529e5560c2ad1114b0a95f4837807c6 
+        GIT_TAG        origin/master
         GIT_SHALLOW TRUE
         PREFIX ${STKFMM_DIR}
         INSTALL_DIR ${STKFMM_DIR}

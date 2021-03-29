@@ -6,8 +6,7 @@ if (NOT TARGET Nanospline::Nanospline)
         Nanospline
         SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/Nanospline
         GIT_REPOSITORY https://github.com/qnzhou/nanospline.git
-        GIT_TAG        7213a53f9f79a6b98ebeef0bae8c9aed0fe7a721
-        GIT_SHALLOW TRUE
+        GIT_TAG        origin/main
     )
     
     set(CMAKE_BUILD_TYPE Release CACHE INTERNAL  "Release or debug mode")

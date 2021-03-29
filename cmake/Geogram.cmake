@@ -10,7 +10,7 @@ if (NOT TARGET Geogram::geogram)
     ExternalProject_Add(
         Geogram 
         GIT_REPOSITORY https://github.com/alicevision/geogram.git
-        GIT_TAG        8b2ae6148c7ab1564fa2700673b4275296ce80d3
+        GIT_TAG        origin/master
         GIT_SHALLOW TRUE
         PREFIX ${CMAKE_BINARY_DIR}/_deps/Geogram
         INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/Geogram

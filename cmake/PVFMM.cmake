@@ -60,7 +60,7 @@ if (NOT TARGET PVFMM::PVFMM)
         SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/PVFMM
         BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/PVFMM
         GIT_REPOSITORY https://github.com/dmalhotra/pvfmm.git
-        GIT_TAG        dde848045f172e086601c11a72fa7ea4b3822a71 
+        GIT_TAG        origin/develop
         GIT_SHALLOW TRUE
     )
     
