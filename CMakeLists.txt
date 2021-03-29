@@ -11,8 +11,10 @@ include(ExternalProject)
 
 find_package(OpenMP REQUIRED)
 find_package(Patchwork REQUIRED)
-find_package(STKFMM REQUIRED)
 find_package(VTK 7 REQUIRED)
+
+find_package(STKFMM)
+include(cmake/STKFMM.cmake)
 
 find_package(PETSc)
 include(cmake/PETSc.cmake)
@@ -37,16 +39,6 @@ include(cmake/Blendsurf.cmake)
 
 find_package(Geogram)
 include(cmake/Geogram.cmake)
-#include(cmake/Eigen3.cmake)
-#include(cmake/Nanospline.cmake)
-#include(cmake/Blendsurf.cmake)
-#include(cmake/Patchwork.cmake)
-#include(cmake/Geogram.cmake)
-#include(cmake/PVFMM.cmake)
-#include(cmake/STKFMM.cmake)
-#include(cmake/p4est.cmake)
-#include(cmake/VTK 7.cmake)
-#include(cmake/PETSc.cmake)
 
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")

@@ -1,5 +1,5 @@
 include_guard()
-if (NOT TARGET Geogram::Geogram)
+if (NOT TARGET Geogram::geogram)
     if(BUILD_SHARED_LIBS)
         set(GEOGRAM_LIB_SUFFIX "so")
     else()
@@ -43,26 +43,4 @@ if (NOT TARGET Geogram::Geogram)
     set(GEOGRAM_LIBRARIES 
         "${GEOGRAM_LIB}"
          )
-#    FetchContent_Declare(
-#        Geogram
-#        SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/Geogram
-#        BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/Geogram
-#        INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/Geogram
-#        GIT_REPOSITORY https://github.com/alicevision/geogram.git
-#        GIT_TAG        8b2ae6148c7ab1564fa2700673b4275296ce80d3
-#        GIT_SHALLOW TRUE
-#    )
-#    
-#
-#    FetchContent_GetProperties(Geogram)
-#    if(NOT geogram_POPULATED)
-#        FetchContent_Populate(Geogram)
-#        message("geogrqm dirs: " ${geogram_SOURCE_DIR} " " ${geogram_BINARY_DIR})
-#        add_subdirectory(${geogram_SOURCE_DIR} ${geogram_BINARY_DIR})
-#        add_library(Geogram::geogram INTERFACE IMPORTED)
-#        target_include_directories(Geogram::geogram SYSTEM INTERFACE
-#            ${geogram_SOURCE_DIR})
-#        target_link_libraries(Geogram::geogram INTERFACE
-#            ${geogram_BINARY_DIR}/lib/libgeogram.a)
-#    endif()
 endif()
