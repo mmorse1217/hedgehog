@@ -13,30 +13,31 @@ find_package(OpenMP REQUIRED)
 find_package(Patchwork REQUIRED)
 find_package(VTK 7 REQUIRED)
 
-find_package(STKFMM)
-include(cmake/STKFMM.cmake)
 
 find_package(PETSc)
 include(cmake/PETSc.cmake)
-
-find_package(FFTW)
-include(cmake/FFTW.cmake)
-
-find_package(Nanospline)
-include(cmake/Nanospline.cmake)
-
+#
 find_package(Eigen3)
 include(cmake/Eigen3.cmake)
-
+#
+find_package(STKFMM)
+include(cmake/STKFMM.cmake)
+#
+find_package(FFTW)
+include(cmake/FFTW.cmake)
+#
+find_package(Nanospline)
+include(cmake/Nanospline.cmake)
+#
 find_package(p4est)
 include(cmake/p4est.cmake)
-
+#
 find_package(PVFMM)
 include(cmake/PVFMM.cmake)
-
+#
 find_package(Blendsurf)
 include(cmake/Blendsurf.cmake)
-
+#
 find_package(Geogram)
 include(cmake/Geogram.cmake)
 

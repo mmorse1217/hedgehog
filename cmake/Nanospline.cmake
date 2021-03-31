@@ -21,6 +21,7 @@ if (NOT TARGET Nanospline::Nanospline)
         target_include_directories(Nanospline::Nanospline SYSTEM INTERFACE
             ${nanospline_SOURCE_DIR})
         target_link_libraries(Nanospline::Nanospline INTERFACE
-            ${nanospline_BINARY_DIR}/libnanospline.a)
+            ${nanospline_BINARY_DIR}/libnanospline.a nanospline_
+            nanospline_forward_decl)
     endif()
 endif()

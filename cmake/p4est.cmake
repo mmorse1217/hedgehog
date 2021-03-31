@@ -14,7 +14,7 @@ if (NOT TARGET p4est::p4est)
         URL http://p4est.github.io/release/p4est-1.1.tar.gz
         PREFIX ${CMAKE_BINARY_DIR}/_deps/p4est
         INSTALL_DIR ${CMAKE_BINARY_DIR}/_deps/p4est
-        CONFIGURE_COMMAND <SOURCE_DIR>/configure CC=mpicc CXX=mpic++ F77=mpif77 FC=mpif90 --enable-mpi --prefix=<INSTALL_DIR>
+        CONFIGURE_COMMAND <SOURCE_DIR>/configure CC=mpicc CXX=mpic++ F77=mpif77 FC=mpif90 --enable-mpi --prefix=<INSTALL_DIR> 
         BUILD_COMMAND make
         INSTALL_COMMAND make install
     )

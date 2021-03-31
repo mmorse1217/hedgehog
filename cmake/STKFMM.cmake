@@ -6,7 +6,9 @@ if (NOT TARGET STKFMM::STKFMM)
     else()
         set(STKFMM_LIB_SUFFIX "a")
     endif()
-
+    
+    find_package(Eigen3)
+    include(cmake/Eigen3.cmake)
 
     message("Downloading STKFMM and PVFMM...")
     # Download and compile PVFMM 
@@ -31,6 +33,7 @@ if (NOT TARGET STKFMM::STKFMM)
         PREFIX ${STKFMM_DIR}
         INSTALL_DIR ${STKFMM_DIR}
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR> -DCMAKE_PREFIX_PATH=${PVFMM_DIR} -Dpvfmm_DIR=${PVFMM_DIR} -DCMAKE_CXX_COMPILER=mpicxx 
+        DEPENDS PVFMM_newBC 
         )
 #cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=/libs/pvfmm_newBC/install -Dpvfmm_DIR=/libs/pvfmm_newBC/install -DCMAKE_CXX_COMPILER=mpicxx .. && \
     
