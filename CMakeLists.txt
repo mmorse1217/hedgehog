@@ -5,6 +5,7 @@ project(Hedgehog)
 set(Hedgehog_VERSION 0.1)
 list(APPEND CMAKE_MODULE_PATH "${Hedgehog_SOURCE_DIR}/cmake")
 option(BUILD_SHARED_LIBS "Build shared libraries" OFF) 
+option(WITH_STKFMM "Use STKFMM for fast summation" OFF) 
 
 include(FetchContent)
 include(ExternalProject)
@@ -20,8 +21,10 @@ include(cmake/PETSc.cmake)
 find_package(Eigen3)
 include(cmake/Eigen3.cmake)
 #
+if(WITH_STKFMM)
 find_package(STKFMM)
 include(cmake/STKFMM.cmake)
+endif()
 #
 find_package(FFTW)
 include(cmake/FFTW.cmake)

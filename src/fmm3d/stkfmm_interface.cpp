@@ -1,6 +1,7 @@
 #include "stkfmm_interface.hpp"
 #include "common/utils.hpp"
 #include "common/kernel3d.hpp"
+#ifdef HAS_STKFMM
 #include <StokesLayerKernel.hpp>
 #include <STKFMM.hpp>
 #define COUT(str) (std::cout<<str<<std::endl)
@@ -117,6 +118,10 @@ class hedgehog::STKFMM::STKFMMImpl{
   ~STKFMMImpl(){
   };
 };
+
+#else
+class hedgehog::STKFMM::STKFMMImpl{};
+#endif
 hedgehog::STKFMM::~STKFMM(){
 }
 hedgehog::STKFMM::STKFMM(Vec source_positions, Vec source_normals,
