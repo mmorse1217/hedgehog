@@ -339,7 +339,6 @@ int main(int argc,char *argv[]) {
   # work.  It is likely that you will end up with a broken build.
   mark_as_advanced (PETSC_INCLUDES PETSC_LIBRARIES PETSC_COMPILER PETSC_DEFINITIONS PETSC_MPIEXEC PETSC_EXECUTABLE_RUNS)
 endif ()
-
 include (FindPackageHandleStandardArgs)
 find_package_handle_standard_args (PETSc
   REQUIRED_VARS PETSC_INCLUDES PETSC_LIBRARIES PETSC_EXECUTABLE_RUNS

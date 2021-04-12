@@ -1,23 +1,48 @@
 cmake_minimum_required(VERSION 3.1)
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 project(Hedgehog)
 set(Hedgehog_VERSION 0.1)
 list(APPEND CMAKE_MODULE_PATH "${Hedgehog_SOURCE_DIR}/cmake")
+option(BUILD_SHARED_LIBS "Build shared libraries" OFF) 
+option(WITH_STKFMM "Use STKFMM for fast summation" OFF) 
 
+include(FetchContent)
+include(ExternalProject)
 
 find_package(OpenMP REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(Nanospline REQUIRED)
-find_package(Blendsurf REQUIRED)
 find_package(Patchwork REQUIRED)
-find_package(Geogram REQUIRED)
-find_package(PVFMM REQUIRED)
-find_package(STKFMM REQUIRED)
-find_package(p4est REQUIRED)
 find_package(VTK 7 REQUIRED)
-find_package(PETSc REQUIRED)
-find_package(FFTW REQUIRED)
+
+
+find_package(PETSc)
+include(cmake/PETSc.cmake)
+#
+find_package(Eigen3)
+include(cmake/Eigen3.cmake)
+#
+if(WITH_STKFMM)
+find_package(STKFMM)
+include(cmake/STKFMM.cmake)
+endif()
+#
+find_package(FFTW)
+include(cmake/FFTW.cmake)
+#
+find_package(Nanospline)
+include(cmake/Nanospline.cmake)
+#
+find_package(p4est)
+include(cmake/p4est.cmake)
+#
+find_package(PVFMM)
+include(cmake/PVFMM.cmake)
+#
+find_package(Blendsurf)
+include(cmake/Blendsurf.cmake)
+#
+find_package(Geogram)
+include(cmake/Geogram.cmake)
 
 if (OPENMP_FOUND)
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
