@@ -1,5 +1,5 @@
 include_guard()
-if (NOT DEFINED PETSC_LIBRARIES)
+if (NOT PETSC_FOUND)
     message("Downloading PETSc...")
 
     # Download and unpack PETSc at configure time

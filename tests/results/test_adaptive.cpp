@@ -729,9 +729,12 @@ void singularity_torii_exterior(Vec samples, int dof,Vec& potential){
 
 
 TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
-    Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/interlocking_torii_flip.wrl");
-    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/interlocking_torii_flip.wrl");
-    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "12");
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/interlocking_torii.wrl"); // CHANGED
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/interlocking_torii.wrl"); // CHANGED
+    Options::set_value_petsc_opts("-bd3d_filename", "wrl_meshes/wrl/cube.wrl"); // CHANGED
+    Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_meshes/wrl/cube.wrl"); // CHANGED
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "12"); //CHANGED
+    Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3"); //CHANGED
     Options::set_value_petsc_opts("-bd3d_facemap_refinement_factor", "0");
     Options::set_value_petsc_opts("-bis3d_spacing", ".1");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
@@ -739,8 +742,10 @@ TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
     Options::set_value_petsc_opts("-kt", "111");
     Options::set_value_petsc_opts("-target_accuracy", "1e-7");
     adaptive_test_base_options();
-    Options::set_value_petsc_opts("-bis3d_spacing", ".05");
-    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".05");
+    Options::set_value_petsc_opts("-bis3d_spacing", ".5");//CHANGED
+    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".5");//CHANGED
+    //Options::set_value_petsc_opts("-bis3d_spacing", ".05");//CHANGED
+    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".05");//CHANGED
     //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
     //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
     
@@ -750,7 +755,8 @@ TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".1");
     //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".025");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".05");
-    Options::set_value_petsc_opts("-dom", "1");
+    //Options::set_value_petsc_opts("-dom", "1"); // CHANGED
+    Options::set_value_petsc_opts("-dom", "0"); 
     
     Options::set_value_petsc_opts("-upsampling_type", "adaptive");
     Options::set_value_petsc_opts("-adaptive_upsampling", "bbox_closest_point");
@@ -770,8 +776,9 @@ TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
     surface->_coarse = true;
     surface->setFromOptions();
     surface->setup();
-    surface->refine();
-    surface->resolve_rhs(&singularity_torii_exterior, 1, 1e-9 );
+    surface->refine_test();
+    //surface->refine(); //CHANGED
+    //surface->resolve_rhs(&singularity_torii_exterior, 1, 1e-9 ); //CHANGED
     
     unique_ptr<SolverGMRESDoubleLayer> solver( new SolverGMRESDoubleLayer(surface.get()));
     solver->set_evaluation_type(EXTRAPOLATION_AVERAGE);

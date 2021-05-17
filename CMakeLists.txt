@@ -15,6 +15,7 @@ find_package(Patchwork REQUIRED)
 find_package(VTK 7 REQUIRED)
 
 
+include(cmake/LeanVTK.cmake)
 find_package(PETSc)
 include(cmake/PETSc.cmake)
 #
@@ -57,7 +58,7 @@ FUNCTION(PREPEND var )
    ENDFOREACH(f)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
-
+#add_subdirectory(src/common/lean-vtk)
 add_subdirectory(src)
 add_subdirectory(tests)
 

@@ -19,6 +19,7 @@
 #include <vtkPolyData.h>
 #include <vtkSmartPointer.h>
 #include "vec3t.hpp"
+#include <lean_vtk.hpp>
 #include "bdry3d/patch_samples.hpp"
 #include "bdry3d/face_map_subpatch.hpp"
 
@@ -256,6 +257,13 @@ void write_triangle_mesh_to_vtk(
         vector<int> corresponding_patches, DblNumMat values){
 
 
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<double>  patch_ids_vec;
+    vector<double>  corr_patch_ids_vec;
+    vector<int>     triangle_ids_vec;
+    vector<double>  values_vec;
+
     // list of vtkQuads to view 
     vtkSmartPointer<vtkCellArray> cellArray =
         vtkSmartPointer<vtkCellArray>::New();
@@ -265,6 +273,13 @@ void write_triangle_mesh_to_vtk(
         vtkSmartPointer<vtkPoints>::New();
     int num_vertices = vertices.n();
     int num_faces = faces.n();
+    int values_stride = values.m();
+    
+    points_vec.reserve(DIM*num_vertices);
+    patch_ids_vec.reserve(num_faces);
+    triangle_ids_vec.reserve(3*num_faces);
+    values_vec.reserve(values_stride*num_faces);
+    corr_patch_ids_vec.reserve(num_faces);
     assert(vertices.m() == DIM);
     assert(faces.m() == 3);
 
@@ -291,6 +306,7 @@ void write_triangle_mesh_to_vtk(
         vtkSmartPointer<vtkDoubleArray>::New();
     values_vtk->SetNumberOfComponents(values.m());
     values_vtk->SetName("Values");
+
     for (int i = 0; i < num_vertices; i++) {
         Point3 vertex_position(vertices.clmdata(i));
         point_position->SetTuple(i, vertex_position.array());
@@ -298,17 +314,32 @@ void write_triangle_mesh_to_vtk(
             values_vtk->InsertNextTuple(values.clmdata(i));
         }
     }
+    for (int i = 0; i < num_vertices; i++) {
+        for (int d=0; d < DIM; d++) {
+            points_vec.push_back(vertices(d, i));
+        }
+    }
+    if(values.n() == num_vertices){
+        for (int i = 0; i < num_vertices; i++) {
+            for (int d=0; d < values_stride; d++) {
+                values_vec.push_back(values(d,i));
+            }
+        }
+    }
     for (int f = 0; f < num_faces; f++) {
         vector<long long> face_ids(3);
         
         for (int d = 0; d < 3; d++) {
             face_ids[d] = faces(d,f);
+            triangle_ids_vec.push_back(faces(d,f));
         }
 
         triangle_ids->InsertNextCell(3, face_ids.data()); 
         patch_ids->InsertNextValue(f);
+        patch_ids_vec.push_back(f);
         if(corresponding_patches.size() == num_faces){
             corr_patch_ids->InsertNextValue(corresponding_patches[f]);
+            corr_patch_ids_vec.push_back(corresponding_patches[f]);
         }
         
     }
@@ -346,6 +377,23 @@ void write_triangle_mesh_to_vtk(
 
     writer->SetDataModeToAscii();
     writer->Write();
+
+    cout << "corresponding_patches" << endl;
+    for (int i =0; i < num_faces; i++) {
+    cout << "vtk: " << corr_patch_ids->GetValue(i) << ", manual: " << corr_patch_ids_vec[i] << endl;
+    assert(corr_patch_ids->GetValue(i)  == corr_patch_ids_vec[i]);
+    }
+    cout << "vtk vec size: " << corr_patch_ids->GetNumberOfValues() << endl;
+    cout << "manual vec size: " << corr_patch_ids_vec.size() << endl;
+
+
+    writer1.add_cell_scalar_field("Triangle Id", patch_ids_vec);
+    writer1.add_cell_scalar_field("Patch Id", corr_patch_ids_vec);
+    writer1.add_field("Values", values_vec, values_stride);
+    writer1.write_surface_mesh(build_filename(iteration, TRIANGLES, file_prefix+"_lean_vtk"),
+            DIM, 3, points_vec, triangle_ids_vec);
+
+
 
 }
 
