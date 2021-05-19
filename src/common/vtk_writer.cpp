@@ -206,6 +206,12 @@ void write_general_points_to_vtk(Vec points, int degrees_of_freedom,
 void write_qbkix_points_to_vtk(DblNumMat qbkix_points, 
         NumVec<OnSurfacePoint> final_closest_on_surface_points, int iteration, string file_prefix){
 
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<double>  qbkix_point_patch_ids_vec;
+    vector<double>  relative_patch_ids_vec;
+    vector<int>     triangle_ids_vec;
+    vector<double>  values_vec;
 
     vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
     
@@ -220,6 +226,25 @@ void write_qbkix_points_to_vtk(DblNumMat qbkix_points,
     patch_relative_ids->SetNumberOfComponents(1);
     patch_relative_ids->SetName("Refined relative Patch Id");
 
+        //Point3 qbkix_point(qbkix_points.clmdata(i));
+        //cout << "point i : ";
+    for(int i =0; i < qbkix_points.n(); i++){
+        for (int d =0; d < DIM; d++) {
+            points_vec.push_back(qbkix_points(d,i));
+            //cout << qbkix_points(d,i) << ", ";
+        }
+        //cout << endl;
+        //points_vec.push_back(InsertNextPoint(qbkix_point.x(), qbkix_point.y(), qbkix_point.z());
+        qbkix_point_patch_ids_vec.push_back(final_closest_on_surface_points(i).parent_patch);
+        relative_patch_ids_vec.push_back(i/4);
+
+    }
+
+    writer1.add_scalar_field("Patch Id", qbkix_point_patch_ids_vec);
+    writer1.add_scalar_field("Relative Patch Id", relative_patch_ids_vec);
+    writer1.write_point_cloud(
+            build_filename(iteration, POINTS, file_prefix+"_lean_vtk"),
+            DIM, points_vec);
 
     for(int i =0; i < qbkix_points.n(); i++){
         Point3 qbkix_point(qbkix_points.clmdata(i));
@@ -249,7 +274,7 @@ void write_qbkix_points_to_vtk(DblNumMat qbkix_points,
   writer->SetDataModeToAscii();
  
   writer->Write();
-
+    exit(0);
 }
 
 void write_triangle_mesh_to_vtk(
@@ -377,14 +402,6 @@ void write_triangle_mesh_to_vtk(
 
     writer->SetDataModeToAscii();
     writer->Write();
-
-    cout << "corresponding_patches" << endl;
-    for (int i =0; i < num_faces; i++) {
-    cout << "vtk: " << corr_patch_ids->GetValue(i) << ", manual: " << corr_patch_ids_vec[i] << endl;
-    assert(corr_patch_ids->GetValue(i)  == corr_patch_ids_vec[i]);
-    }
-    cout << "vtk vec size: " << corr_patch_ids->GetNumberOfValues() << endl;
-    cout << "manual vec size: " << corr_patch_ids_vec.size() << endl;
 
 
     writer1.add_cell_scalar_field("Triangle Id", patch_ids_vec);
