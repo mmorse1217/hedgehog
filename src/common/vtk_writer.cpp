@@ -141,6 +141,10 @@ void write_structured_data_to_vtk(vector<Vec> data_vecs,
 
 void write_general_points_to_vtk(Vec points, int degrees_of_freedom, 
         string filename, Vec values, string file_prefix){
+    
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<double>  values_vec;
 
     //int num_values = Petsc::get_vec_size(values)/degrees_of_freedom;
     //int num_points= Petsc::get_vec_size(points)/DIM;
@@ -155,6 +159,7 @@ void write_general_points_to_vtk(Vec points, int degrees_of_freedom,
     cout << "getting local vector 1" << endl;
     DblNumMat points_local = get_local_vector(DIM, num_points, points);
     cout << "getting local vector 1" << endl;
+    cout << "WRITE GENERAL" << endl;
     DblNumMat values_local = get_local_vector(degrees_of_freedom, num_values, values);
 
 
@@ -177,7 +182,26 @@ void write_general_points_to_vtk(Vec points, int degrees_of_freedom,
         for(int d =0; d < degrees_of_freedom; d++){
             vtk_values->InsertNextValue(value(d));
         }*/
+        for(int d =0; d < DIM; d++){
+            points_vec.push_back(points_local(d,i));
+        }
+        for(int d =0; d < degrees_of_freedom; d++){
+            values_vec.push_back(values_local(d,i));
+        }
     }
+
+
+
+    string file_name = build_filename(0, POINTS, filename+"lean_vtk");
+    cout << "values_vec.size: " << values_vec.size()  <<  endl;
+    cout << "points_vec.size: " << points_vec.size()  <<  endl;
+    if (degrees_of_freedom == 1){
+        writer1.add_scalar_field("Values",values_vec);
+    } else {
+        writer1.add_vector_field("Values",values_vec, degrees_of_freedom);
+    }
+    writer1.write_point_cloud( file_name, DIM, points_vec);
+
     vtkSmartPointer<vtkPolyData> polydata = 
         vtkSmartPointer<vtkPolyData>::New();
     polydata->SetPoints(vtk_points);
