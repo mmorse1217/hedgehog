@@ -274,7 +274,6 @@ void write_qbkix_points_to_vtk(DblNumMat qbkix_points,
   writer->SetDataModeToAscii();
  
   writer->Write();
-    exit(0);
 }
 
 void write_triangle_mesh_to_vtk(
@@ -419,11 +418,12 @@ void write_triangle_mesh_to_vtk(
 void write_face_map_patches_to_vtk(DblNumMat qbkix_points, 
         vector<int> patches_refined_relative_ids,
         PatchSurfFaceMap* face_map, int iteration, string file_prefix){
+    leanvtk::VTUWriter writer1;
+    vector<double> points_vec;
+    vector<int> quad_ids_vec;
+    vector<double> patch_ids_vec;
+    vector<double> patch_relative_ids_vec;
 
-
-    // list of vtkQuads to view 
-    vtkSmartPointer<vtkCellArray> cellArray =
-        vtkSmartPointer<vtkCellArray>::New();
 
     // list of vtkPoints to defining quads 
     vtkSmartPointer<vtkPoints> points =
@@ -479,14 +479,26 @@ void write_face_map_patches_to_vtk(DblNumMat qbkix_points,
             
             // save the position
             point_position->SetTuple(index, position.array());
+            for (int d =0; d<DIM; d++) {
+                points_vec.push_back(position(d));
+            }
         }
         // save the quad id list
         quad_ids->InsertNextCell(4, point_ids.data());
         patch_ids->InsertNextValue(pi);
         patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
+        for (int d=0; d<4; d++) {
+            quad_ids_vec.push_back(point_ids[d]);
+        }
+        patch_ids_vec.push_back(pi);
+        patch_relative_ids_vec.push_back(patches_refined_relative_ids.at(pi));
     }
+
+    writer1.add_cell_scalar_field("Patch Id", patch_ids_vec);
+    writer1.add_cell_scalar_field("Relative Patch Id", patch_ids_vec);
+    writer1.write_surface_mesh(build_filename(iteration, PATCHES, file_prefix+"_lean_vtk"),
+            DIM, 3, points_vec, quad_ids_vec);
     points->SetData(point_position);
-    //cout << "number of cells... " << cellArray->GetNumberOfCells() << endl;
     
     // actual format to save to a file
     vtkSmartPointer<vtkPolyData> polydata =
