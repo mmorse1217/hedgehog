@@ -438,7 +438,6 @@ void write_triangle_mesh_to_vtk(
 }
 
 
-
 void write_face_map_patches_to_vtk(DblNumMat qbkix_points, 
         vector<int> patches_refined_relative_ids,
         PatchSurfFaceMap* face_map, int iteration, string file_prefix){
@@ -521,7 +520,7 @@ void write_face_map_patches_to_vtk(DblNumMat qbkix_points,
     writer1.add_cell_scalar_field("Patch Id", patch_ids_vec);
     writer1.add_cell_scalar_field("Relative Patch Id", patch_ids_vec);
     writer1.write_surface_mesh(build_filename(iteration, PATCHES, file_prefix+"_lean_vtk"),
-            DIM, 3, points_vec, quad_ids_vec);
+            DIM, 4, points_vec, quad_ids_vec);
     points->SetData(point_position);
     
     // actual format to save to a file
@@ -555,6 +554,12 @@ void write_face_map_mesh_to_vtk(
         PatchSurfFaceMap* face_map, int iteration,
         string file_prefix, int num_samples_1d){
 
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<double>  patch_ids_vec;
+    vector<double>  corr_patch_ids_vec;
+    vector<int>     triangle_ids_vec;
+    vector<double>  values_vec;
 
     //int num_samples_1d = 20;
     double step = 1./(num_samples_1d-1);
@@ -613,6 +618,9 @@ void write_face_map_mesh_to_vtk(
             Point3 position(vertices.clmdata(i));
             // save the position
             point_position->SetTuple(index, position.array());
+            for (int d=0; d < DIM; d++) {
+                points_vec.push_back(position(d));
+            }
         }
         for(int i = 0; i < triangles_per_bbox; i++){
             vector<long long > ids(3,0);
@@ -620,8 +628,12 @@ void write_face_map_mesh_to_vtk(
                 ids[d] = faces(d,i) + pi*num_samples;
             }
             triangles->InsertNextCell(3, ids.data());
+            for (int d = 0; d < 3; d++) {
+                triangle_ids_vec.push_back(ids[d]);
+            }
         // save the quad id list
         patch_ids->InsertNextValue(pi);
+        patch_ids_vec.push_back(pi);
         }
     }
     points->SetData(point_position);
@@ -646,6 +658,9 @@ void write_face_map_mesh_to_vtk(
 
     writer->SetFileName(file_name.c_str());
     writer->SetInputData(polydata);
+    // TODO verify with dump_vtk_data_for_paraview()
+    writer1.write_surface_mesh(build_filename(iteration, TRIANGLES, file_prefix+"_lean_vtk"),
+            DIM, 3, points_vec, triangle_ids_vec);
 
 
     writer->SetDataModeToAscii();
@@ -660,6 +675,11 @@ void write_face_map_patch_bounding_boxes_to_vtk(
         PatchSurfFaceMap* face_map, int iteration, string file_prefix,
         bool inflate){
 
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<int>  quad_ids_vec;
+    vector<double>  patch_ids_vec;
+    vector<double>  relative_patch_ids_vec;
 
     int num_patches = face_map->patches().size();
     // list of vtkQuads to view 
@@ -673,11 +693,11 @@ void write_face_map_patch_bounding_boxes_to_vtk(
 
     // uv coordinates to evaluate at the patch corners... (counter clockwise
     // order);
-    vector<Point2> uv_coords;
-    uv_coords.push_back(Point2(0.,0.));
-    uv_coords.push_back(Point2(1.,0.));
-    uv_coords.push_back(Point2(1.,1.));
-    uv_coords.push_back(Point2(0.,1.));
+//    vector<Point2> uv_coords;
+//    uv_coords.push_back(Point2(0.,0.));
+//    uv_coords.push_back(Point2(1.,0.));
+//    uv_coords.push_back(Point2(1.,1.));
+//    uv_coords.push_back(Point2(0.,1.));
 
 
     // 3 x (4*num_patches) double array to contain patch corner locations
@@ -704,6 +724,7 @@ void write_face_map_patch_bounding_boxes_to_vtk(
 
     //point_position->SetNumberOfTuples(num_patches);
     cout << "bbox ids: "<< endl;
+    points_vec.resize(DIM*num_patches*8);
     for(int pi = 0; pi <num_patches; pi++){
 
         auto patch = face_map->subpatch(pi);
@@ -717,15 +738,27 @@ void write_face_map_patch_bounding_boxes_to_vtk(
 
         }
 
-        /*double inflation_factor = 
-            Options::get_double_from_petsc_opts("-adaptive_upsampling_bbox_inflation_factor");
-        // Increase by the size of the near zone
-        //cout << "bbox_min: " << bbox_min << endl;
-        //cout << "bbox_max: " << bbox_max << endl;
-        bbox_max += Point3(inflation_factor*patch->characteristic_length());
-        bbox_min -= Point3(inflation_factor*patch->characteristic_length());*/
+        int index = DIM*8*pi;
+        vector<Point3> bounding_box_corners = {
+            Point3(bbox_min),
+            Point3(bbox_min(0), bbox_min(1), bbox_max(2)),
+            Point3(bbox_min(0), bbox_max(1), bbox_min(2)),
+            Point3(bbox_max(0), bbox_min(1), bbox_min(2)),
+            Point3(bbox_min(0), bbox_max(1), bbox_max(2)),
+            Point3(bbox_max(0), bbox_min(1), bbox_max(2)),
+            Point3(bbox_max(0), bbox_max(1), bbox_min(2)),
+            Point3(bbox_max)
+        };
 
-        // I hate me.
+        for (int corner=0; corner < 8; corner++) {
+            Point3 bounding_box_corner = bounding_box_corners[corner];
+            for(int d=0; d< DIM; d++){
+                points_vec[index + DIM*corner + d] = bounding_box_corner[d];
+            }
+        }
+
+
+
         point_position->SetTuple(8*pi, Point3(bbox_min).array());
         point_position->SetTuple(8*pi+1, Point3(bbox_min(0), bbox_min(1), bbox_max(2)).array());
         point_position->SetTuple(8*pi+2, Point3(bbox_min(0), bbox_max(1), bbox_min(2)).array());
@@ -734,6 +767,8 @@ void write_face_map_patch_bounding_boxes_to_vtk(
         point_position->SetTuple(8*pi+5, Point3(bbox_max(0), bbox_min(1), bbox_max(2)).array());
         point_position->SetTuple(8*pi+6, Point3(bbox_max(0), bbox_max(1), bbox_min(2)).array());
         point_position->SetTuple(8*pi+7, Point3(bbox_max).array());
+        
+
 
         vector<long long> ids(4,0);// = {8*pi, 8*pi+1, 8*pi+5, 8*pi+3};
         ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+5; ids[3] =  8*pi+3;
@@ -742,10 +777,6 @@ void write_face_map_patch_bounding_boxes_to_vtk(
         patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
          
         ids[0] = 8*pi; ids[1] = 8*pi+2; ids[2] =  8*pi+6; ids[3] =  8*pi+3;
-        /*for(const auto& i : ids){
-            cout << i << ", ";
-        }
-        cout << endl;*/
         quad_ids->InsertNextCell(4, ids.data());
         patch_ids->InsertNextValue(pi);
         patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
@@ -770,7 +801,45 @@ void write_face_map_patch_bounding_boxes_to_vtk(
         patch_ids->InsertNextValue(pi);
         patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
 
+
+
+
+        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+5; ids[3] =  8*pi+3;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+
+        ids[0] = 8*pi; ids[1] = 8*pi+2; ids[2] =  8*pi+6; ids[3] =  8*pi+3;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+         
+        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+4; ids[3] =  8*pi+2;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+        
+        ids[0] = 8*pi+3; ids[1] = 8*pi+6; ids[2] =  8*pi+7; ids[3] =  8*pi+5;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+         
+        ids[0] = 8*pi+1; ids[1] = 8*pi+5; ids[2] =  8*pi+7; ids[3] =  8*pi+4;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+         
+        ids[0] = 8*pi+2; ids[1] = 8*pi+4; ids[2] =  8*pi+7; ids[3] =  8*pi+6;
+        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
+        patch_ids_vec.push_back(pi);
+        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
     }
+
+
+    writer1.add_cell_scalar_field("Patch Id", patch_ids_vec);
+    writer1.add_cell_scalar_field("Relative Patch Id", relative_patch_ids_vec);
+    string file_name1 = build_filename(iteration, BOXES, file_prefix+"_lean_vtk_");
+    writer1.write_surface_mesh(file_name1, DIM, 4, points_vec, quad_ids_vec);
     points->SetData(point_position);
     //cout << "number of cells... " << cellArray->GetNumberOfCells() << endl;
     
@@ -798,23 +867,6 @@ void write_face_map_patch_bounding_boxes_to_vtk(
 
     writer->SetDataModeToAscii();
     writer->Write();
-
-    /*
-       vtkSmartPointer<vtkAppendFilter> appendFilter =
-       vtkSmartPointer<vtkAppendFilter>::New();
-       appendFilter->AddInputData(polydata);
-       appendFilter->Update();
-       */ 
-    //vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid =
-    //vtkSmartPointer<vtkUnstructuredGrid>::New();
-    //writer->SetInput(idf->GetOutput());
-    //writer->SetFileName(fname.c_str());
-    //vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid =
-    //vtkSmartPointer<vtkUnstructuredGrid>::New();
-    //unstructuredGrid->ShallowCopy(appendFilter->GetOutput());
-    // Write file
-    //vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
-    //vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
 }
 
 
