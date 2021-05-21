@@ -874,13 +874,14 @@ void write_face_map_patch_bounding_boxes_to_vtk(
 void write_lines_from_qbkix_to_closest_point(DblNumMat qbkix_points, 
         NumVec<OnSurfacePoint> final_closest_on_surface_points, 
         PatchSurfFaceMap* face_map, int iteration, string file_prefix){
+    
+    leanvtk::VTUWriter writer1;
+    vector<double>  points_vec;
+    vector<double>  point_directions_vec;
 
     int num_qbkix_points = qbkix_points.n();
     assert(qbkix_points.n() == final_closest_on_surface_points.m());
     cout << num_qbkix_points << endl;
-    // list of lines from qbkix points to closest on-surface points to view 
-    vtkSmartPointer<vtkCellArray> lines =
-        vtkSmartPointer<vtkCellArray>::New();
 
     // list of qbkix + on-surface points
     vtkSmartPointer<vtkPoints> points =
@@ -926,6 +927,11 @@ void write_lines_from_qbkix_to_closest_point(DblNumMat qbkix_points,
             dir = Point3(0,0,.25);
         }
         point_vector->SetTuple(qi, dir.array());
+        for (int d=0; d < DIM; d++) {
+         points_vec.push_back(qbkix_point(d));
+         point_directions_vec.push_back(dir(d));
+
+        }
         //vector<long long> point_ids(2,0);
         //point_ids[0] = 2*qi;
         //point_ids[1] = 2*qi+1;
@@ -942,6 +948,10 @@ void write_lines_from_qbkix_to_closest_point(DblNumMat qbkix_points,
     polydata->GetPointData()->SetVectors(point_vector);
     //polydata->SetPolys(lines);
 
+    writer1.add_vector_field("qbkix direction", point_directions_vec, DIM);
+    writer1.write_point_cloud(
+            build_filename(iteration, LINES, file_prefix+"_lean_vtk_"),
+            DIM, points_vec);
  
   // Write the file
   vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
