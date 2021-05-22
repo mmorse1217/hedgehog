@@ -1,23 +1,6 @@
 #include "vtk_writer.hpp"
 #include <sampling.hpp>
 
-#include <vtkVersion.h>
-#include <vtkVersion.h>
-#include <vtkObjectBase.h>
-#include <vtkCellArray.h>
-#include <vtkCellData.h>
-#include <vtkPointData.h>
-#include <vtkDoubleArray.h>
-#include <vtkAppendFilter.h>
-#include <vtkPolyData.h>
-#include <vtkQuad.h>
-#include <vtkAppendFilter.h>
-#include <vtkXMLUnstructuredGridWriter.h>
-#include <vtkUnstructuredGrid.h>
-#include <vtkPoints.h>
-#include <vtkXMLPolyDataWriter.h>
-#include <vtkPolyData.h>
-#include <vtkSmartPointer.h>
 #include "vec3t.hpp"
 #include <lean_vtk.hpp>
 #include "bdry3d/patch_samples.hpp"
@@ -139,836 +122,410 @@ void write_structured_data_to_vtk(vector<Vec> data_vecs,
     }
 }
 
-void write_general_points_to_vtk(Vec points, int degrees_of_freedom, 
-        string filename, Vec values, string file_prefix){
-    
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<double>  values_vec;
+void write_general_points_to_vtk(Vec point_positions, int degrees_of_freedom,
+                                 string filename, Vec point_values,
+                                 string file_prefix) {
 
-    //int num_values = Petsc::get_vec_size(values)/degrees_of_freedom;
-    //int num_points= Petsc::get_vec_size(points)/DIM;
-    int64_t num_values;
-    int64_t num_points;
-    VecGetLocalSize(values, &num_values);
-    VecGetLocalSize(points, &num_points);
-    num_values  /=degrees_of_freedom;
-    num_points/=DIM;
-    cout << num_points << ", " << num_values << endl;
-    assert(num_points == num_values);
-    cout << "getting local vector 1" << endl;
-    DblNumMat points_local = get_local_vector(DIM, num_points, points);
-    cout << "getting local vector 1" << endl;
-    cout << "WRITE GENERAL" << endl;
-    DblNumMat values_local = get_local_vector(degrees_of_freedom, num_values, values);
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<double> values;
 
+  // int num_values = Petsc::get_vec_size(values)/degrees_of_freedom;
+  // int num_points= Petsc::get_vec_size(points)/DIM;
+  int64_t num_values;
+  int64_t num_points;
+  VecGetLocalSize(point_values, &num_values);
+  VecGetLocalSize(point_positions, &num_points);
+  num_values /= degrees_of_freedom;
+  num_points /= DIM;
+  assert(num_points == num_values);
+  DblNumMat points_local = get_local_vector(DIM, num_points, point_positions);
+  DblNumMat values_local =
+      get_local_vector(degrees_of_freedom, num_values, point_values);
 
-    vtkSmartPointer<vtkPoints> vtk_points = vtkSmartPointer<vtkPoints>::New();
-    
-    vtkSmartPointer<vtkDoubleArray> vtk_values= 
-        vtkSmartPointer<vtkDoubleArray>::New();
-
-    vtk_values->SetNumberOfComponents(degrees_of_freedom);
-    vtk_values->SetName("Values");
-    
-
-
-    for(int i =0; i < num_points; i++){
-        Point3 point(points_local.clmdata(i));
-        vtk_points->InsertNextPoint(point.x(), point.y(), point.z());
-
-        vtk_values->InsertNextTuple(values_local.clmdata(i));
-        /*DblNumVec value(degrees_of_freedom, false, values_loca.clmdata(i));
-        for(int d =0; d < degrees_of_freedom; d++){
-            vtk_values->InsertNextValue(value(d));
-        }*/
-        for(int d =0; d < DIM; d++){
-            points_vec.push_back(points_local(d,i));
-        }
-        for(int d =0; d < degrees_of_freedom; d++){
-            values_vec.push_back(values_local(d,i));
-        }
+  for (int i = 0; i < num_points; i++) {
+    for (int d = 0; d < DIM; d++) {
+      points.push_back(points_local(d, i));
     }
-
-
-
-    string file_name = build_filename(0, POINTS, filename+"lean_vtk");
-    cout << "values_vec.size: " << values_vec.size()  <<  endl;
-    cout << "points_vec.size: " << points_vec.size()  <<  endl;
-    if (degrees_of_freedom == 1){
-        writer1.add_scalar_field("Values",values_vec);
-    } else {
-        writer1.add_vector_field("Values",values_vec, degrees_of_freedom);
+    for (int d = 0; d < degrees_of_freedom; d++) {
+      values.push_back(values_local(d, i));
     }
-    writer1.write_point_cloud( file_name, DIM, points_vec);
+  }
 
-    vtkSmartPointer<vtkPolyData> polydata = 
-        vtkSmartPointer<vtkPolyData>::New();
-    polydata->SetPoints(vtk_points);
-
-    polydata->GetPointData()->AddArray(vtk_values);
-    polydata->GetPointData()->SetActiveScalars("Values");
- 
-  // Write the file
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-    vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-  
-  string f = file_prefix + filename;
-  cout << "WRITING TO " << f << endl;
-  writer->SetFileName(f.c_str());
-  writer->SetInputData(polydata);
- 
-  // Optional - set the mode. The default is binary.
-  //writer->SetDataModeToBinary();
-  writer->SetDataModeToAscii();
- 
-  writer->Write();
-
+  string file_name = build_filename(0, POINTS, filename + "lean_vtk");
+  if (degrees_of_freedom == 1) {
+    writer.add_scalar_field("Values", values);
+  } else {
+    writer.add_vector_field("Values", values, degrees_of_freedom);
+  }
+  writer.write_point_cloud(file_name, DIM, points);
 }
 
+void write_qbkix_points_to_vtk(
+    DblNumMat qbkix_points,
+    NumVec<OnSurfacePoint> final_closest_on_surface_points, int iteration,
+    string file_prefix) {
 
-void write_qbkix_points_to_vtk(DblNumMat qbkix_points, 
-        NumVec<OnSurfacePoint> final_closest_on_surface_points, int iteration, string file_prefix){
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<double> qbkix_point_patch_ids;
+  vector<double> relative_patch_ids;
 
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<double>  qbkix_point_patch_ids_vec;
-    vector<double>  relative_patch_ids_vec;
-    vector<int>     triangle_ids_vec;
-    vector<double>  values_vec;
-
-    vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-    
-    
-    vtkSmartPointer<vtkIntArray> qbkix_point_patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    qbkix_point_patch_ids->SetNumberOfComponents(1);
-    qbkix_point_patch_ids->SetName("Patch Id");
-    
-    vtkSmartPointer<vtkIntArray> patch_relative_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_relative_ids->SetNumberOfComponents(1);
-    patch_relative_ids->SetName("Refined relative Patch Id");
-
-        //Point3 qbkix_point(qbkix_points.clmdata(i));
-        //cout << "point i : ";
-    for(int i =0; i < qbkix_points.n(); i++){
-        for (int d =0; d < DIM; d++) {
-            points_vec.push_back(qbkix_points(d,i));
-            //cout << qbkix_points(d,i) << ", ";
-        }
-        //cout << endl;
-        //points_vec.push_back(InsertNextPoint(qbkix_point.x(), qbkix_point.y(), qbkix_point.z());
-        qbkix_point_patch_ids_vec.push_back(final_closest_on_surface_points(i).parent_patch);
-        relative_patch_ids_vec.push_back(i/4);
-
+  for (int i = 0; i < qbkix_points.n(); i++) {
+    for (int d = 0; d < DIM; d++) {
+      points.push_back(qbkix_points(d, i));
     }
+    qbkix_point_patch_ids.push_back(
+        final_closest_on_surface_points(i).parent_patch);
+    relative_patch_ids.push_back(i / 4);
+  }
 
-    writer1.add_scalar_field("Patch Id", qbkix_point_patch_ids_vec);
-    writer1.add_scalar_field("Relative Patch Id", relative_patch_ids_vec);
-    writer1.write_point_cloud(
-            build_filename(iteration, POINTS, file_prefix+"_lean_vtk"),
-            DIM, points_vec);
-
-    for(int i =0; i < qbkix_points.n(); i++){
-        Point3 qbkix_point(qbkix_points.clmdata(i));
-        points->InsertNextPoint(qbkix_point.x(), qbkix_point.y(), qbkix_point.z());
-        qbkix_point_patch_ids->InsertNextValue(final_closest_on_surface_points(i).parent_patch);
-        patch_relative_ids->InsertNextValue(i/4);
-    }
- vtkSmartPointer<vtkPolyData> polydata = 
-    vtkSmartPointer<vtkPolyData>::New();
-  polydata->SetPoints(points);
-
-    polydata->GetPointData()->AddArray(qbkix_point_patch_ids);
-    polydata->GetPointData()->AddArray(patch_relative_ids);
-    polydata->GetPointData()->SetActiveScalars("Patch Id");
- 
-  // Write the file
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-    vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-  
   string file_name = build_filename(iteration, POINTS, file_prefix);
-  
-  writer->SetFileName(file_name.c_str());
-  writer->SetInputData(polydata);
- 
-  // Optional - set the mode. The default is binary.
-  //writer->SetDataModeToBinary();
-  writer->SetDataModeToAscii();
- 
-  writer->Write();
+  writer.add_scalar_field("Patch Id", qbkix_point_patch_ids);
+  writer.add_scalar_field("Relative Patch Id", relative_patch_ids);
+  writer.write_point_cloud(file_name, DIM, points);
 }
 
-void write_triangle_mesh_to_vtk(
-        DblNumMat vertices, IntNumMat faces, int iteration, string file_prefix,
-        vector<int> corresponding_patches, DblNumMat values){
+void write_triangle_mesh_to_vtk(DblNumMat vertices, IntNumMat faces,
+                                int iteration, string file_prefix,
+                                vector<int> corresponding_patches,
+                                DblNumMat point_values) {
 
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<double> patch_ids;
+  vector<double> corr_patch_ids;
+  vector<int> triangle_ids;
+  vector<double> values;
 
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<double>  patch_ids_vec;
-    vector<double>  corr_patch_ids_vec;
-    vector<int>     triangle_ids_vec;
-    vector<double>  values_vec;
+  int num_vertices = vertices.n();
+  int num_faces = faces.n();
+  int values_stride = point_values.m();
+  assert(corresponding_patches.size() == num_faces);
+  assert(num_vertices == point_values.n());
 
-    // list of vtkQuads to view 
-    vtkSmartPointer<vtkCellArray> cellArray =
-        vtkSmartPointer<vtkCellArray>::New();
+  const int num_verts_per_tri = 3;
 
-    // list of vtkPoints to defining triangles
-    vtkSmartPointer<vtkPoints> points =
-        vtkSmartPointer<vtkPoints>::New();
-    int num_vertices = vertices.n();
-    int num_faces = faces.n();
-    int values_stride = values.m();
-    
-    points_vec.reserve(DIM*num_vertices);
-    patch_ids_vec.reserve(num_faces);
-    triangle_ids_vec.reserve(3*num_faces);
-    values_vec.reserve(values_stride*num_faces);
-    corr_patch_ids_vec.reserve(num_faces);
-    assert(vertices.m() == DIM);
-    assert(faces.m() == 3);
+  points.reserve(DIM * num_vertices);
+  patch_ids.reserve(num_faces);
+  triangle_ids.reserve(num_verts_per_tri* num_faces);
+  values.reserve(values_stride * num_faces);
+  corr_patch_ids.reserve(num_faces);
+  assert(vertices.m() == DIM);
+  assert(faces.m() == num_verts_per_tri);
 
-    // 3 x (4*num_patches) double array to contain patch corner locations
-    vtkSmartPointer<vtkDoubleArray> point_position = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_vertices);
+  // 3 x (4*num_patches) double array to contain patch corner locations
 
-    vtkSmartPointer<vtkCellArray> triangle_ids = 
-        vtkSmartPointer<vtkCellArray>::New();
-    
-    vtkSmartPointer<vtkIntArray> patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_ids->SetNumberOfComponents(1);
-    patch_ids->SetName("Triangle Id");
-    
-    vtkSmartPointer<vtkIntArray> corr_patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    corr_patch_ids->SetNumberOfComponents(1);
-    corr_patch_ids->SetName("Patch Id");
-
-    vtkSmartPointer<vtkDoubleArray> values_vtk= 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    values_vtk->SetNumberOfComponents(values.m());
-    values_vtk->SetName("Values");
-
+  for (int i = 0; i < num_vertices; i++) {
+    for (int d = 0; d < DIM; d++) {
+      points.push_back(vertices(d, i));
+    }
+  }
+  if (point_values.n() == num_vertices) {
     for (int i = 0; i < num_vertices; i++) {
-        Point3 vertex_position(vertices.clmdata(i));
-        point_position->SetTuple(i, vertex_position.array());
-        if(values.n() == num_vertices){
-            values_vtk->InsertNextTuple(values.clmdata(i));
-        }
+      for (int d = 0; d < values_stride; d++) {
+        values.push_back(point_values(d, i));
+      }
     }
-    for (int i = 0; i < num_vertices; i++) {
-        for (int d=0; d < DIM; d++) {
-            points_vec.push_back(vertices(d, i));
-        }
+  }
+  for (int f = 0; f < num_faces; f++) {
+    vector<long long> face_ids(num_verts_per_tri);
+
+    for (int d = 0; d < num_verts_per_tri; d++) {
+      face_ids[d] = faces(d, f);
+      triangle_ids.push_back(faces(d, f));
     }
-    if(values.n() == num_vertices){
-        for (int i = 0; i < num_vertices; i++) {
-            for (int d=0; d < values_stride; d++) {
-                values_vec.push_back(values(d,i));
-            }
-        }
-    }
-    for (int f = 0; f < num_faces; f++) {
-        vector<long long> face_ids(3);
-        
-        for (int d = 0; d < 3; d++) {
-            face_ids[d] = faces(d,f);
-            triangle_ids_vec.push_back(faces(d,f));
-        }
+    patch_ids.push_back(f);
+    corr_patch_ids.push_back(corresponding_patches[f]);
+  }
 
-        triangle_ids->InsertNextCell(3, face_ids.data()); 
-        patch_ids->InsertNextValue(f);
-        patch_ids_vec.push_back(f);
-        if(corresponding_patches.size() == num_faces){
-            corr_patch_ids->InsertNextValue(corresponding_patches[f]);
-            corr_patch_ids_vec.push_back(corresponding_patches[f]);
-        }
-        
-    }
-    
-    points->SetData(point_position);
-    //cout << "number of cells... " << cellArray->GetNumberOfCells() << endl;
-    
-    // actual format to save to a file
-    vtkSmartPointer<vtkPolyData> polydata =
-        vtkSmartPointer<vtkPolyData>::New();
-    // insert points + patches
-    polydata->SetPoints(points);
-    polydata->SetPolys(triangle_ids);
-    polydata->GetCellData()->AddArray(patch_ids);
-    if(corresponding_patches.size() == num_faces){
-        polydata->GetCellData()->AddArray(corr_patch_ids);
-        polydata->GetCellData()->SetActiveScalars("Patch Id");
-    }
-    polydata->GetCellData()->SetActiveScalars("Triangle Id");
+  string file_name = build_filename(iteration, TRIANGLES, file_prefix);
 
-    if(values.n() == num_vertices){
-        polydata->GetPointData()->AddArray(values_vtk);
-    }
-    
-    
-    // save
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-        vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-
-    string file_name = build_filename(iteration, TRIANGLES, file_prefix);
-
-    writer->SetFileName(file_name.c_str());
-    writer->SetInputData(polydata);
-
-
-    writer->SetDataModeToAscii();
-    writer->Write();
-
-
-    writer1.add_cell_scalar_field("Triangle Id", patch_ids_vec);
-    writer1.add_cell_scalar_field("Patch Id", corr_patch_ids_vec);
-    writer1.add_field("Values", values_vec, values_stride);
-    writer1.write_surface_mesh(build_filename(iteration, TRIANGLES, file_prefix+"_lean_vtk"),
-            DIM, 3, points_vec, triangle_ids_vec);
-
-
-
+  writer.add_cell_scalar_field("Triangle Id", patch_ids);
+  writer.add_cell_scalar_field("Patch Id", corr_patch_ids);
+  writer.add_field("Values", values, values_stride);
+  writer.write_surface_mesh(file_name, DIM, num_verts_per_tri, points, triangle_ids);
 }
 
+void write_face_map_patches_to_vtk(DblNumMat qbkix_points,
+                                   vector<int> patches_refined_relative_ids,
+                                   PatchSurfFaceMap *face_map, int iteration,
+                                   string file_prefix) {
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<int> quad_ids;
+  vector<double> patch_ids;
+  vector<double> patch_relative_ids;
 
-void write_face_map_patches_to_vtk(DblNumMat qbkix_points, 
-        vector<int> patches_refined_relative_ids,
-        PatchSurfFaceMap* face_map, int iteration, string file_prefix){
-    leanvtk::VTUWriter writer1;
-    vector<double> points_vec;
-    vector<int> quad_ids_vec;
-    vector<double> patch_ids_vec;
-    vector<double> patch_relative_ids_vec;
+  // uv coordinates to evaluate at the patch corners... (counter clockwise
+  // order);
+  vector<Point2> uv_coords;
+  uv_coords.push_back(Point2(0., 0.));
+  uv_coords.push_back(Point2(1., 0.));
+  uv_coords.push_back(Point2(1., 1.));
+  uv_coords.push_back(Point2(0., 1.));
 
+  int num_patches = face_map->patches().size();
+  const int num_verts_per_quad = 4;
 
-    // list of vtkPoints to defining quads 
-    vtkSmartPointer<vtkPoints> points =
-        vtkSmartPointer<vtkPoints>::New();
+  for (int pi = 0; pi < num_patches; pi++) {
 
-    // uv coordinates to evaluate at the patch corners... (counter clockwise
-    // order);
-    vector<Point2> uv_coords;
-    uv_coords.push_back(Point2(0.,0.));
-    uv_coords.push_back(Point2(1.,0.));
-    uv_coords.push_back(Point2(1.,1.));
-    uv_coords.push_back(Point2(0.,1.));
+    FaceMapSubPatch *patch = (FaceMapSubPatch *)face_map->patches()[pi];
 
-    int num_patches = face_map->patches().size();
+    // make a list of point ids defining the patch
+    vector<long long> point_ids(num_verts_per_quad);
+    // evaluate the patch at its corners
+    for (int i = 0; i < uv_coords.size(); i++) {
+      int index = num_verts_per_quad * pi + i;
+      point_ids[i] = index;
+      Point3 position(0.);
+      patch->xy_to_patch_coords(uv_coords[i].array(), PatchSamples::EVAL_VL,
+                                position.array());
 
-    // 3 x (4*num_patches) double array to contain patch corner locations
-    vtkSmartPointer<vtkDoubleArray> point_position = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_patches*4);
-
-    vtkSmartPointer<vtkCellArray> quad_ids = 
-        vtkSmartPointer<vtkCellArray>::New();
-    
-    vtkSmartPointer<vtkIntArray> patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_ids->SetNumberOfComponents(1);
-    patch_ids->SetName("Patch Id");
-
-
-    
-    vtkSmartPointer<vtkIntArray> patch_relative_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_relative_ids->SetNumberOfComponents(1);
-    patch_relative_ids->SetName("Refined relative Patch Id");
-
-    //point_position->SetNumberOfTuples(num_patches);
-    
-    for(int pi = 0; pi <num_patches; pi++){
-
-        FaceMapSubPatch* patch = (FaceMapSubPatch*) face_map->patches()[pi];
-
-        // make a list of point ids defining the patch 
-        vector<long long > point_ids(4);
-        // evaluate the patch at its corners
-        for(int i = 0; i < uv_coords.size(); i++){
-            int index = 4*pi+i;
-            point_ids[i] = index;
-            Point3 position(0.);
-            patch->xy_to_patch_coords(uv_coords[i].array(), 
-                    PatchSamples::EVAL_VL,
-                    position.array());
-            
-            // save the position
-            point_position->SetTuple(index, position.array());
-            for (int d =0; d<DIM; d++) {
-                points_vec.push_back(position(d));
-            }
-        }
-        // save the quad id list
-        quad_ids->InsertNextCell(4, point_ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-        for (int d=0; d<4; d++) {
-            quad_ids_vec.push_back(point_ids[d]);
-        }
-        patch_ids_vec.push_back(pi);
-        patch_relative_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+      // save the position
+      for (int d = 0; d < DIM; d++) {
+        points.push_back(position(d));
+      }
     }
+    // save the quad id list
+    for (int d = 0; d < num_verts_per_quad; d++) {
+      quad_ids.push_back(point_ids[d]);
+    }
+    patch_ids.push_back(pi);
+    patch_relative_ids.push_back(patches_refined_relative_ids.at(pi));
+  }
 
-    writer1.add_cell_scalar_field("Patch Id", patch_ids_vec);
-    writer1.add_cell_scalar_field("Relative Patch Id", patch_ids_vec);
-    writer1.write_surface_mesh(build_filename(iteration, PATCHES, file_prefix+"_lean_vtk"),
-            DIM, 4, points_vec, quad_ids_vec);
-    points->SetData(point_position);
-    
-    // actual format to save to a file
-    vtkSmartPointer<vtkPolyData> polydata =
-        vtkSmartPointer<vtkPolyData>::New();
-    // insert points + patches
-    polydata->SetPoints(points);
-    polydata->SetPolys(quad_ids);
-    //polydata->GetCellData()->SetScalars(patch_ids);
-    polydata->GetCellData()->AddArray(patch_relative_ids);
-    polydata->GetCellData()->AddArray(patch_ids);
-    polydata->GetCellData()->SetActiveScalars("Patch Id");
-    
-    
-    // save
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-        vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-
-    string file_name = build_filename(iteration, PATCHES, file_prefix);
-
-    writer->SetFileName(file_name.c_str());
-    writer->SetInputData(polydata);
-
-
-    writer->SetDataModeToAscii();
-    writer->Write();
-
+  string file_name = build_filename(iteration, PATCHES, file_prefix);
+  writer.add_cell_scalar_field("Patch Id", patch_ids);
+  writer.add_cell_scalar_field("Relative Patch Id", patch_ids);
+  writer.write_surface_mesh(file_name, DIM, num_verts_per_quad, points, quad_ids);
 }
 
-void write_face_map_mesh_to_vtk( 
-        PatchSurfFaceMap* face_map, int iteration,
-        string file_prefix, int num_samples_1d){
+void write_face_map_mesh_to_vtk(PatchSurfFaceMap *face_map, int iteration,
+                                string file_prefix, int num_samples_1d) {
 
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<double>  patch_ids_vec;
-    vector<double>  corr_patch_ids_vec;
-    vector<int>     triangle_ids_vec;
-    vector<double>  values_vec;
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<double> patch_ids;
+  vector<int> triangle_ids;
 
-    //int num_samples_1d = 20;
-    double step = 1./(num_samples_1d-1);
-    const int num_samples= num_samples_1d*num_samples_1d;
-    const int triangles_per_bbox = 2*(num_samples_1d-1)*(num_samples_1d-1);
-    DblNumMat vertices(3, num_samples);
-    Rectangle domain = Sampling::base_domain;
-    IntNumMat faces(3, triangles_per_bbox); //3 x num_faces matrix of positions
-    // list of vtkQuads to view 
-    vtkSmartPointer<vtkCellArray> cellArray =
-        vtkSmartPointer<vtkCellArray>::New();
+  // int num_samples_1d = 20;
+  double step = 1. / (num_samples_1d - 1);
+  const int num_samples = num_samples_1d * num_samples_1d;
+  const int triangles_per_bbox =
+      2 * (num_samples_1d - 1) * (num_samples_1d - 1);
+  const int num_verts_per_tri = 3;
+  DblNumMat vertices(DIM, num_samples);
+  Rectangle domain = Sampling::base_domain;
+  IntNumMat faces(num_verts_per_tri,
+                  triangles_per_bbox); // 3 x num_faces matrix of positions
+  // list of vtkQuads to view
 
-    // list of vtkPoints to defining quads 
-    vtkSmartPointer<vtkPoints> points =
-        vtkSmartPointer<vtkPoints>::New();
+  // uv coordinates to evaluate at the patch corners... (counter clockwise
+  // order);
 
-    // uv coordinates to evaluate at the patch corners... (counter clockwise
-    // order);
+  int num_patches = face_map->patches().size();
 
-    int num_patches = face_map->patches().size();
+  // 3 x (4*num_patches) double array to contain patch corner locations
 
-    // 3 x (4*num_patches) double array to contain patch corner locations
-    vtkSmartPointer<vtkDoubleArray> point_position = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_patches*num_samples);
+  int num_faces = 0;
+  for (int pi = 0; pi < num_patches; pi++) {
 
-    vtkSmartPointer<vtkCellArray> triangles= 
-        vtkSmartPointer<vtkCellArray>::New();
-    
-    vtkSmartPointer<vtkIntArray> patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_ids->SetNumberOfComponents(1);
-    patch_ids->SetName("Patch Id");
+    FaceMapSubPatch *patch = face_map->subpatch(pi);
 
+    // make a list of point ids defining the patch
 
-    /*
-    vtkSmartPointer<vtkIntArray> patch_relative_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_relative_ids->SetNumberOfComponents(1);
-    patch_relative_ids->SetName("Refined relative Patch Id");
-    */
-    //point_position->SetNumberOfTuples(num_patches);
-    
-    int num_faces=0;
-    for(int pi = 0; pi <num_patches; pi++){
-
-        FaceMapSubPatch* patch =face_map->subpatch(pi);
-
-        // make a list of point ids defining the patch 
-
-        patch->mesh_patch(step, domain, vertices, faces);
-        // evaluate the patch at its corners
-        for(int i = 0; i < num_samples; i++){
-            long long index = i + pi*num_samples;
-            Point3 position(vertices.clmdata(i));
-            // save the position
-            point_position->SetTuple(index, position.array());
-            for (int d=0; d < DIM; d++) {
-                points_vec.push_back(position(d));
-            }
-        }
-        for(int i = 0; i < triangles_per_bbox; i++){
-            vector<long long > ids(3,0);
-            for (int d = 0; d < 3; d++) {
-                ids[d] = faces(d,i) + pi*num_samples;
-            }
-            triangles->InsertNextCell(3, ids.data());
-            for (int d = 0; d < 3; d++) {
-                triangle_ids_vec.push_back(ids[d]);
-            }
-        // save the quad id list
-        patch_ids->InsertNextValue(pi);
-        patch_ids_vec.push_back(pi);
-        }
+    patch->mesh_patch(step, domain, vertices, faces);
+    // evaluate the patch at its corners
+    for (int i = 0; i < num_samples; i++) {
+      long long index = i + pi * num_samples;
+      Point3 position(vertices.clmdata(i));
+      // save the position
+      for (int d = 0; d < DIM; d++) {
+        points.push_back(position(d));
+      }
     }
-    points->SetData(point_position);
-    //cout << "number of cells... " << cellArray->GetNumberOfCells() << endl;
-    
-    // actual format to save to a file
-    vtkSmartPointer<vtkPolyData> polydata =
-        vtkSmartPointer<vtkPolyData>::New();
-    // insert points + patches
-    polydata->SetPoints(points);
-    polydata->SetPolys(triangles);
-    //polydata->GetCellData()->SetScalars(patch_ids);
-    polydata->GetCellData()->AddArray(patch_ids);
-    polydata->GetCellData()->SetActiveScalars("Patch Id");
-    
-    
-    // save
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-        vtkSmartPointer<vtkXMLPolyDataWriter>::New();
 
-    string file_name = build_filename(iteration, TRIANGLES, file_prefix);
+    // for each triangle in on a patch ...
+    for (int i = 0; i < triangles_per_bbox; i++) {
+      // for each vertex of  a triangle...
+      for (int d = 0; d < num_verts_per_tri; d++) {
+        int vertex_id = faces(d, i) + pi * num_samples;
+        triangle_ids.push_back(vertex_id);
+      }
+      // save the quad id list
+      patch_ids.push_back(pi);
+    }
+  }
 
-    writer->SetFileName(file_name.c_str());
-    writer->SetInputData(polydata);
-    // TODO verify with dump_vtk_data_for_paraview()
-    writer1.write_surface_mesh(build_filename(iteration, TRIANGLES, file_prefix+"_lean_vtk"),
-            DIM, 3, points_vec, triangle_ids_vec);
+  string file_name = build_filename(iteration, TRIANGLES, file_prefix);
 
-
-    writer->SetDataModeToAscii();
-    writer->Write();
-
+  writer.add_cell_scalar_field("Patch Id", patch_ids);
+  writer.write_surface_mesh(file_name, DIM, num_verts_per_tri, points,
+                            triangle_ids);
 }
-
-
 
 void write_face_map_patch_bounding_boxes_to_vtk(
         vector<int> patches_refined_relative_ids,
         PatchSurfFaceMap* face_map, int iteration, string file_prefix,
         bool inflate){
 
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<int>  quad_ids_vec;
-    vector<double>  patch_ids_vec;
-    vector<double>  relative_patch_ids_vec;
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<int> quad_ids;
+  vector<double> patch_ids;
+  vector<double> relative_patch_ids;
 
-    int num_patches = face_map->patches().size();
-    // list of vtkQuads to view 
-    vtkSmartPointer<vtkCellArray> cellArray =
-        vtkSmartPointer<vtkCellArray>::New();
-    cellArray->SetNumberOfCells(num_patches*6);
+  int num_patches = face_map->patches().size();
+  const int num_vertices_per_bbox = 8;
+  const int num_faces_per_bbox = 6;
+  const int num_vertices_per_face = 4;
+  points.resize(DIM * num_patches * num_vertices_per_bbox);
+  quad_ids.reserve(num_vertices_per_face * num_faces_per_bbox * num_patches);
+  patch_ids.reserve(num_vertices_per_face * num_faces_per_bbox * num_patches);
+  relative_patch_ids.reserve(num_vertices_per_face * num_faces_per_bbox * num_patches);
 
-    // list of vtkPoints to defining quads 
-    vtkSmartPointer<vtkPoints> points =
-        vtkSmartPointer<vtkPoints>::New();
+  // 3 x (4*num_patches) double array to contain patch corner locations
+  cout << "bbox ids: " << endl;
+  for (int pi = 0; pi < num_patches; pi++) {
 
-    // uv coordinates to evaluate at the patch corners... (counter clockwise
-    // order);
-//    vector<Point2> uv_coords;
-//    uv_coords.push_back(Point2(0.,0.));
-//    uv_coords.push_back(Point2(1.,0.));
-//    uv_coords.push_back(Point2(1.,1.));
-//    uv_coords.push_back(Point2(0.,1.));
+    auto patch = face_map->subpatch(pi);
 
-
-    // 3 x (4*num_patches) double array to contain patch corner locations
-    vtkSmartPointer<vtkDoubleArray> point_position = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_patches*8);
-
-    vtkSmartPointer<vtkCellArray> quad_ids = 
-        vtkSmartPointer<vtkCellArray>::New();
-    //quad_ids->SetNumberOfCells(num_patches*6);
-    
-    vtkSmartPointer<vtkIntArray> patch_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_ids->SetNumberOfComponents(1);
-    patch_ids->SetName("Patch Id");
-
-
-    
-    vtkSmartPointer<vtkIntArray> patch_relative_ids= 
-        vtkSmartPointer<vtkIntArray>::New();
-    patch_relative_ids->SetNumberOfComponents(1);
-    patch_relative_ids->SetName("Refined relative Patch Id");
-
-    //point_position->SetNumberOfTuples(num_patches);
-    cout << "bbox ids: "<< endl;
-    points_vec.resize(DIM*num_patches*8);
-    for(int pi = 0; pi <num_patches; pi++){
-
-        auto patch = face_map->subpatch(pi);
-
-        Point3 bbox_min;
-        Point3 bbox_max;
-        if(inflate){
-            patch->inflated_bounding_box(bbox_min, bbox_max);
-        } else {
-            patch->bounding_box(bbox_min, bbox_max);
-
-        }
-
-        int index = DIM*8*pi;
-        vector<Point3> bounding_box_corners = {
-            Point3(bbox_min),
-            Point3(bbox_min(0), bbox_min(1), bbox_max(2)),
-            Point3(bbox_min(0), bbox_max(1), bbox_min(2)),
-            Point3(bbox_max(0), bbox_min(1), bbox_min(2)),
-            Point3(bbox_min(0), bbox_max(1), bbox_max(2)),
-            Point3(bbox_max(0), bbox_min(1), bbox_max(2)),
-            Point3(bbox_max(0), bbox_max(1), bbox_min(2)),
-            Point3(bbox_max)
-        };
-
-        for (int corner=0; corner < 8; corner++) {
-            Point3 bounding_box_corner = bounding_box_corners[corner];
-            for(int d=0; d< DIM; d++){
-                points_vec[index + DIM*corner + d] = bounding_box_corner[d];
-            }
-        }
-
-
-
-        point_position->SetTuple(8*pi, Point3(bbox_min).array());
-        point_position->SetTuple(8*pi+1, Point3(bbox_min(0), bbox_min(1), bbox_max(2)).array());
-        point_position->SetTuple(8*pi+2, Point3(bbox_min(0), bbox_max(1), bbox_min(2)).array());
-        point_position->SetTuple(8*pi+3, Point3(bbox_max(0), bbox_min(1), bbox_min(2)).array());
-        point_position->SetTuple(8*pi+4, Point3(bbox_min(0), bbox_max(1), bbox_max(2)).array());
-        point_position->SetTuple(8*pi+5, Point3(bbox_max(0), bbox_min(1), bbox_max(2)).array());
-        point_position->SetTuple(8*pi+6, Point3(bbox_max(0), bbox_max(1), bbox_min(2)).array());
-        point_position->SetTuple(8*pi+7, Point3(bbox_max).array());
-        
-
-
-        vector<long long> ids(4,0);// = {8*pi, 8*pi+1, 8*pi+5, 8*pi+3};
-        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+5; ids[3] =  8*pi+3;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi; ids[1] = 8*pi+2; ids[2] =  8*pi+6; ids[3] =  8*pi+3;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+4; ids[3] =  8*pi+2;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-        
-        ids[0] = 8*pi+3; ids[1] = 8*pi+6; ids[2] =  8*pi+7; ids[3] =  8*pi+5;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi+1; ids[1] = 8*pi+5; ids[2] =  8*pi+7; ids[3] =  8*pi+4;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi+2; ids[1] = 8*pi+4; ids[2] =  8*pi+7; ids[3] =  8*pi+6;
-        quad_ids->InsertNextCell(4, ids.data());
-        patch_ids->InsertNextValue(pi);
-        patch_relative_ids->InsertNextValue(patches_refined_relative_ids.at(pi));
-
-
-
-
-        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+5; ids[3] =  8*pi+3;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
-
-        ids[0] = 8*pi; ids[1] = 8*pi+2; ids[2] =  8*pi+6; ids[3] =  8*pi+3;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi; ids[1] = 8*pi+1; ids[2] =  8*pi+4; ids[3] =  8*pi+2;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
-        
-        ids[0] = 8*pi+3; ids[1] = 8*pi+6; ids[2] =  8*pi+7; ids[3] =  8*pi+5;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi+1; ids[1] = 8*pi+5; ids[2] =  8*pi+7; ids[3] =  8*pi+4;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
-         
-        ids[0] = 8*pi+2; ids[1] = 8*pi+4; ids[2] =  8*pi+7; ids[3] =  8*pi+6;
-        quad_ids_vec.insert(quad_ids_vec.end(), ids.begin(), ids.end());
-        patch_ids_vec.push_back(pi);
-        relative_patch_ids_vec.push_back(patches_refined_relative_ids.at(pi));
+    Point3 bbox_min;
+    Point3 bbox_max;
+    if (inflate) {
+      patch->inflated_bounding_box(bbox_min, bbox_max);
+    } else {
+      patch->bounding_box(bbox_min, bbox_max);
     }
 
+    int index = DIM * num_vertices_per_bbox * pi;
+    vector<Point3> bounding_box_corners = {
+        Point3(bbox_min),
+        Point3(bbox_min(0), bbox_min(1), bbox_max(2)),
+        Point3(bbox_min(0), bbox_max(1), bbox_min(2)),
+        Point3(bbox_max(0), bbox_min(1), bbox_min(2)),
+        Point3(bbox_min(0), bbox_max(1), bbox_max(2)),
+        Point3(bbox_max(0), bbox_min(1), bbox_max(2)),
+        Point3(bbox_max(0), bbox_max(1), bbox_min(2)),
+        Point3(bbox_max)};
 
-    writer1.add_cell_scalar_field("Patch Id", patch_ids_vec);
-    writer1.add_cell_scalar_field("Relative Patch Id", relative_patch_ids_vec);
-    string file_name1 = build_filename(iteration, BOXES, file_prefix+"_lean_vtk_");
-    writer1.write_surface_mesh(file_name1, DIM, 4, points_vec, quad_ids_vec);
-    points->SetData(point_position);
-    //cout << "number of cells... " << cellArray->GetNumberOfCells() << endl;
-    
-    // actual format to save to a file
-    vtkSmartPointer<vtkPolyData> polydata =
-        vtkSmartPointer<vtkPolyData>::New();
-    // insert points + patches
-    polydata->SetPoints(points);
-    polydata->SetPolys(quad_ids);
-    //polydata->GetCellData()->SetScalars(patch_ids);
-    polydata->GetCellData()->AddArray(patch_relative_ids);
-    polydata->GetCellData()->AddArray(patch_ids);
-    polydata->GetCellData()->SetActiveScalars("Patch Id");
-    
-    
-    // save
-    vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-        vtkSmartPointer<vtkXMLPolyDataWriter>::New();
+    for (int corner = 0; corner < 8; corner++) {
+      Point3 bounding_box_corner = bounding_box_corners[corner];
+      for (int d = 0; d < DIM; d++) {
+        points[index + DIM * corner + d] = bounding_box_corner[d];
+      }
+    }
 
+    vector<long long> ids(4, 0);
+    ids[0] = 8 * pi;
+    ids[1] = 8 * pi + 1;
+    ids[2] = 8 * pi + 5;
+    ids[3] = 8 * pi + 3;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+
+    ids[0] = 8 * pi;
+    ids[1] = 8 * pi + 2;
+    ids[2] = 8 * pi + 6;
+    ids[3] = 8 * pi + 3;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+
+    ids[0] = 8 * pi;
+    ids[1] = 8 * pi + 1;
+    ids[2] = 8 * pi + 4;
+    ids[3] = 8 * pi + 2;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+
+    ids[0] = 8 * pi + 3;
+    ids[1] = 8 * pi + 6;
+    ids[2] = 8 * pi + 7;
+    ids[3] = 8 * pi + 5;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+
+    ids[0] = 8 * pi + 1;
+    ids[1] = 8 * pi + 5;
+    ids[2] = 8 * pi + 7;
+    ids[3] = 8 * pi + 4;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+
+    ids[0] = 8 * pi + 2;
+    ids[1] = 8 * pi + 4;
+    ids[2] = 8 * pi + 7;
+    ids[3] = 8 * pi + 6;
+    quad_ids.insert(quad_ids.end(), ids.begin(), ids.end());
+    patch_ids.push_back(pi);
+    relative_patch_ids.push_back(patches_refined_relative_ids.at(pi));
+    }
+
+    writer.add_cell_scalar_field("Patch Id", patch_ids);
+    writer.add_cell_scalar_field("Relative Patch Id", relative_patch_ids);
     string file_name = build_filename(iteration, BOXES, file_prefix);
-
-    writer->SetFileName(file_name.c_str());
-    writer->SetInputData(polydata);
-
-
-    writer->SetDataModeToAscii();
-    writer->Write();
+    writer.write_surface_mesh(file_name, DIM, 4, points, quad_ids);
 }
 
+void write_lines_from_qbkix_to_closest_point(
+    DblNumMat qbkix_points,
+    NumVec<OnSurfacePoint> final_closest_on_surface_points,
+    PatchSurfFaceMap *face_map, int iteration, string file_prefix) {
 
+  leanvtk::VTUWriter writer;
+  vector<double> points;
+  vector<double> point_directions;
 
-void write_lines_from_qbkix_to_closest_point(DblNumMat qbkix_points, 
-        NumVec<OnSurfacePoint> final_closest_on_surface_points, 
-        PatchSurfFaceMap* face_map, int iteration, string file_prefix){
-    
-    leanvtk::VTUWriter writer1;
-    vector<double>  points_vec;
-    vector<double>  point_directions_vec;
+  int num_qbkix_points = qbkix_points.n();
+  assert(qbkix_points.n() == final_closest_on_surface_points.m());
+  cout << num_qbkix_points << endl;
 
-    int num_qbkix_points = qbkix_points.n();
-    assert(qbkix_points.n() == final_closest_on_surface_points.m());
-    cout << num_qbkix_points << endl;
+  points.reserve(DIM * num_qbkix_points);
+  point_directions.reserve(DIM * num_qbkix_points);
 
-    // list of qbkix + on-surface points
-    vtkSmartPointer<vtkPoints> points =
-        vtkSmartPointer<vtkPoints>::New();
+  int num_patches = face_map->patches().size();
 
-    int num_patches = face_map->patches().size();
+  for (int qi = 0; qi < num_qbkix_points; qi++) {
+    Point3 qbkix_point(qbkix_points.clmdata(qi));
 
-    // 3 x (2*num_qbkix_points) double array to contain qbkix points and
-    // on-surface points
-    vtkSmartPointer<vtkDoubleArray> point_position = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_position->SetNumberOfComponents(3);
-    point_position->SetNumberOfTuples(num_qbkix_points);
+    // get the patch containing the closest on-surface point to the qbkix
+    // point
+    OnSurfacePoint on_surface_point = final_closest_on_surface_points(qi);
 
-    vtkSmartPointer<vtkDoubleArray> point_vector = 
-        vtkSmartPointer<vtkDoubleArray>::New();
-    point_vector->SetNumberOfComponents(3);
-    point_vector->SetNumberOfTuples(num_qbkix_points);
-    point_vector->SetName("qbkix direction");
-    for(int qi = 0; qi <num_qbkix_points; qi++){
-        // insert qbkix point location
-        Point3 qbkix_point(qbkix_points.clmdata(qi)); 
-        point_position->SetTuple(qi, qbkix_point.array());
+    int patch_conataining_closest_point = on_surface_point.parent_patch;
+    Point3 dir;
+    if (patch_conataining_closest_point > -1) {
+      FaceMapSubPatch *patch =
+          (FaceMapSubPatch *)face_map->patches()[on_surface_point.parent_patch];
 
-        // get the patch containing the closest on-surface point to the qbkix
-        // point
-        OnSurfacePoint on_surface_point = final_closest_on_surface_points(qi);
-        //cout << "patch conataining closest point: " << on_surface_point.parent_patch << endl;
-        int patch_conataining_closest_point = on_surface_point.parent_patch;
-        Point3 dir;
-        if(patch_conataining_closest_point > -1){
-            FaceMapSubPatch* patch = (FaceMapSubPatch*) face_map->patches()[on_surface_point.parent_patch];
+      // compute the position of closest on_surface_point
+      Point3 on_surface_point_position(0.);
+      patch->xy_to_patch_coords(on_surface_point.parametric_coordinates.array(),
+                                PatchSamples::EVAL_VL,
+                                on_surface_point_position.array());
 
-            // compute the position of closest on_surface_point
-            Point3 on_surface_point_position(0.);
-            patch->xy_to_patch_coords(on_surface_point.parametric_coordinates.array(), 
-                    PatchSamples::EVAL_VL,
-                    on_surface_point_position.array());
-            //cout << "qi: " << qi << ", " << on_surface_point_position << endl;
-            // insert closest on_surface_point_position
-            dir = on_surface_point_position - qbkix_point;
-        } else {
-            dir = Point3(0,0,.25);
-        }
-        point_vector->SetTuple(qi, dir.array());
-        for (int d=0; d < DIM; d++) {
-         points_vec.push_back(qbkix_point(d));
-         point_directions_vec.push_back(dir(d));
-
-        }
-        //vector<long long> point_ids(2,0);
-        //point_ids[0] = 2*qi;
-        //point_ids[1] = 2*qi+1;
-        // save point ids defining the line
-        //lines->InsertNextCell(2, point_ids.data());
+      // compute direction to closest on_surface_point_position
+      dir = on_surface_point_position - qbkix_point;
+    } else {
+      dir = Point3(0, 0, .25);
     }
-    points->SetData(point_position);
-    
-    // actual format to save to a file
-    vtkSmartPointer<vtkPolyData> polydata =
-        vtkSmartPointer<vtkPolyData>::New();
-    // insert points + patches
-    polydata->SetPoints(points);
-    polydata->GetPointData()->SetVectors(point_vector);
-    //polydata->SetPolys(lines);
 
-    writer1.add_vector_field("qbkix direction", point_directions_vec, DIM);
-    writer1.write_point_cloud(
-            build_filename(iteration, LINES, file_prefix+"_lean_vtk_"),
-            DIM, points_vec);
- 
-  // Write the file
-  vtkSmartPointer<vtkXMLPolyDataWriter> writer =  
-    vtkSmartPointer<vtkXMLPolyDataWriter>::New();
-  
+    for (int d = 0; d < DIM; d++) {
+      points.push_back(qbkix_point(d));
+      point_directions.push_back(dir(d));
+    }
+  }
+
   string file_name = build_filename(iteration, LINES, file_prefix);
-  
-  writer->SetFileName(file_name.c_str());
-  writer->SetInputData(polydata);
- 
-  // Optional - set the mode. The default is binary.
-  //writer->SetDataModeToBinary();
-  writer->SetDataModeToAscii();
- 
-  writer->Write();
 
+  writer.add_vector_field("qbkix direction", point_directions, DIM);
+  writer.write_point_cloud(file_name, DIM, points);
 }
-
 
 END_EBI_NAMESPACE
