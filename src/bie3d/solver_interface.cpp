@@ -19,13 +19,6 @@ SolverInterface::~SolverInterface()
   if(_patch_samples!=NULL) delete _patch_samples;
   if(_refined_patch_samples!=NULL) delete _refined_patch_samples;
 }
-/*void SolverInterface::setFromOptions()
-{
-  ebiFunctionBegin;
-  
-  ebiFunctionReturn(0);
-}*/
-
 
 
 void SolutionDensity::localSize(int& la, int& lb, int& lm)

@@ -30,14 +30,7 @@ class EvaluatorQBKIXAverage: public EvaluatorQBKIX{
             interpolation_directions,
             target_far_field,
             target_interpolant_spacing){;}
-    /*~EvaluatorQBKIXAverage(){
-        if(_interior_interpolation_points)
-            delete _interior_interpolation_points;
-        if(_exterior_interpolation_points)
-            delete _exterior_interpolation_points;
-    }*/
-
-    int setup();
+        int setup();
     int eval(Vec density, Vec potential);
     int eval_2(Vec density, Vec potential);
     Vec construct_check_points();

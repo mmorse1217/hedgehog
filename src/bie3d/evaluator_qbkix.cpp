@@ -76,7 +76,6 @@ Vec EvaluatorQBKIX::compute_refined_density(Vec density){
 
 
         Vec extra_scaled_density;
-        //VecView(refined_density, PETSC_VIEWER_STDOUT_SELF);
         VecDuplicate(refined_density, &extra_scaled_density);
 
         denscale(source_dof(), 
@@ -194,7 +193,6 @@ double extrapolation_eval_point_blendsurf(double distance_to_closest_sample, dou
 }
 double extrapolation_eval_point_qbkix(double distance_to_target, double h){
     return -1.;
-    //return -distance_to_target/h;
 }
 int EvaluatorQBKIX::eval(Vec density, Vec potential){
     double matvec_start = omp_get_wtime();
@@ -327,7 +325,7 @@ void EvaluatorQBKIX::lagrange_extrapolation(DblNumMat target_3d_position,
         DblNumVec ith_final_potential(target_dof(), false, final_potential.clmdata(i));
         DblNumMat current_target_interpolation_point_potential
             (target_dof(), L, false, interpolation_point_potential_local.clmdata(L*i));
-        //eval_points(i) = eval_point(distance_to_closest_sample, h);
+    
         evaluate_lagrange_interpolant(
                 interpolation_nodes, 
                 current_target_interpolation_point_potential, 
@@ -374,15 +372,11 @@ void evaluate_lagrange_interpolant(
         compute_interpolation_weights(L,
                 &(interpolation_nodes[0]),
                 eval_point,
-                //-(h - distance_to_closest_sample)/h, // MJM TODO CHECK FOR BUG
-                //0,
                 interpolation_weights.data());
-        //cout << interpolation_weights << endl;   
         for(int ll = 0; ll < L; ll++){
             for(int d = 0; d < target_dof; d++){
                 final_potential(d) += interpolation_weights(ll) *
                     interpolation_point_potential_local(d, ll);
-                        //current_target_interpolation_point_potential(d,ll);
             }
         }
 }
@@ -409,14 +403,7 @@ void lagrange_extrapolation_bary(DblNumMat target_3d_position,
     int num_local_targets = target_3d_position.n();
     DblNumVec eval_points(num_local_targets);
     int L = interpolation_nodes.size();
-/*
-    cout << num_local_targets << ", " << node_spacing.n() << endl;
-    cout << num_local_targets << ", " << expansion_distance_to_boundary.n() << endl;
-    cout << num_local_targets << ", " << closest_sample_3d_position.n() << endl;
-    cout << num_local_targets*L << ", " << interpolation_point_potential_local.n() << endl;
-    cout << target_dof << ", " << final_potential.m() << endl;
-    cout << target_dof << ", " << interpolation_point_potential_local.m() << endl;
-*/
+
 
     assert(num_local_targets == node_spacing.n());
     assert(num_local_targets == expansion_distance_to_boundary.n());

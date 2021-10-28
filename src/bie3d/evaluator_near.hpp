@@ -112,7 +112,6 @@ class EvaluatorNear: public Evaluator
             _refined_patch_samples = patch_samples;
         }
         //accessors:
-        // DZ ideally & should be eliminated, and these set at the setup time
         Vec& target_3d_position() {               return _target_3d_position; } 
         Vec& target_in_out() {                    return _target_in_out; }
         Vec& closest_sample_3d_position() {       return _closest_sample_3d_position; }
@@ -122,12 +121,6 @@ class EvaluatorNear: public Evaluator
         vector<double>& interpolation_nodes() {
             return _interpolation_nodes;
         }
-/*
-    Vec interpolate_density_near(Vec intermediate_targets,
-            Vec closest_surface_targets, Vec near_targets, 
-            Vec intermediate_potentials, Vec closest_points_surface_potentials,
-            Vec den);
-            */
         void set_fmm_init(bool b){
             _fmm_initialize = b;
         }

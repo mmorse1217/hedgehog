@@ -14,7 +14,6 @@ class EvaluatorOnSurface: public Evaluator
 
   class UnitVectorDensities { //cstmdfy data
   protected:
-    // DZ  rename _data, consider adding operator[] instead of accessor
 	 vector<Vec> _untvec;
   public:
 	 UnitVectorDensities() {;}

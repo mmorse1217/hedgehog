@@ -32,11 +32,6 @@ SolverGMRESDoubleLayer::SolverGMRESDoubleLayer(const string& n, const string& p)
       _compute_refined_surface(true),
       _nits(0)  {
 
-    //int eqn_opt;
-
-    //PetscBool flag;
-    //PetscInt tmp;
-    //PetscOptionsGetInt(NULL, "", "-kt", &tmp,  &flag);
     int eqn_opt = Options::get_int_from_petsc_opts("-kt");
 
     // Form enums to construct particular kernel
@@ -114,9 +109,9 @@ int SolverGMRESDoubleLayer::setFromOptions(){
   _patch_partition = vector<int>(_bdry->num_patches(), mpiRank());
   _dom = Options::get_int_from_petsc_opts("-dom"); 
 
-    // specify which matvec to use inside GMRES
-    //solver->set_evaluation_type(eval_type); 
-    //solver->_compute_refined_surface = compute_refined_surface;
+  // specify which matvec to use inside GMRES
+  //solver->set_evaluation_type(eval_type); 
+  //solver->_compute_refined_surface = compute_refined_surface;
 
 }
 // ---------------------------------------------------------------------- 
@@ -133,11 +128,6 @@ int SolverGMRESDoubleLayer::setup()
   // all surfaces have orientation == -1.
   
   vector<int>& boundary_orientation = this->bdry()->boundary_orientation();
-  /*vector<int> boundary_orientation;
-  boundary_orientation.reserve(_bdry->num_patches());
-  for(auto p : _bdry){
-      boundary_orientation.push_back(p->_orientation);
-  }*/
   if(this->dom()==DOM_BND) { //verify dom and bdry match
 	 ebiAssert(boundary_orientation[0]==1);
      
@@ -172,7 +162,7 @@ int SolverGMRESDoubleLayer::setup()
   cout << "equation type: " << (int) _equation_type << endl;
 
   
-  // Access kernel dependent degrees of freedom
+  // Access kernel dependent degrees of freedom 
   // Source degree of freedom
   //int sdof = single_layer_kernel.get_sdof();
 
@@ -215,10 +205,7 @@ int SolverGMRESDoubleLayer::setup()
 
       refined_face_map->_surface_type = coarse_face_map->_surface_type;
       refined_face_map->setup_from_existing_face_map(coarse_face_map);
-      //refined_face_map->initialize_with_existing_p4est(coarse_face_map->_p4est);
-      //refined_face_map->_quadrature_weights = coarse_face_map->_quadrature_weights;
-      //refined_face_map->setFromOptions();
-      //refined_face_map->setup();
+      
       string upsampling_type = Options::get_string_from_petsc_opts("-upsampling_type");
       if(upsampling_type == "uniform"){
           int num_levels_upsampling = Options::get_int_from_petsc_opts("-uniform_upsampling_num_levels");
@@ -228,25 +215,6 @@ int SolverGMRESDoubleLayer::setup()
           refine_patches_for_fixed_qbkix_points(refined_face_map->_p4est, refined_face_map);
           refined_face_map->patches() = p4est_to_face_map_subpatches(refined_face_map->_p4est, refined_face_map);
       }
-      //write_face_map_patches_to_vtk(DblNumMat(0,0), vector<int>(refined_face_map->num_patches(),0), refined_face_map, 10, "_upsampled_");
-      /*vector<int> pids;
-      for(int i =0; i < refined_face_map->num_patches(); i++)
-          pids.push_back(i);
-      stats.add_result("num upsampled_patches", refined_face_map->num_patches());
-      */
-        /*
-        // Refine until points are inside
-        p4est_connectivity_t* connectivity = build_connectivity_from_face_map(refined_face_map);
-        p4est_t* p4est = p4est_new(MPI_COMM_WORLD, connectivity, sizeof(RefinementData<FaceMapPatch>), NULL, NULL);
-
-
-        refine_patches_for_fixed_qbkix_points(p4est, refined_face_map);
-        //refine_patches_uniform(2, p4est, refined_face_map);
-        
-        vector<Patch*> subpatches = p4est_to_face_map_subpatches(p4est, refined_face_map);
-        refined_face_map->patches() = subpatches;
-
-        */
         _refined_surface = refined_face_map; 
         this->_refined_patch_samples = new PatchSamples("", "");
         refined_patch_samples = this->_refined_patch_samples;
@@ -254,15 +222,11 @@ int SolverGMRESDoubleLayer::setup()
         refined_patch_samples->bdry()            = _refined_surface;
         vector<int> refined_patch_partition(refined_face_map->patches().size(),this->mpiRank());
         refined_patch_samples->patch_partition() = refined_patch_partition;
-        //refined_patch_samples->patch_partition() = this->patch_partition();
+        
 
         refined_patch_samples->setup(); //refined=true for setup
 
   } else {
-
-      // DZ the LL here is used in PatchSamples interpolate_data for density interpolation
-      // the same LL is used for near evaluation interpolation -- these two
-      // should be separate
 
       this->_refined_patch_samples = new PatchSamples("", "");
       refined_patch_samples = this->_refined_patch_samples;
@@ -400,8 +364,7 @@ int SolverGMRESDoubleLayer::setup()
       VecScale(_interpolation_directions, minus_one);
 
       double one = 1.;
-      //VecSet(_target_in_out, 3*one);
-    VecSet(_target_in_out, 4);
+      VecSet(_target_in_out, 4);
 
       Vec on_surface_samples = patch_samples->sample_point_3d_position();
       Vec on_surface_face_points = patch_samples->sample_as_face_point();
@@ -592,7 +555,7 @@ int SolverGMRESDoubleLayer::setup()
          for(int ui=0; ui<local_num_sample_points; ui++) {
 
              PatchSamples::Tag* tag = (PatchSamples::Tag*)(iarr+ui);
-             // DZ RENAME component_id
+             // RENAME component_id
              int cid = int(tag->_gid);
 
              if(cid>=bnd_domain_offset) { //good
@@ -621,7 +584,6 @@ int SolverGMRESDoubleLayer::setup()
                  // this is 3x3 cross-product matrix only used for
                  // vector kernels which have the additional constraint
                  // in eqs 7 and 9
-                 //ebiAssert(tdof==3 && rdof==3); // <--This might be redundant
                  DblNumMat cross_prod_matrix = 
                      Kernel3d::get_cross_product_matrix(current_pole_position, 
                              current_sample_point_3d_position);
@@ -644,7 +606,6 @@ int SolverGMRESDoubleLayer::setup()
      }
      // (constraint_matrix^T*pole_matrix)^{-1}
 
-     // DZ RENAME ictb  precond_Schur_complement_inverse
      MatCreateDense(this->mpiComm(), 
              local_pole_total_dofs, 
              local_pole_total_dofs, 
@@ -700,7 +661,6 @@ int SolverGMRESDoubleLayer::setup()
 		  //Compute LU Factorization of precond_schur_complement_inverse 
           //(L + U stored in precond_schur_complement_inverse on termination)
 		  DGETRF(&gbblas, &gbblas, precond_ptr, &gbblas, ipiv, &info);
-		  //ebiAssert(info==0); //MJM: FIXME
           
 		  PetscBLASInt lwork = global_pole_total_dofs;
 		  double* work = new double[lwork];
@@ -710,11 +670,10 @@ int SolverGMRESDoubleLayer::setup()
 		  DGETRI(&gbblas, precond_ptr, &gbblas, ipiv, work, &lwork, &info);
 
           cout << "info: " << info << endl;
-	  // DZ check -- (_constraint_matrix^T*_pole_matrix)^{-1} or as below? compare to the
+	  // check -- (_constraint_matrix^T*_pole_matrix)^{-1} or as below? compare to the
           // Greengard et al paper
           // In summary precond_schur_complement_inverse = 
           // (_pole_matrix^T*_constraint_matrix)^{-1} upon completion of set up
-		  // ebiAssert(info==0);//MJM: FIXME
           
 		  delete [] ipiv;
 		  delete [] work;
@@ -1085,7 +1044,6 @@ void SolverGMRESDoubleLayer::evaluate(Vec target_points,
     VecDuplicate( target_in_out, &target_interpolant_spacing);
     cout << "created vecs" << endl;
 
-    // set qbkix related junk TODO remove these
     VecSet(target_far_field, Options::get_double_from_petsc_opts("-boundary_distance_ratio"));
     VecSet(target_interpolant_spacing, Options::get_double_from_petsc_opts("-interpolation_spacing_ratio"));
     VecSet(interpolation_directions, 0.);
@@ -1524,16 +1482,7 @@ int SolverGMRESDoubleLayer::neaeval(Vec near_targets,  // targets in Omega_2
   near_evaluator->set_refined_surface_discretization(this->refined_patch_samples());
   
   
-  // MJM TODO figure what this does...
   int64_t near_interpolation_num_samples = (int64_t)(ceil((1.0/this->patch_samples()->spacing()))); 
-  /*
-  if (near_interpolation_num_samples > 8) {
-      near_interpolation_num_samples = this->surface_interpolation_num_samples();
-  }
-  */
-
-  //MJM TODO make sure this is ok to do
-  //near_evaluator->interpolation_nodes() = get_interpolation_nodes();
 
   SolutionDensity solution(*_reference_solution);
   solution.set_petsc_vec(density);
@@ -1800,9 +1749,6 @@ Vec greens_identity(
     Vec sample_point_3d_position = solver->patch_samples()->sample_point_3d_position();
     Vec sample_point_normal = solver->patch_samples()->sample_point_normal();
     
-    // Kress says green's identity holds for interior faces normals
-    //VecScale(sample_point_normal, -1);
-    
     //Vec boundary_data;
     int num_local_samples = num_local_points(sample_point_3d_position);
     int target_dof = problem_kernel.get_tdof();
@@ -1817,23 +1763,19 @@ Vec greens_identity(
             solver->mpiComm(),
             problem_kernel,
             singularity_location,
-            //singularity_normals,
             singularity_strength,
             sample_point_3d_position,
             sample_point_normal);
 
     cout << "evaluated u(x)" << endl;
-    //VecView(potential, PETSC_VIEWER_STDOUT_SELF);
     Vec potential_dn = Test::compute_neumann_boundary_data(
             solver->mpiComm(),
             problem_kernel,
             singularity_location,
-            //singularity_normals,
             singularity_strength,
             sample_point_3d_position,
             sample_point_normal);
     cout << "evaluated du/dn(x)" << endl;
-    //VecView(potential_dn, PETSC_VIEWER_STDOUT_SELF);
     
     Vec solution = greens_identity(comm, potential, potential_dn, target_points, solver);
     Petsc::destroy_vec(potential);
@@ -1857,9 +1799,7 @@ Vec greens_identity(
                 dynamic_cast<PatchSurfFaceMap*>(solver->bdry()),false);
     target_points_local.restore_local_vector();
     cout << "marked target points"  << endl;
-    /*for(int i = 0; i < on_surface_points_targets.m(); i++){
-        cout << on_surface_points_targets(i).region << endl;
-    }*/
+   
     return greens_identity(comm, dirichlet_data, neumann_data, 
             on_surface_points_targets, target_points, solver);
 }
@@ -1995,7 +1935,7 @@ void SolverGMRESDoubleLayer::populate_qbx_data(const NumVec<OnSurfacePoint> on_s
         patch->xy_to_patch_coords(p.parametric_coordinates.array(), 
                 PatchSamples::EVAL_VL|PatchSamples::EVAL_FD, 
                 (double*)positions_and_derivs);
-        //closest_on_surface_point.array());
+    
         Point3 interior_normal = -cross(positions_and_derivs[1], positions_and_derivs[2]).dir(); // interior normal!! note minus sign
         for(int d =0; d< DIM; d++){
             closest_on_surface_points_3d_position_local(d,i) = positions_and_derivs[0](d);

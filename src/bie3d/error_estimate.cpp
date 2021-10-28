@@ -75,10 +75,8 @@ Point2 compute_principal_curvature_direction(OnSurfacePoint on_surface_point,
     // TODO  compute eigenvectors of shape operator (analytically)
     if(curvature_direction == ErrorEstimate::CurvatureDirection::FIRST){
         return Point2(1.,0.);
-        //return Point2(.5,.5);
     } else {
         return Point2(0.,1.);
-        //return Point2(-.5,-.5);
     }
 }
 
@@ -361,9 +359,6 @@ double evaluate_error_estimate_expression_legacy(double curve_derivative,
 }
 
 
-//double ErrorEstimate::evaluate_error_estimate( FaceMapSubPatch* patch, Point3 target, 
-//        OnSurfacePoint closest_point, int quadrature_order, 
-//       DblNumMat uv_values, DblNumMat density_values){
 double ErrorEstimate::evaluate_near_zone_distance( FaceMapSubPatch* patch){
     OnSurfacePoint closest_point(patch->V(), DBL_MAX, Point2(.5, .5), UNMARKED,  0);
     closest_point.inside_domain = INSIDE;

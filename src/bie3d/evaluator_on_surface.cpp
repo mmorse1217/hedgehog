@@ -38,15 +38,12 @@ int EvaluatorOnSurface::setFromOptions()
 // kernel (i.e. is it hypersingular). Only occurs in the case of Stokes
 // pressure evaluation. 
 //
-// TODO move to Kernel3d class
 #undef __FUNCT__
 #define __FUNCT__ "EvaluatorOnSurface::use_singularity_cancellation"
 
 bool EvaluatorOnSurface::use_singularity_cancellation(Kernel3d& knl){
 
     // Only use singularity cancellation for Stokes pressure.
-    // MJM TODO make sure that newknl is unused, then make this function return
-    // this value. 
     return knl.kernelType() == KNL_STK_D_P;
 }
 
@@ -234,16 +231,6 @@ int EvaluatorOnSurface::eval(Vec density, Vec val)
 int EvaluatorOnSurface::singular_evaluation(Vec den, Vec val)
 {
   ebiFunctionBegin;
-  vector<int> bad_idx = {68245};
- /*{ 
-      DblNumVec tmp(val);
-      for(int i =0; i < tmp.m(); i++){
-          if(i ==68245){
-              cout << "bad value (near singular in fmm):" << tmp(i) << "; idx:  " << i << endl;
-              bad_idx.push_back(i);
-          }
-      }
-  }*/
   
   // Overlapping patch representation
   PatchSamples* patch_samples = this->_patch_samples;
@@ -294,10 +281,6 @@ int EvaluatorOnSurface::singular_evaluation(Vec den, Vec val)
 
   double start = omp_get_wtime(); 
   iC( patch_samples->refine_data(source_dof, _refinement_factor, dat, _refined_datvec));
-  /*patch_samples->refine_data(3, _refinement_factor,
-          patch_samples->sample_point_3d_position(), _refined_positions);
-  patch_samples->refine_data(3, _refinement_factor, 
-          patch_samples->sample_point_normal(), _refined_normals);*/
   stats.result_plus_equals("total fft upsample time", omp_get_wtime() - start );
   _dat = dat;
   cout << "prep " << endl;
@@ -387,32 +370,7 @@ int EvaluatorOnSurface::singular_evaluation(Vec den, Vec val)
   }
   cout << "sub " << endl;
   cout << "innaccurate local part" << endl;
-/*{ 
-      DblNumVec tmp(density_at_collocs);
-      for(auto const& idx : bad_idx){
-          cout << "direct computation of bad value: " << tmp(idx) << "; idx:  " << idx << endl;
-      }
-      Vec tmptmp;
-      VecDuplicate(density_at_collocs, &tmptmp);
-      VecCopy(density_at_collocs, tmptmp);
-  iC( VecScatterBegin(colloc_data->colloc_to_target_value_scatter(),
-                      density_at_collocs,
-                      tmptmp,
-                      ADD_VALUES,
-                      SCATTER_FORWARD) );
 
-  iC( VecScatterEnd(colloc_data->colloc_to_target_value_scatter(),
-                    density_at_collocs,
-                    tmptmp,
-                    ADD_VALUES,
-                    SCATTER_FORWARD) );
-    DblNumVec tmptmptmp(tmptmp);
-      for(auto const& idx : bad_idx){
-          cout << "inaccurate subtraction: " << tmptmptmp(idx) << "; idx:  " << idx << endl;
-      }
-      VecDestroy(&tmptmp);
-
-  } */
 stats.result_plus_equals("total inaccurate subtract time", omp_get_wtime() - start );
   start = omp_get_wtime();
 
@@ -422,7 +380,6 @@ stats.result_plus_equals("total inaccurate subtract time", omp_get_wtime() - sta
   // add_singular_quadrature_part, and the integral is added rather than subtracted 
  Kernel3d true_kernel(this->knl().kernelType(),this->knl().coefs(), 0.);
   for(int pi=0; pi<bd->patches().size(); pi++) {
-	 //if(prtn[pi]==mpiRank()) {
 		//-----------------
 		Patch* patch = bd->patches()[pi];
 
@@ -489,38 +446,12 @@ stats.result_plus_equals("total inaccurate subtract time", omp_get_wtime() - sta
 			 iC( dgemv( 1.0, addmat, tmpdat, 1.0, curval) );
 		  }
 		}
-		//}
   }
   stats.result_plus_equals("total polar quad time", omp_get_wtime() - start );
  
   iC( VecDestroy(&dat) );
   _dat = NULL;
-/*{ 
-      DblNumVec tmp(density_at_collocs);
-      for(auto const& idx : bad_idx){
-          cout << "singular quad: " << tmp(idx) << "; idx:  " << idx << endl;
-      }
-      Vec tmptmp;
-      VecDuplicate(density_at_collocs, &tmptmp);
-      VecCopy(density_at_collocs, tmptmp);
-  iC( VecScatterBegin(colloc_data->colloc_to_target_value_scatter(),
-                      density_at_collocs,
-                      tmptmp,
-                      ADD_VALUES,
-                      SCATTER_FORWARD) );
 
-  iC( VecScatterEnd(colloc_data->colloc_to_target_value_scatter(),
-                    density_at_collocs,
-                    tmptmp,
-                    ADD_VALUES,
-                    SCATTER_FORWARD) );
-    DblNumVec tmptmptmp(tmptmp);
-      for(auto const& idx : bad_idx){
-          cout << "inaccurate subtraction + singular quad: " << tmptmptmp(idx) << "; idx:  " << idx << endl;
-      }
-      VecDestroy(&tmptmp);
-
-  }*/
   iC( VecScatterBegin(colloc_data->colloc_to_target_value_scatter(),
                       density_at_collocs,
                       density_at_targets,
@@ -546,16 +477,7 @@ stats.result_plus_equals("total inaccurate subtract time", omp_get_wtime() - sta
 
   // add discretization of (18) + (19)second part to the first part of (19) 
   iC( VecAXPY( val, one,  density_at_targets) );
-  /*
-{ 
-      DblNumVec tmp(val);
-      for(auto const& idx : bad_idx){
-          cout << "singular quad: " << tmp(idx) << "; idx:  " << idx << endl;
-      }
-  }*/
   iC( VecDestroy(&density_at_collocs) );
-  //VecDuplicate(density_at_targets, &_density_at_targets);
-  //VecCopy(density_at_targets, _density_at_targets);
   iC( VecDestroy(&density_at_targets) );
   
   ebiFunctionReturn(0);
@@ -597,7 +519,6 @@ int EvaluatorOnSurface::apply_singularity_cancellation(Vec den, Vec val)
                  PETSC_DETERMINE, &density_at_targets) );
      iC( VecSet( density_at_targets, zero) );
 
-	 //1. obtain density	 //prep vector<Vec> csts;  csts.resize(1, NULL);  csts[0] = patch_samples->sample_point_blend_func_value();
 	 Vec dat;
      VecDuplicate(den,&dat); 
      denscale(source_dof, patch_samples->sample_point_blend_func_value(), den, dat);
@@ -862,13 +783,7 @@ int EvaluatorOnSurface::add_singular_quadrature_part(int pi, int source_dof, dou
                 polar_quad_point, 
                 PatchSamples::EVAL_VL | PatchSamples::EVAL_FD,
                 (double*)point_position_and_derivs) ;
-        /*
-patch_samples->interpolate_data(pi, polar_quad_point,  dnref,  LL ,
-        PatchSamples::EVAL_VL, _refined_positions, point_position_and_derivs[0]);
-patch_samples->interpolate_data(pi, polar_quad_point,  dnref,  LL ,
-        PatchSamples::EVAL_VL, _refined_normals, point_position_and_derivs[1]);
-        //Point3 cn = point_position_and_derivs[1];
-        */
+        
         Point3 cp = point_position_and_derivs[0]; // positions
         Point3 cn = cross(point_position_and_derivs[1],
                 point_position_and_derivs[2]); // n = tangent1 x tangent2 	 
@@ -905,8 +820,6 @@ double EvaluatorOnSurface::eta(double t)
 {  
     double res[3];
 
-    // MJM TODO factor this function out into a function on PatchSurf
-    // MJM TODO REMOVE!!!!!!!!!!!
     double eps = 1e-7;
     double a;  
     pou1d(PatchSamples::EVAL_VL, t, eps, 1.0-eps, res, 

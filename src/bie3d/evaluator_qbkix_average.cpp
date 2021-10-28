@@ -9,10 +9,8 @@ BEGIN_EBI_NAMESPACE
 
 
 int EvaluatorQBKIXAverage::setup(){
-    // Use the same setup() as regular extrapolation, just use tro sided
+    // Use the same setup() as regular extrapolation, just use two sided
     // extrapolation
-    //_expansion_type = EXTRAPOLATE_TWO_SIDE;
-    //EvaluatorQBKIX::setup(); 
     //-----------------------------------------------------------------------
     // compute interpolation points in intermediate zone
     _expansion_type = EXTRAPOLATE_TWO_SIDE;
@@ -49,11 +47,6 @@ int EvaluatorQBKIXAverage::setup(){
     stats.add_result("num. matvecs", 0.);
     stats.add_result("total density interp time", 0.);
     stats.add_result("total fmm time", 0.);
-    /*
-    auto fm = dynamic_cast<PatchSurfFaceMap*>(_patch_samples->bdry());
-    write_face_map_patches_to_vtk(DblNumMat(0,0), 
-        vector<int>(fm->num_patches(), 0),
-        fm, -1, "output/surface_"+to_string(this->mpiRank())+"_");*/
     return 0;
     //-----------------------------------------------------------------------
 }
@@ -78,15 +71,6 @@ Vec EvaluatorQBKIXAverage::construct_check_points(){
 
     int n = Petsc::get_vec_local_size(_interior_interpolation_points)/3;
     
-
-
-        /*generate_auxiliary_interpolation_points(_target_3d_position,
-                _closest_sample_3d_position, 
-                this->knl(),
-                _expansion_type, 
-                _interpolation_directions,
-                _refined_patch_samples->sample_point_far_field(),
-                _refined_patch_samples->sample_point_interpolant_spacing());*/
     
     // flip interpolation directions and  generate exterior check points
     VecScale(_interpolation_directions, -1.);
@@ -125,17 +109,10 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
     int num_check_points_one_side = num_check_points/2;
     int num_targets = Petsc::get_vec_local_size(potential)/target_dof();
 
-    //Vec scaled_density;
-    //VecDuplicate(density, &scaled_density);
-
-    /*denscale(source_dof(), 
-            this->_patch_samples->sample_point_blend_func_value(),
-            density,
-            scaled_density);*/
     double start = omp_get_wtime();
+    
     Vec refined_density = EvaluatorQBKIX::compute_refined_density(density);
-    //write_general_points_to_vtk(_refined_patch_samples->sample_point_3d_position(), source_dof(), 
-            //"density.vtp", refined_density,"output/ref_den_"+to_string(this->mpiRank())+"_");
+    
     stats.result_plus_equals("total density interp time", (omp_get_wtime() - start) );
 
     Vec check_point_potential;
@@ -144,10 +121,8 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
             check_point_potential);
 
     start = omp_get_wtime();
+    
     _fmm->evaluate(refined_density, check_point_potential);
-  //((PvFMM*)fmm.get())->evaluate_direct(refined_density, check_point_potential);
-    //write_general_points_to_vtk(_aux_interpolation_points, target_dof(), 
-    //        "check_potential.vtp", check_point_potential,"output/check_potential_"+to_string(this->mpiRank())+"_");
     
     stats.result_plus_equals("total fmm time", (omp_get_wtime() - start) );
     start = omp_get_wtime();
@@ -159,7 +134,6 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
 
     vector<double> interpolation_nodes = get_interpolation_nodes(_expansion_type);
     int L = interpolation_nodes.size();
-    cout << "L:" << L << endl;
 
     DblNumMat interior_target_potential(target_dof(), num_targets);
     DblNumMat exterior_target_potential(target_dof(), num_targets);
@@ -262,21 +236,17 @@ int EvaluatorQBKIXAverage::eval(Vec density, Vec potential){
     stats.result_plus_equals("num. matvecs", 1 );
 
     potential_local.restore_local_vector();
-    //write_general_points_to_vtk(_patch_samples->sample_point_3d_position(), source_dof(), 
-            //"target_potential.vtp", potential,"output/target_pot_"+to_string(this->mpiRank())+"_");
 
 
     target_3d_position_local.restore_local_vector();
     closest_sample_3d_position_local.restore_local_vector();
     potential_local.restore_local_vector();
     density_local.restore_local_vector();
-    //VecRestoreArray(_target_in_out, &target_in_out_ptr);
 
     ISDestroy(&interior_check_index_set);
     ISDestroy(&exterior_check_index_set);
     Petsc::destroy_vec(check_point_potential);
     Petsc::destroy_vec(refined_density);
-    //Petsc::destroy_vec(scaled_density);
 
 }
 

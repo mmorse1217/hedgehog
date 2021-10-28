@@ -41,7 +41,6 @@ namespace ErrorEstimate {
         imaginary operator()(imaginary t){
             imaginary I(0., 1.);
             imaginary theta_t = theta(t);
-            //return I*_r*(cos(theta_t) + I*sin(theta_t)-1.);
             return I*_r*(exp(I*theta_t)-1.);
         }
 
@@ -50,7 +49,6 @@ namespace ErrorEstimate {
             double a = .5;
             imaginary I(0., 1.);
             imaginary theta_t = a*t/_r;
-            //return I*a*(-sin(theta_t) + I*cos(theta_t));
             return -a*exp(I*theta_t);
         }
 

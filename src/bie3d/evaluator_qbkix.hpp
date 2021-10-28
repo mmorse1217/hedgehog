@@ -65,7 +65,6 @@ class EvaluatorQBKIX: public Evaluator {
             VecDestroy(&_aux_interpolation_points);
 
         }
-        //delete _fmm;
     }
 
     int setup();

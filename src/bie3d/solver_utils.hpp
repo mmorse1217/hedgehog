@@ -24,7 +24,6 @@ int  num_global_points(Vec pos);
 void local_index_range(Vec pos, int& beg, int& end);
 
 //--------------------------
-// DZ RENAME argument names to something meaningful
 int denscale(int dof, Vec cst, Vec den, Vec fnl); //scale density by alf or wcb
 int denscale(int dof, vector<Vec>& csts, Vec den, Vec fnl);
 

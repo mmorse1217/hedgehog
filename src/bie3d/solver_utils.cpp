@@ -12,10 +12,6 @@ int dim() { return 3; }
 // Petsc Options shortcuts
 //-----------------------------------------------------------------------------
 
-// TODO replace annoying calls to PetscOptionsGetXXX(...) with simple accessors
-// by accesing options locally, it's making the code messy and obnoxious when
-// there's no need
-
 //-----------------------------------------------------------------------------
 // Petsc Vector shortcuts
 //-----------------------------------------------------------------------------
@@ -101,17 +97,6 @@ int denscale(int sd, vector<Vec>& constant_vecs, Vec den, Vec scaled_density)
   ebiFunctionReturn(0);
 }
 
-
-
-/*
-void pvfmm_evaluation(Vec sources, Vec normals, Vec targets, Kernel3d kernel,
-        Vec density, Vec potential){
-    PvFMM* fmm = new PvFMM(sources, normals, targets, kernel);
-    fmm->evaluate(density, potential);
-    delete fmm;
-}
-*/
-
 void find_closest_on_surface_points(Vec near_targets, PatchSamples* patch_samples, 
         Vec& closest_points, Vec& closest_face_points){
 
@@ -138,7 +123,6 @@ void find_closest_on_surface_points(Vec near_targets, PatchSamples* patch_sample
         int patch_containing_closest_sample = 0;
 
         // Find the closest collocation point to the ti-th target
-        // MJM TODO replace this loop with a call to PvFMM tree if possible?
         // MJM TODO move to a function on PatchSamples
         for(int pi = 0; pi < patch_samples->bdry()->patches().size(); pi++){
 
@@ -161,7 +145,7 @@ void find_closest_on_surface_points(Vec near_targets, PatchSamples* patch_sample
         // Start searching for the closest on-surface point using the nearest
         // collocation point as a starting point
         
-        // MJM NOTE this code is aggressively adapted from the relavent section
+        // MJM NOTE this code is aggressively adapted from the relevant section
         // of markgrid(); may or may not be optimal...
         
         Point3 closest_sample_point = patch_samples->
@@ -309,21 +293,6 @@ void write_to_text_file(
     }
     out.close();
 
-    /*
-    sample_points_local.restore_local_vector(); // MJM BUG causes seg fault, FIXME
-    density_local.restore_local_vector();
-    potential_local.restore_local_vector();
-    if(val1_stride != 0){
-        val1_local.restore_local_vector();
-    }
-    if(val2_stride != 0){
-        val2_local.restore_local_vector();
-    }
-    if(val3_stride != 0){
-        val3_local.restore_local_vector();
-    }
-    */
-
 }
 
 
@@ -362,25 +331,6 @@ void evaluate_singularity_solution(
         Vec target_potential){          // targe_dof x num_targets
     
 
-    // MJM TODO add asserts to verify correct size vectors based on kernel DOF's
-   /* 
-
-    cout << "before fmm initialize" <<  endl;
-    PvFMM* fmm = new PvFMM(
-            singularity_positions,
-            singularity_normals,
-            target_points,
-            kernel);
-    Vec dummy_normals;
-    VecCreateMPI(MPI_COMM_WORLD, num_local_samples*3, PETSC_DETERMINE, &dummy_normals);
-    VecSet(dummy_normals, 0.);
-    cout << "after fmm initialize" <<  endl;
-    
-    cout << "before fmm evaluate" <<  endl;
-    fmm->evaluate(singularity_densities, target_potential);
-    cout << "after fmm evaluate" <<  endl;
-    delete fmm;
-*/
 }
 
 void axis_aligned_singularities(
@@ -493,8 +443,6 @@ Vec evaluate_singularities_along_basis(
         normals(i, i) = -1.;
         normals(i, i + num_singularities/2) = 1.;
 
-        //densities(0, i) = -1; // 
-        //densities(2, i) = 1; // 
     }
     for(int i=0; i < num_singularities; i++)
         densities(0, i) = -1;

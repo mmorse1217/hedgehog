@@ -35,7 +35,6 @@ int EvaluatorFar::eval(Vec density, Vec val)
   
   // Evaluate
   fmm->evaluate(scaled_density, val);
-  //((PvFMM*)fmm.get())->evaluate_direct(scaled_density, val);
 
 
   VecDestroy(&scaled_density);

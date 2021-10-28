@@ -49,12 +49,7 @@ int EvaluatorNear::setup()
   //1. separate points into two classes, near/on, and "far" which here
   //means Omega_1 zone in the paper (Omega_2 points are not passed to this
   //function
-  // (really three, but the difference
-  //between on-the-surface and near points is minor);
-  // DZ RENAME:  here far is a bad use of term; let's call Omega_1 (paper,
-  //p. 260)
-  //intermediate points, Omega_2 near points, and points on the surface
-  //surface points, and adjust variable names accordingly
+  // (really three, but the difference between on-the-surface and near points is minor);
   
   Vec aux_interpolation_points = generate_auxiliary_interpolation_points(
                                     _target_3d_position, 
@@ -128,12 +123,6 @@ vector<double> get_interpolation_nodes(ExpansionType expansion_type){
   PetscBool flag;
   int64_t near_interpolation_num_samples;
   PetscOptionsGetInt(NULL, "",  "-near_interpolation_num_samples", &near_interpolation_num_samples,  &flag);
-  /*if(expansion_type == EXTRAPOLATE_TWO_SIDE || 
-          expansion_type == INTERPOLATE_ACROSS_SURFACE){
-      near_interpolation_num_samples *= 2;
-  }*/
-
-  
 
   vector<double> interpolation_nodes(near_interpolation_num_samples);
   
@@ -142,7 +131,6 @@ vector<double> get_interpolation_nodes(ExpansionType expansion_type){
 
   for (int nn = 2; nn < near_interpolation_num_samples; nn++){
 	 interpolation_nodes[nn] = interpolation_nodes[1] + (double)(nn-1)/1.0;
-	 //interpolation_nodes[nn] = 0.5*(-cos(nn*M_PI/(near_interpolation_num_samples-1))+1.0);
   }
   return interpolation_nodes;
 }
@@ -162,7 +150,6 @@ vector<double> get_chebyshev_nodes(){
       double t = -cos(double(i)*M_PI/L);
       t = (L*h)/2.*(t  + 1.);
       interpolation_nodes[i] = t;
-      cout << "i : " << i << ", t: " << t << endl;
   }
   return interpolation_nodes;
 
@@ -174,7 +161,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
         // TODO merge into one vector because they're generally equal
         Vec sample_point_far_field,
         Vec sample_point_interpolant_spacing){
-    //cout << "EXPANSION TYPE == " << expansion_type << endl;
     PetscBool err = PETSC_FALSE;
     double h;
     PetscOptionsGetReal(NULL, "", "-bis3d_spacing", &h, &err);
@@ -240,13 +226,8 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
   // interpolate.
   int aux_points_counter = 0;
   int one_sided_point_counter = 0;
-  //h /= 2.;
 
   for(int ti=0; ti<num_local_targets; ti++) {
-      /*
-      if(sample_point_far_field != NULL){
-        h = far_field_local(ti);
-      }*/
         double distance_from_boundary;
         double interpolant_spacing;
         if(sample_point_far_field != NULL){
@@ -264,9 +245,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
         Point3 dir;
       if(interpolation_directions == NULL){
               dir = tp-bp;
-          /*if(Options::get_int_from_petsc_opts("-bdtype") == 2){
-              dir = -dir;
-          }*/
           dir = dir/dir.length(); //get direction from the closest surface point to the near target point
       } else { // we're passing the directions explicitly
         dir = interpolation_directions_local.clmdata(ti);
@@ -278,12 +256,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
             //                 the intermediate zone) + (i*h in the dir
             //                 direction) for i = 1, ..., L
             //Point3 np = (bp + h*dir) + dir * interpolation_nodes[l] * h;
-            /*double spacing =  interpolation_nodes[l] * interpolant_spacing;
-            double L = interpolant_spacing*num_aux_targets/4.;
-            spacing = pow(interpolant_spacing + 1. - L, .25) - 1. + L;
-            Point3 np = (bp + distance_from_boundary*dir) + 
-                           dir * spacing;
-            */
             Point3 np = (bp + distance_from_boundary*dir) + 
                            dir * interpolation_nodes[l] * interpolant_spacing;
             memcpy( &aux_trg_ptr[aux_points_counter*DIM], 
@@ -296,14 +268,11 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
             // interp point = (first point along ray dir from bp to tp that is in
             //                 the intermediate zone) + (i*h in the dir
             //                 direction) for i = 1, ..., L/2
-            //Point3 np = (bp + h*dir) + dir * interpolation_nodes[l] * h;
             Point3 np = (bp + distance_from_boundary*dir) + 
                         dir * interpolation_nodes[l] * interpolant_spacing;
-            //memcpy( &aux_trg_ptr[aux_points_counter*DIM], 
             memcpy( &aux_trg_ptr[(aux_points_counter + l)*DIM], 
                     np.array(), 
                     sizeof(double)*DIM );
-            //aux_points_counter++;
         }
         int exterior_offset = num_local_targets*num_aux_targets/2;
         for(int l=0; l<num_aux_targets/2; l++) {
@@ -318,7 +287,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
             memcpy( &aux_trg_ptr[(exterior_offset + aux_points_counter + l)*DIM], 
                     np.array(), 
                     sizeof(double)*DIM );
-            //aux_points_counter++;
         }
             aux_points_counter += num_aux_targets/2;
 
@@ -352,8 +320,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
 
         //int left_most_interp_point = num_aux_targets/2;
         int left_most_interp_point = num_aux_targets/2;
-        //cout << "bp: " << bp << "; " << endl;
-        //cout << "dir: " << dir << "; " << endl;
         for(int l=0; l<num_aux_targets/2; l++) {
             // interp point = (furthest point along ray dir from bp to tp that is in
             //                 the intermediate zone) + (i*h in the  -dir
@@ -361,7 +327,6 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
             //                 i.e. back towards the surface
             Point3 np = (bp + left_most_interp_point*h*dir) -
                 dir * interpolation_nodes[l] * h;
-            //cout << l << "th interp point: " << np << endl;
             memcpy( &aux_trg_ptr[aux_points_counter*DIM], 
                     np.array(), 
                     sizeof(double)*DIM );
@@ -374,28 +339,11 @@ Vec generate_auxiliary_interpolation_points(Vec near_targets,
             //                 note that points are on the opposite side of the
             //                 surface as in the previous loop (minus signs)
             Point3 np = (bp - h*dir) - dir * interpolation_nodes[l] * h;
-            //cout << l << "th interp point: " << np << endl;
             memcpy( &aux_trg_ptr[aux_points_counter*DIM], 
                     np.array(), 
                     sizeof(double)*DIM );
             aux_points_counter++;
         }
-        /*
-        for(int l=0; l < num_aux_targets+1; l++){
-            if(l != num_aux_targets/2){
-                Point3 np = (bp + left_most_interp_point*h*dir) - dir * interpolation_nodes[l] * h;
-                memcpy( &aux_trg_ptr[aux_points_counter*DIM], 
-                        np.array(), 
-                        sizeof(double)*DIM );
-                aux_points_counter++;
-            }
-
-        }
-        */
-
-
-
-
     } else if (expansion_type == INTERPOLATE){ //interpolate with an on-surface point, so generate (L-1) points in intermediate zone
         for(int l=1; l<num_aux_targets; l++) {
             Point3 np = bp + dir * interpolation_nodes[l] * h;
@@ -429,8 +377,6 @@ Vec generate_interior_qbkix_points(Vec near_targets,
 
     assert(sample_point_interpolant_spacing != NULL);
     assert(sample_point_far_field != NULL);
-    //assert(interpolation_directions != NULL);
-    //assert(expansion_type == EXTRAPOLATE_ONE_SIDE | expansion_type == EXTRAPOLATE_TWO_SIDE);
     vector<double> interpolation_nodes = get_interpolation_nodes(EXTRAPOLATE_ONE_SIDE);
 
     
@@ -484,13 +430,6 @@ Vec generate_interior_qbkix_points(Vec near_targets,
  
 
 
-    //if(interpolation_directions != NULL){
-
-        //interpolation_directions_local = get_local_vector(DIM, num_local_targets, interpolation_directions);
-        //VecGetArray(interpolation_directions, &interpolation_directions_ptr);
-        //interpolation_directions_local = DblNumMat(DIM, num_local_targets, 
-        //false, interpolation_directions_ptr);
-    //}
 
     for(int ti=0; ti<num_local_targets; ti++) {
         double distance_from_boundary = far_field_local(ti);;
@@ -503,7 +442,6 @@ Vec generate_interior_qbkix_points(Vec near_targets,
         Point3 bp(closest_surf_ptr + ti*DIM);
         Point3 dir;
         if(interpolation_directions == NULL){
-            //dir = (tp-bp).dir();
             dir = (tp-bp);
             // if they're too close, you end up dividing by zero when normalizing, 
             // leading to an excitingly vague fmm nan potential assert.
@@ -517,13 +455,7 @@ Vec generate_interior_qbkix_points(Vec near_targets,
 
         for(int i = 0; i < qbkix_point_index.size(); i++){
             int index = qbkix_point_index[i];
-            /*
-            double spacing =  interpolation_nodes[index]*interpolant_spacing;
-            spacing = pow(spacing+1., .25)-1.;
-            cout << index << ", " << spacing << ", " << interpolant_spacing << endl;
-            Point3 qbkix_point = (bp + distance_from_boundary*dir) + 
-                           dir * spacing;
-            */
+            
             Point3 qbkix_point = 
                 (bp + distance_from_boundary*dir) + 
                 dir * interpolation_nodes[index] * interpolant_spacing;
@@ -536,9 +468,6 @@ Vec generate_interior_qbkix_points(Vec near_targets,
     VecRestoreArray(sample_point_far_field, &far_field_ptr);
     VecRestoreArray(sample_point_interpolant_spacing, &interpolant_spacing_ptr);
     VecRestoreArray(closest_surface_points_near, &closest_surf_ptr);
-    if(interpolation_directions != NULL){
-        //interpolation_directions_local.restore_local_vector();
-    }
 
     qbkix_points_local.restore_local_vector();
 
@@ -678,12 +607,9 @@ void jump_evaluation(Vec den, Vec val, vector<DblNumMat>& _refined_datvec,
   double zero = 0.0;
   iC( VecSet( val, zero) );
   
-  //PatchSamples* patch_samples = this->_patch_samples;
   PatchSurf* bd = patch_samples->bdry();
   vector<int>& prtn = patch_samples->patch_partition();
   
-  //int source_dof = this->source_dof();
-  //int target_dof = this->target_dof();
   int source_dof = kernel.get_sdof();
   int target_dof = kernel.get_tdof();
 
@@ -704,7 +630,6 @@ void jump_evaluation(Vec den, Vec val, vector<DblNumMat>& _refined_datvec,
   iC( VecCreateMPI(PETSC_COMM_WORLD, num_local_colloc_points*target_dof, 
                     PETSC_DETERMINE, &density_at_collocs) );
   //------------------------------------------------------------------
-  //cerr << "MPI RANK = " << this->mpiRank() << endl;
   int kt = kernel.kernelType();
 
 
@@ -718,11 +643,6 @@ void jump_evaluation(Vec den, Vec val, vector<DblNumMat>& _refined_datvec,
 	 // interface to density_at_collocs
 	 DblNumMat colval(_collocation_data->coldat(pi, density_at_collocs, target_dof));
 
-	 //@BUG	DZ kernel-specific!! needs to be fixed, may require extra flags
-	 // in the kernel function
-	 // if kerenel is a double layer kernel (i.e. has a jump) but not
-	 // hypersingular
-	 // the jump is the density, just need to interpolate  (see p. 252, eq 5)
        
      int num_col_points = _collocation_data->num_collocation_points(pi);
 	 if(kt == KNL_LAP_D_U || kt == KNL_MODHEL_D_U ||
@@ -870,8 +790,6 @@ Vec interpolate_density_to_refined_grid(PatchSamples* patch_samples,
 
   //1. den -> detailed dstz version, and eval using fmm
   PatchSurf* bd = patch_samples->bdry();
-  //PatchSamples* patch_samples = this->_patch_samples;
-  //PatchSamples* refined_patch_samples = this->_refined_patch_samples;
   int num_local_colloc_points = 
       num_local_points(_refined_collocation_data->colloc_point_3d_position());
   int num_local_targets = 
@@ -933,7 +851,6 @@ Vec interpolate_density_to_refined_grid(PatchSamples* patch_samples,
               SCATTER_FORWARD) );
   Vec scaled_density;
   VecDuplicate(density_at_targets, &scaled_density);
-  //VecCopy(density_at_targets, scaled_density);
   iC( denscale(source_dof, refined_sample_point_combined_weight,
               density_at_targets, scaled_density) );
   iC( VecDestroy(&density_at_collocs) );
@@ -1141,7 +1058,6 @@ void interpolation_near(Vec& intermediate_targets, Vec& closest_surface_targets,
 		num_points_near ++;
 	 } else if( distance_to_closest_sample<h ) { 
          // near zone points, interpolation 
-         // DZ @BUG why 4*L rather than L?
          double buf[L*target_dof];
          double* currv = rvarr + num_points_near*target_dof;
          double* curjv = jvarr + num_points_near*target_dof;
@@ -1164,7 +1080,6 @@ void interpolation_near(Vec& intermediate_targets, Vec& closest_surface_targets,
 		// using up target_dof*(L-1) doubles in buf, in addition to target_dof doubles already there
 		memcpy(buf+target_dof, curfv, target_dof*(L-1)*sizeof(double) );
 
-		// DZ @BUG same question -- why 2*L?
         // MJM @BUG  only needs to be of size L, not L*target_dof
 		double wgt[L*target_dof];
 
@@ -1203,9 +1118,6 @@ void interpolation_near(Vec& intermediate_targets, Vec& closest_surface_targets,
   VecRestoreArray(near_targets, &near_targets_ptr);
   VecRestoreArray(closest_surface_targets, &closest_boundary_point_ptr);
   VecRestoreArray(val, &vlarr);
-// ----------------------------------------------------------------------------
-//  code above destroys some Vecs here
-// ----------------------------------------------------------------------------
   cout << "interpolation near complete" << endl; 
 
 }
