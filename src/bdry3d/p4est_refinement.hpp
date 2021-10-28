@@ -4,7 +4,6 @@
 #include "bdry3d/patch_surf_face_map.hpp"
 #include <gpmesh.hpp>
 #include "bdry3d/face_map_subpatch.hpp"
-//#include "bdry3d/p4est_interface.hpp"
 extern "C" {
 #include <p4est_connectivity.h>
 #include <p4est.h>

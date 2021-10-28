@@ -56,9 +56,6 @@ int PatchSurfAnalytic::setup()
 	 }
   }
 
-  //for(int g=0; g<_agsurf.groups().size(); g++)	 cerr<<_agsurf.groups()[g].ctr()<<endl;
-  //for(int g=0; g<_patches.size(); g++) {	 AnalyticPatch* ptr = (AnalyticPatch*)(_patches[g]);	 cerr<<ptr->si()<<" "<<ptr->ci()<<endl;  }
-  
   //3. Make lists of centers and orientations of partitions of unity
   for(unsigned si=0; si<_agsurf.groups().size(); si++) {
 	 _boundary_component_center.push_back( _agsurf.groups()[si].ctr() );
@@ -219,15 +216,7 @@ int AnalyticPatch::xy_to_patch_coords(double* xy, int flag, double* ret)
   ebiAssert( xy[0]>=FM && xy[0]<TO && xy[1]>=FM && xy[1]<TO );
   AnalyticSurf& agsurf = ((PatchSurfAnalytic*)bdry())->agsurf();
   iC( agsurf.eval(flag, _si*6 + _ci, xy, (Point3*)ret) );  //AnalyticSurf::EVAL_VL|AnalyticSurf::EVAL_FD
-  /*if(Options::get_int_from_petsc_opts("dom") == 1 &&// is exterior problem
-          flag & EVAL_FD // we're evaluating 1st derivatives
-          ){ 
-      // flip the normals by interchanging derivative order
-      Point3* r = static_cast<Point3*>(ret);
-      Point3 temp = r[1];
-      r[1] = r[2];
-      r[2] = temp;
-  }*/
+  
   ebiFunctionReturn(0);
 }
 // ---------------------------------------------------------------------- 

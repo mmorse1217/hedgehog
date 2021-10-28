@@ -12,12 +12,8 @@ PatchSurf::~PatchSurf()
   _patches.resize(0);
 }
 
-// TODO cache these functions
+// TODO cache this
 NumVec<Point2> Patch::sample_patch(SamplingPattern sampling_pattern){
-    //PetscOptionsGetReal(NULL , "", "-bis3d_spacing", &
-    //TODO remove when making the parent class a template
-    //assert(dynamic_cast<PatchSurfFaceMap*>(this));
-    // MJM TODO check that this is new options access is working
     double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
     int num_samples = floor(1./spacing)+1;
 
@@ -44,8 +40,6 @@ NumVec<Point2> Patch::sample_patch(SamplingPattern sampling_pattern){
 
 }
 DblNumMat Patch::generate_qbkix_samples(NumVec<Point2> on_surface_patch_samples){
-    //TODO remove when making the parent class a template
-    //assert(dynamic_cast<PatchSurfFaceMap*>(this));
     
     double boundary_distance_ratio = Options::get_double_from_petsc_opts("-boundary_distance_ratio");
     double interpolation_spacing_ratio = Options::get_double_from_petsc_opts("-interpolation_spacing_ratio");
@@ -57,7 +51,8 @@ DblNumMat Patch::generate_qbkix_samples(NumVec<Point2> on_surface_patch_samples)
     for(int si = 0; si < num_total_samples; si++){
         Point2 uv = on_surface_patch_samples(si);
         Point3 position_and_derivs[3];
-        // TODO could introduce a bug here by calling virtual class methods...
+        // TODO could introduce a bug here by calling virtual class methods
+        // (blendsurf vs polynomials)...
         xy_to_patch_coords(uv.array(), EVAL_VALUE|EVAL_1ST_DERIV, (double*)position_and_derivs);
         Point3 position = position_and_derivs[0];
         Point3 normal = cross(position_and_derivs[1], position_and_derivs[2]).dir();
@@ -108,7 +103,6 @@ void Patch::mesh_patch(double spacing,  // sampling spacing
         DblNumMat& vertices, //3 x num_vertices matrix of positions
         IntNumMat& faces //3 x num_faces matrix of positions
         ){
-    //int n = floor(1./spacing)+1;
     int n = mesh_num_vertices_1d(spacing);
     int num_vertices = mesh_num_vertices(spacing);
     // sample target domain
@@ -149,7 +143,6 @@ void Patch::mesh_patch_no_sampling(
     int findex = 0;
     for(int i = 0; i < n-1; i++){
         for (int j = 0; j < n-1; j++) {
-            //int stride = 2*(n-1);
             int vindex= (n)*i + j;
             
             // for triangle

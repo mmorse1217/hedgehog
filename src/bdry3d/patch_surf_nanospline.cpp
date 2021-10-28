@@ -1,3 +1,6 @@
+// BUG This file is still in development and not meant for general use.
+// Currently, should be hardcoded for a single doubly periodic spline patch
+
 #include <nanospline/PatchBase.h>
 #include <nanospline/forward_declaration.h>
 #include <nanospline/BSplinePatch.h>
@@ -8,7 +11,7 @@
 #include "common/utils.hpp"
 #include <sampling.hpp>
 
-// TODO abstract library calls out
+// TODO abstract out library calls 
 //#include "p4est_interface.hpp"
 #include "p4est_refinement.hpp"
 #include "bie3d/solver_utils.hpp"

@@ -126,11 +126,7 @@ int PatchSurfBlended::setFromOptions()
     iC( PetscOptionsGetInt(NULL, prefix().c_str(),  "-bdsurf_g", &tmp,  &flg) );
     NUM_PATCHES = tmp;
     ebiAssert(flg==PETSC_TRUE);
-    //if(mi!=opts.end()) {
-        //istringstream ss((*mi).second); ss>> NUM_PATCHES; 
-    //}
 
-    // TODO: check this is somehow right
     char matrix_dir[100];
     iC( PetscOptionsGetString(NULL,prefix().c_str(), "-bdsurf_matdir", matrix_dir, 100,&flg) );
     ebiAssert(flg==PETSC_TRUE);
@@ -153,7 +149,7 @@ int PatchSurfBlended::setFromOptions()
             fs, cot, sd ,poudeg,
             spacing, interpolate,0,0);//,0, loadW );
 
-    _bdsurf.setup(tmpb,0,Point3(1.0),(void*)submatlib,(void*)bdulib); // blendsurf v3 (doesn't work yet)
+    _bdsurf.setup(tmpb,0,Point3(1.0),(void*)submatlib,(void*)bdulib); // blendsurf v3
   ebiFunctionReturn(0);
 }
 
@@ -164,35 +160,22 @@ int PatchSurfBlended::setup()
 {
   ebiFunctionBegin;
   //1. read in and generate all scbs (??)
-  string filedata;  iC( file2string(mpiComm(), _filename.c_str(), filedata) ); //parallel communication
+  string filedata;  iC( file2string(mpiComm(), _filename.c_str(), filedata) ); 
   cerr << _filename.c_str() << endl;
   istringstream fin(filedata);
-  //iC( _bdsurf.setup(fin, _spacing, _pouctrl, _pdeg) ); // blendsurf v1
 
-    //2. derive the patches from the cbs
+    //2. computer patches from mesh
     int pcnt = 0;
     for(int V=0; V<_bdsurf.numVertices(); V++) {
-    //for(int V=0; V<_bdsurf.numv(); V++) {
        _patches.push_back(  new BlendedPatch(this, pcnt, V) );
        pcnt++;
     }
     //3. centers
     GpMesh& gpmesh = _bdsurf.gpmesh();
-    // blendsurf v3
+    
     _boundary_component_center = gpmesh.get_interior_points();
     _boundary_orientation  = gpmesh.get_intpt_orientation();
-    cout << "bd3dbd _boundary_orientation.size()" << 
-            _boundary_orientation.size() << endl;
-    //blendsrf v1
-    /*
-    for(int gi=0; gi<gpmesh.groups().size(); gi++) {
-       _boundary_component_center.push_back( gpmesh.groups()[gi].intpt() );
-       _boundary_orientation.push_back( gpmesh.groups()[gi].orient() );
-    }
-    cout << "sizze1: " << _boundary_component_center.size() <<endl;
-    cout << "sizze2: " << _boundary_orientation.size() <<endl;
-    
-    */
+
     ebiFunctionReturn(0);
 }
 
@@ -213,8 +196,7 @@ int PatchSurfBlended::patches_containing_face_point(FacePointOverlapping* face_p
   for(int v=0; v<4; v++) {
 	 int V;	 int f;
 	 double cd[2];
-     //iC( bdsurf.Fcdv2Vfcd(BdSurf::EVAL_VL, bb->F(), bb->cd(), v, V, f, cd) ); //blendsurf v1 
-     iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, bb->F(), bb->cd(), v, V, f, cd) );//blendsurf v3
+     iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, bb->F(), bb->cd(), v, V, f, cd) );
 	 if(cd[0]<bdsurf.EVAL_UB() && cd[1]<bdsurf.EVAL_UB())
 		pivec.push_back(V);
   }
@@ -231,8 +213,7 @@ BlendedPatch::BlendedPatch(PatchSurf* b, int pi, int V): Patch(b, pi), _V(V)
 {
   ebiFunctionBegin;
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
-  //iC( bdsurf.chartbound(_V, bdsurf.EVAL_UB(), _bnd) ); //blendsurf v1
-  iC( bdsurf.paramBound(_V, bdsurf.EVAL_UB(), _bnd) );   //blendsurf v3
+  iC( bdsurf.paramBound(_V, bdsurf.EVAL_UB(), _bnd) );   
   ebiFunctionReturnVoid;
 }
 
@@ -240,7 +221,6 @@ int BlendedPatch::group_id()
 {
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
   GpMesh& gpmesh = bdsurf.gpmesh();
-  //return gpmesh.verts()[_V].GI;
   return gpmesh.get_group_ids()[_V];
 }
 
@@ -258,8 +238,7 @@ int BlendedPatch::is_face_point_valid(FacePointOverlapping* face_point, bool& is
   int tV, tf;
   double st[6];
   for(int v=0; v<4; v++) {
-	 //iC( bdsurf.Fcdv2Vfcd(BdSurf::EVAL_VL, F, cd, v, tV, tf, st) ); //blendsurf v1
-	 iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, F, cd, v, tV, tf, st) );  //blendsurf v3
+	 iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, F, cd, v, tV, tf, st) );
 	 if(tV==_V) {
 		found = true;
 		break;
@@ -275,7 +254,7 @@ int BlendedPatch::is_face_point_valid(FacePointOverlapping* face_point, bool& is
 int BlendedPatch::face_point_to_xy(FacePointOverlapping* face_point, double* xy)
 {
   ebiFunctionBegin;
-  FacePointBlended* face_point_blended = (FacePointBlended*)face_point;  //ebiAssert(face_point->scbidx()==scbidx());
+  FacePointBlended* face_point_blended = (FacePointBlended*)face_point;  
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
   int F = face_point_blended->F();
   double* cd = face_point_blended->cd();
@@ -283,8 +262,7 @@ int BlendedPatch::face_point_to_xy(FacePointOverlapping* face_point, double* xy)
   int tV, tf;
   double st[6];
   for(int v=0; v<4; v++) {
-	 //iC( bdsurf.Fcdv2Vfcd(BdSurf::EVAL_VL, F, cd, v, tV, tf, st) ); //blendsurf v1
-	 iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, F, cd, v, tV, tf, st) ); //blendsurf v3
+	 iC( bdsurf.Fcd2Vfcd(BdSurf::EVAL_VALUE, F, cd, v, tV, tf, st) );
 	 if(tV==_V) {
 		found = true;
 		break;
@@ -294,8 +272,7 @@ int BlendedPatch::face_point_to_xy(FacePointOverlapping* face_point, double* xy)
  
   ebiAssert(st[0]<bdsurf.EVAL_UB() && st[1]<bdsurf.EVAL_UB());
 
-  //iC( bdsurf.Vfcd2xy(BdSurf::EVAL_VL, tV, tf, st, xy) );  // blendsurf v1
-  iC( bdsurf.Vfcd2Vxy(BdSurf::EVAL_VALUE, tV, tf, st, xy) ); // blendsurf v3
+  iC( bdsurf.Vfcd2Vxy(BdSurf::EVAL_VALUE, tV, tf, st, xy) ); 
   
   ebiFunctionReturn(0);
 }
@@ -309,8 +286,7 @@ int BlendedPatch::is_xy_valid(double* xy, bool& is_valid)
   int f;
   double cd[2];		
   
-  //iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) ); // blendsurf v1
-  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) ); // blendsurf v3
+  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) ); 
   
   is_valid = (cd[0]<bdsurf.EVAL_UB() && cd[1]<bdsurf.EVAL_UB());
   ebiFunctionReturn(0);
@@ -324,8 +300,7 @@ int BlendedPatch::is_xy_dominant(double* xy, bool& dominant)
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
   int f;
   double cd[2];		
-  //iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) ); //blendsurf v1
-  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) ); //blendsurf v3
+  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) );
   dominant = (cd[0]<=0.5 && cd[1]<=0.5);
   ebiFunctionReturn(0);
 }
@@ -338,16 +313,14 @@ int BlendedPatch::xy_to_face_point(double* xy, FacePointOverlapping* face_point)
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
   int f;
   double cd[2];		
-  //iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) ); //blendsurf v1
-  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) ); //blendsurf v3
+  iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) ); 
 
   ebiAssert(cd[0]<bdsurf.EVAL_UB() && cd[1]<bdsurf.EVAL_UB()); //assure it is good
   int F;
   double st[2];		  
-  //iC( bdsurf.Vfcd2Fcd(BdSurf::EVAL_VL, _V, f, cd, F, st) ); //blendsurf v1
-  iC( bdsurf.Vfcd2Fcd(BdSurf::EVAL_VALUE, _V, f, cd, F, st) ); //blendsurf v3
+  iC( bdsurf.Vfcd2Fcd(BdSurf::EVAL_VALUE, _V, f, cd, F, st) );
 
-  FacePointBlended* tmp = (FacePointBlended*)face_point; // what is the point of this?
+  FacePointBlended* tmp = (FacePointBlended*)face_point; 
   *tmp = FacePointBlended(F, st);
   ebiFunctionReturn(0);
 }
@@ -359,28 +332,9 @@ int BlendedPatch::xy_to_patch_coords(double* xy, int flag, double* ret)
   ebiFunctionBegin;
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
 
-  // TODO exterior problems on multiply connected domains is likely broken
-  //assert(Options::get_int_from_petsc_opts("-dom") == 0);
-
-  //int f;  double cd[2];		iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) );
-  //ebiAssert(cd[0]<bdsurf.EVAL_UB() && cd[1]<bdsurf.EVAL_UB()); //assure it is good
+  // TODO exterior problems on multiply connected domains is possibly broken
+  iC( bdsurf.eval(flag, _V, xy, (Point3*)ret) ); 
   
-  //iC( bdsurf.eval(flag, _V, xy, (Point3*)ret, LL) ); // blendsurf v1
-  //double start = omp_get_wtime();
-  iC( bdsurf.eval(flag, _V, xy, (Point3*)ret) ); // blendsurf v3
-  //stats.result_plus_equals("surface eval time", omp_get_wtime() - start);
-  //stats.result_plus_equals("num surface calls", 1);
-  
-  /*if(Options::get_int_from_petsc_opts("dom") == 1 &&// is exterior problem
-          flag & EVAL_FD // we're evaluating 1st derivatives
-          ){ 
-      // flip the normals by interchanging derivative order
-      Point3 temp = ret[1];
-      ret[1] = ret[2];
-      ret[2] = temp;
-  }*/
-
-
   ebiFunctionReturn(0);
 }
 // ---------------------------------------------------------------------- 
@@ -393,14 +347,9 @@ int BlendedPatch::estimate_jacobian(double* jac)
   Point3 ret[3];
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
 
-  //iC( bdsurf.internal_eval(EVAL_VL|EVAL_FD, _V, xy, ret) ); //blendsurf v1
-  //double start = omp_get_wtime();
-  iC( bdsurf.eval(BdSurf::EVAL_VALUE|BdSurf::EVAL_1ST_DERIV, _V, xy, ret) ); //blendsurf v3
-  //stats.result_plus_equals("surface eval time", omp_get_wtime() - start);
-  //stats.result_plus_equals("num surface calls", 1);
+  iC( bdsurf.eval(BdSurf::EVAL_VALUE|BdSurf::EVAL_1ST_DERIV, _V, xy, ret) ); 
 
   jac[0] = max(ret[1].l2(), ret[2].l2());
-  //jac[0] = cross(ret[1], ret[2]).l2();
   ebiFunctionReturn(0);
 }
 // ---------------------------------------------------------------------- 
@@ -412,17 +361,10 @@ int BlendedPatch::xy_to_patch_value(double* xy, int flag, double* ret)
   BdSurf& bdsurf = ((PatchSurfBlended*)bdry())->bdsurf();
   int f;  double cd[2];		
  
-  //blendsurf v3
   iC( bdsurf.Vxy2Vfcd(BdSurf::EVAL_VALUE, _V, xy, f, cd) );
   ebiAssert(flag == BdSurf::EVAL_VALUE);
   iC( bdsurf.blendFuncEval(flag, cd, 1.0-bdsurf.EVAL_UB(), bdsurf.EVAL_UB(), ret) );
   
-  //blendsurf v1
-  /*
-  iC( bdsurf.Vxy2fcd(BdSurf::EVAL_VL, _V, xy, f, cd) );
-  ebiAssert(flag==EVAL_VL);
-  iC( bdsurf.Vfcd2Pou(flag, cd, 1.0-bdsurf.EVAL_UB(), bdsurf.EVAL_UB(), ret) );
-  */
 
   ebiFunctionReturn(0);
 }

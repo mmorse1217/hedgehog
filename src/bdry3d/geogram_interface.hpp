@@ -17,8 +17,6 @@ class FaceMapSubPatch;
  void geogram_mesh_to_arrays(GEO::Mesh& mesh, DblNumMat& vertices, IntNumMat& faces);
 class AABBTree {
     private:
-        //unique_ptr<GEO::MeshFacetsAABB> _tree;
-        //unique_ptr<GEO::Mesh> _mesh;
         GEO::MeshFacetsAABB* _tree;
         GEO::Mesh* _mesh;
 

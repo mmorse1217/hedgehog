@@ -62,10 +62,8 @@ void copy_user_data_from_parent_quad(p4est_t* p4est,
         quad->p.user_data = child_ref_data;
 
     }
-    //cout << "deleting Patch ["  << parent_patch << "]"  << endl;
     if(!parent_ref_data->refine){
         delete parent_patch;
-        // MJM TODO ADD THIS AND TEST
         delete parent_ref_data;
     }
     
@@ -147,8 +145,6 @@ void resolve_function(p4est_t* p4est, PatchSurfFaceMap*& face_map, FunctionHandl
         samples->patch_partition() = vector<int>(face_map->num_patches(), 0);
         samples->setFromOptions();
         samples->setup();
-        // TODO use to only resample patches that need refine rather than all of
-        // them...
     
         int num_samples_1d = f_ref_data.num_samples_1d;
 
@@ -192,8 +188,9 @@ void resolve_function(p4est_t* p4est, PatchSurfFaceMap*& face_map, FunctionHandl
         // evaluate target function at child sample points
         f(f_ref_data.child_sample_points, range_dim, 
                 f_ref_data.function_values_at_children);
+    
         // iterate over the leaves, check if each one is valid via callbacks
-    cout << "total num quads to check : " <<invalid_patches.size() << endl;
+        cout << "total num quads to check : " <<invalid_patches.size() << endl;
         p4est_iterate(p4est,
                 NULL,
                 &f_ref_data,
@@ -201,41 +198,10 @@ void resolve_function(p4est_t* p4est, PatchSurfFaceMap*& face_map, FunctionHandl
                 NULL,
                 NULL);
 
-
-
-/*
-        // evaluate target function at parent sample points
-        Petsc::create_mpi_vec(face_map->mpiComm(), 
-                face_map->num_patches()*
-                f_ref_data.num_samples_1d*f_ref_data.num_samples_1d*range_dim,
-                f_ref_data.function_values_at_parent);
-        Petsc::create_mpi_vec(face_map->mpiComm(), 
-                4*face_map->num_patches()*
-                f_ref_data.num_samples_1d*f_ref_data.num_samples_1d*range_dim,
-                f_ref_data.function_values_at_children);
-
-        f(samples->sample_point_3d_position(), range_dim, 
-                f_ref_data.function_values_at_parent);
-        generate_samples_on_child_patches(face_map->mpiComm(), 
-                face_map,
-                f_ref_data.num_samples_1d,
-                f_ref_data.uv_coordinates_single_patch, 
-                f_ref_data.child_sample_points);
-        // evaluate target function at child sample points
-        f(f_ref_data.child_sample_points, range_dim, 
-                f_ref_data.function_values_at_children);
-        // iterate over the leaves, check if each one is valid via callbacks
-        p4est_iterate(p4est,
-                NULL,
-                &f_ref_data,
-                update_patch_validity,
-                NULL,
-                NULL);
-*/
 
         // if so, continue
         //p4est_refine_ext(p4est, 0, -1, is_panel_inadmissible<FaceMapSubPatch>, NULL, copy_user_data_from_parent_quad);
-refine_p4est_quads( p4est);
+        refine_p4est_quads( p4est);
         
         bool dump_points = Options::get_int_from_petsc_opts("-dump_qbkix_points"); 
         if(dump_points){
@@ -251,19 +217,6 @@ refine_p4est_quads( p4est);
             string s = "rhs_interp_values_" + to_string(it) + ".vtp";
             write_general_points_to_vtk(invalid_patches_to_sample_3d_position, range_dim, 
                     s, f_ref_data.function_values_at_parent, "data/");
-            /*if(it == 5){
-                IS is;
-                long long idxx[1] = {14};
-                ISCreateBlock(MPI_COMM_WORLD,
-                        DIM*num_samples_1d*num_samples_1d,
-                        num_patches_to_refine,
-                        idxx,
-                        PETSC_COPY_VALUES,
-                        &is);
-                Vec tmp;
-                VecGetSubVector(f_ref_data.child_sample_points, is, &tmp);
-
-            }*/
         }
         VecRestoreSubVector(samples->sample_point_3d_position(), patch_samples_index_set, &invalid_patches_to_sample_3d_position);
         ISDestroy(&patch_samples_index_set);
@@ -274,17 +227,11 @@ refine_p4est_quads( p4est);
 
         // else, split it using split() inside of the refine_ext callback
         patches_still_need_refinement = check_refinement_criteria<FaceMapSubPatch>(p4est);
+        
         // extract final set of patches of the leaves of the refined forest.
         vector<FaceMapSubPatch*> patches= collect_patches<FaceMapSubPatch>(p4est);
         face_map->patches().assign( patches.begin(), patches.end());
-        if(it == 5){ 
-            
-            //exit(0);
-        }
-    //vector<Patch*> subpatches = p4est_to_face_map_subpatches(p4est, face_map);
-    //face_map->patches() = subpatches;
     }
-    //_patches = collect_patches<FaceMapSubPatch>(p4est);
 
 }
 
@@ -299,13 +246,11 @@ void refine_patches_uniform(int max_level, p4est_t* p4est, PatchSurfFaceMap*& fa
     mark_all_patches_for_refinement<FaceMapSubPatch>(p4est);
     for(int level = 0; level < max_level; level++){
         refine_p4est_quads(p4est);
-        //p4est_refine_ext(p4est, 0, -1, is_panel_inadmissible<FaceMapSubPatch>, NULL, copy_user_data_from_parent_quad);
     }
 }
 
 void refine_patches_for_qbkix_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map){
 
-    // 
     //initialize_p4est_leaves_with_subpatches(p4est, face_map);
     int qbkix_order = Options::get_int_from_petsc_opts("-near_interpolation_num_samples");
     vector<int> stage_one_qbkix_indices(1, qbkix_order - 1);
@@ -315,17 +260,6 @@ void refine_patches_for_qbkix_point_location(p4est_t* p4est, PatchSurfFaceMap*& 
     vector<int> stage_two_qbkix_indices(1, (qbkix_order-1)/2);
     refine_patches_midpoint_near_medial_axis(p4est, face_map, stage_two_qbkix_indices);
 
-    // TODO ADD ANOTHER STEP THAT CHECK ALL QBKIX POINTS!!!!!
-    //vector<int> stage_three_qbkix_indices(qbkix_order);
-    //for(int i =0; i <qbkix_order; i++)
-    //    stage_three_qbkix_indices[i] = i;
-    //refine_patches_midpoint_near_medial_axis(p4est, face_map, stage_three_ref_data);
-/*
-    // each patch should be refined until the qbkix points from the previous
-    // steps are far from all remaining patches
-    refine_patches_for_fixed_qbkix_points(p4est, face_map);
-*/
-    //set_coarse_patch_ids( p4est);
 }
 
 void refine_patches_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map, 
@@ -360,8 +294,6 @@ void refine_patches_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map,
         DblNumMat qbkix_points_local = get_local_vector(DIM, num_qbkix_samples, qbkix_points);
         
         //   mark each as inside/outside + near/far
-        // @REFACTOR needs to change for tree algo
-        //NumVec<OnSurfacePoint> closest_on_surface_points = test_samples->closest_points_to_qbkix_points();
         NumVec<OnSurfacePoint> closest_on_surface_points = 
             Markgrid::mark_target_points(
                     qbkix_points_local,
@@ -380,7 +312,6 @@ void refine_patches_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map,
                 FaceMapSubPatch* patch = refinement_data->patch;
                 assert(patch != NULL);
                 assert(patch->_quadrant != NULL);
-                //assert(patch->_quadrant == quad);
                 
 
                 // TODO BUG CHECK this variable is initialized properly...
@@ -410,7 +341,6 @@ void refine_patches_point_location(p4est_t* p4est, PatchSurfFaceMap*& face_map,
             }
         }
         refine_p4est_quads(p4est);
-        //p4est_refine_ext(p4est, 0, -1, is_panel_inadmissible<FaceMapSubPatch>, NULL, copy_user_data_from_parent_quad);
         
         // update list of patches to refine and repeat until list is empty
         patches_to_refine = patches_that_need_refinement(p4est);
@@ -520,16 +450,6 @@ void refine_patches_midpoint_near_medial_axis(p4est_t*& p4est, PatchSurfFaceMap*
                     vector<OnSurfacePoint> closest_on_surface_points = 
                         closest_on_surface_point_map[current_patch_qbkix_point_index + qbkix_i];
                     
-
-
-                    //shuffle(closest_on_surface_points.begin(), closest_on_surface_points.end());
-                    /*cout << "near patch ids to point " << qbkix_i << ": " << endl;
-                    for(int kk = 0; kk < closest_on_surface_points.size(); kk++){
-                        cout << closest_on_surface_points[kk].parent_patch << ", ";
-                    }
-                    cout << endl;
-                    cout << "looking for patch " << patch->V() << endl;
-                    */
                     assert(closest_on_surface_points.size() > 0);
                     // find the closest on-surface point
                     // TODO replace with
@@ -539,19 +459,19 @@ void refine_patches_midpoint_near_medial_axis(p4est_t*& p4est, PatchSurfFaceMap*
                             closest_on_surface_points, 
                             patch, target,
                             intermediate_face_map);
-                    //cout.precision(16);
+                    
                     if(closest_point.parent_patch != patch->V()){
-                        cout << "point " << qbkix_i << " on patch " << patch->V() << " caused refinement: " << endl;
-                        cout << closest_point.distance_from_target << endl;
-                        cout << closest_point.parent_patch << endl;
-                        cout << closest_point.target_index << endl;
+                        //cout << "point " << qbkix_i << " on patch " << patch->V() << " caused refinement: " << endl;
+                        //cout << closest_point.distance_from_target << endl;
+                        //cout << closest_point.parent_patch << endl;
+                        //cout << closest_point.target_index << endl;
                         OnSurfacePoint s; s.parent_patch = -1;
                         for(auto p : closest_on_surface_points){
                             if(p.parent_patch == patch->V()){
                                 s = p;
                             } 
                         }
-                        if(s.parent_patch == -1){
+                        /*if(s.parent_patch == -1){
 
                         cout << "parent patch not found!" << endl;
                         } else {
@@ -561,10 +481,9 @@ void refine_patches_midpoint_near_medial_axis(p4est_t*& p4est, PatchSurfFaceMap*
                         cout << s.target_index << endl;
                         cout << "difference in distance: " << fabs(s.distance_from_target - closest_point.distance_from_target) << endl;
 
-                        }
+                        }*/
 
                         refinement_data->refine = true;
-                        //closest_point.parent_patch = -200;
                     }
                     final_closest_on_surface_points(current_patch_qbkix_point_index + qbkix_i) = closest_point;
                 }
@@ -582,19 +501,8 @@ void refine_patches_midpoint_near_medial_axis(p4est_t*& p4est, PatchSurfFaceMap*
             dump_vtk_data_for_paraview(qbkix_points_local,
                     final_closest_on_surface_points, it,
                     patches_refined_relative_ids, intermediate_face_map, s);
-            /*
-            DblNumMat qbkix_points_local = get_local_vector(DIM, num_qbkix_samples, qbkix_points);
-            write_qbkix_points_to_vtk(qbkix_points_local, final_closest_on_surface_points,it);
-            write_face_map_patches_to_vtk(qbkix_points_local, 
-                    patches_refined_relative_ids,
-                    intermediate_face_map, it);
-            write_lines_from_qbkix_to_closest_point(qbkix_points_local, final_closest_on_surface_points, intermediate_face_map, it);
-            qbkix_points_local.restore_local_vector();
-             */           
             it++;
         }
-        /*if(it == 2)
-        exit(0);*/
         qbkix_points_local.restore_local_vector();
     }
 }
@@ -659,35 +567,16 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
                 subpatches_to_refine.end());
         cout << "num patches to upsample: " << parent_subpatches_to_refine.size() << endl;
         unique_ptr<AABBTree> aabb_tree(new AABBTree(parent_subpatches_to_refine,true));
-       /* 
-        Markgrid::SpatialGrid* grid = new Markgrid::SpatialGrid(parent_subpatches_to_refine);
-
-        // Add all qbkix points from the coarse grid
-        for(int qi = 0; qi < num_qbkix_samples; qi++){
-            Point3 qbkix_point(qbkix_points_local.clmdata(qi));
-            if(qbkix_point < grid->max() && qbkix_point > grid->min()){
-                grid->insert(qi, qbkix_point);
-            } else {
-                assert(0);
-            }
-        }
-
-        // find the near-zone bounding boxes near to each qbkix point.
-        // Below is a map from qbkix point ids to lists of patch bounding boxes
-        // that share a grid box with the qi-th qbkix point.
-        map<uint, vector<uint> > bounding_boxes_near_points = 
-            *grid->boxes_near_points();
-        */
+       
         // For each qbkix point...
         mark_all_patches_for_refinement<FaceMapSubPatch>(p4est, false);
         NumVec<OnSurfacePoint> final_closest_on_surface_points(num_qbkix_samples);
         setvalue(final_closest_on_surface_points, OnSurfacePoint());
 
         bool compute_closest_points = it >= upsampling_switch_iter && upsampling_algo == "bbox_closest_point";
-        // TODO make sure this is thread safe
         // TODO BUG closest point computation is not strictly necessary! At best
         // it save one level of refinement. Remove entirely and replace with 
-        // grid queries only.
+        // tree queries only.
         cout << "checking if qbkix points are valid: compute_closest_points = " << compute_closest_points << endl;
 #pragma omp parallel for 
         for(int qi = 0; qi < num_qbkix_samples; qi++){
@@ -700,22 +589,12 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
         }
             Point3 qbkix_point(qbkix_points_local.clmdata(qi));
             // 1. find all nearby refined leaf bounding boxes
-            //vector<uint> patches_near_qbkix_point = bounding_boxes_near_points[qi];
             vector<uint> patches_near_qbkix_point = aabb_tree->patches_near_point(qbkix_point);
-            /*uint near_patch_id = aabb_tree->closest_patch_to_point(qbkix_point);
-            vector<uint> patches_near_qbkix_point;
-            patches_near_qbkix_point.push_back(near_patch_id);
-            vector<uint> reindexed_patches;
-            for(auto pi : patches_near_qbkix_point){
-                // Get the actual patch from the face-map
-                int patch_id = subpatches_to_refine[pi]->V();
-                reindexed_patches.push_back(patch_id);
-            }*/
+            
             // 2. find closest points patches
             size_t num_patches_near_point = patches_near_qbkix_point.size();
             vector<OnSurfacePoint> on_surface_points;
             if(compute_closest_points){
-                //cout << "computing closest points!" << endl;
                 on_surface_points= 
                     Markgrid::compute_closest_points_on_patches(
                             qbkix_point,
@@ -733,14 +612,8 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
                    FaceMapSubPatch* patch = 
                            intermediate_face_map->subpatch(patch_id);
                    
-                   /*Point3 bbox_min;
-                   Point3 bbox_max;
-                   patch->inflated_bounding_box(bbox_min, bbox_max);*/
                    // yank out the correpsonding p4est quad and mark it for
                    // refinement
-                   //Markgrid::BoundingBox* bounding_box = grid->_stored_bounding_boxes[pi];
-                   //if(qbkix_point > bounding_box->min() && qbkix_point < bounding_box->max()){
-               //if(qbkix_point > bbox_min && qbkix_point < bbox_max){
                    int tree_id = patch->_parent_id;
                    int quad_id = patch->_quad_id_within_p4est_tree;
                    auto refinement_data = 
@@ -765,11 +638,8 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
                        }
 
                    }
-                   //}
 
             }
-            //final_closest_on_surface_points(qi) = 
-            //    Markgrid::find_closest_on_surface_point_in_list( on_surface_points);
             
             
         }
@@ -788,25 +658,15 @@ void refine_patches_for_fixed_qbkix_points(p4est_t*& p4est, PatchSurfFaceMap*& f
                     final_closest_on_surface_points, it,
                     patches_refined_relative_ids, intermediate_face_map,
                     s);
-            /*
-            DblNumMat qbkix_points_local = get_local_vector(DIM, num_qbkix_samples, qbkix_points);
-            write_qbkix_points_to_vtk(qbkix_points_local, final_closest_on_surface_points,it);
-            write_face_map_patches_to_vtk(qbkix_points_local, 
-                    patches_refined_relative_ids,
-                    intermediate_face_map, it);
-            write_lines_from_qbkix_to_closest_point(qbkix_points_local, final_closest_on_surface_points, intermediate_face_map, it);
-            qbkix_points_local.restore_local_vector();
-            */
+            
             it++;
         }
         
         refine_p4est_quads(p4est);
-        //update_face_map(p4est, intermediate_face_map, intermediate_face_map, test_samples);
         update_face_map(p4est, face_map, intermediate_face_map, test_samples);
 
         // update list of patches to refine and repeat until list is empty
         patches_to_refine = patches_that_need_refinement(p4est);
-        //delete grid;
     }
 
         qbkix_points_local.restore_local_vector();

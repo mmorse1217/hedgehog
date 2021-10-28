@@ -29,11 +29,7 @@ RefinementData<FaceMapSubPatch>* get_refinement_data_from_forest(p4est_t* p4est,
 
 
 RefinementData<FaceMapSubPatch>* get_refinement_data(p4est_quadrant_t* quad);
-/*
-void dump_vtk_data_for_paraview(DblNumMat qbkix_points,
-        NumVec<OnSurfacePoint> closest_on_surface_points, int it,
-        vector<int> global_patch_ids, PatchSurfFaceMap* face_map );
-*/
+
 Rectangle parameter_domain_of_child_quad(int parent_patch_level, 
         p4est_quadrant_t* quad, Rectangle parent_domain);
 // refinement
@@ -45,8 +41,6 @@ void update_and_resample_face_map(p4est_t* p4est,
         vector<int> qbkix_indices);
 
 vector<pair<int, int> > patches_that_need_refinement(p4est_t* p4est);
-// refinement
-// refinement
 vector<FaceMapSubPatch*> face_map_patches_to_refine(p4est_t* p4est);
 vector<int> face_map_patch_ids_to_refine(p4est_t* p4est);
 
@@ -86,17 +80,10 @@ struct PointInQuad{
                 (p.y() >=  y_int.first)   &&
                 (p.y() <=  y_int.second) ;
 
-            // TODO check with Abtin about this piece
-            /*
-            int point_on_quad_edge = 
-                (p.x() - x_int.first) >= EPS    &&
-                (p.x() - x_int.second)<= EPS    &&
-                (p.y() - y_int.first) >= EPS    &&
-                (p.y() - y_int.second)<= EPS   ;*/
-            if(point_in_quad /*|| point_on_quad_edge*/){
+            if(point_in_quad ){
                 quadrant_containing_points[ordered_osp->first] = quadrant;
             }
-            return point_in_quad /*|| point_on_quad_edge*/;
+            return point_in_quad ;
         }
 
     }

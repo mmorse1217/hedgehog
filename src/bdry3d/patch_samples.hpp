@@ -30,6 +30,7 @@ public:
 		   //coordinates wrt its patch center are < 0.5 
   };
     /** 
+     * Needed for blendsurf support
      * _patch_sampling_index:(sqrt(num samples)) x (sqrt(num samples)) matrix
      * that serves as an indexing scheme of sample points in the bounding
      * box of the ith patch. Sample points **outside** the patch are labeled
@@ -78,8 +79,6 @@ protected:
     //! i-th patch domain
     vector<double> _step_size;
 
-  // DZ num is misleading, num_sample_point_steps?
-  // MJM: not sure how steps is better; maybe num_sample_points_in_bbox?
     /** _num_sample_points: the square root of the 
      * number of total sample points taken in the bounding box around the ith
      * patch. In practice, this number is 2*(half-width of bounding box around

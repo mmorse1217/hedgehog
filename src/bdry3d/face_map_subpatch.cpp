@@ -26,69 +26,6 @@ FaceMapSubPatch::FaceMapSubPatch(FaceMapPatch* face_map_patch,
     _quadrature_weights(quad_weights)
 {
     estimate_jacobian(&_approx_jacobian);
-    /*
-    // TODO factor out quadrature weight computation; pre-cache integrals of
-    // lagrange basis functions
-    int num_samples = 20;
-    double spacing = 1./double(num_samples-1.);
-
-    //NumVec<Point2> samples(num_samples*num_samples);
-    NumMatrix samples = 
-        Sampling::sample_2d<Sampling::chebyshev2>(num_samples, Sampling::base_domain);
-    DblNumVec quad_weight(num_samples*num_samples);
-
-    if(_quadrature_weights == NULL){
-
-        // generate quadrature nodes and weights
-        DblNumVec quadrature_nodes_1d(num_samples);
-        DblNumVec* quadrature_weights_1d = new DblNumVec(num_samples);
-        for(int si = 0; si < num_samples; si++){
-            quadrature_nodes_1d(si) = samples(1,si);
-        }
-
-        for(int si = 0; si < num_samples; si++){
-            (*quadrature_weights_1d)(si) = 
-                Interpolate::integrate_ith_lagrange_basis_func(
-                        si, 0., 1., num_samples, quadrature_nodes_1d, num_samples/2+1, 1.);
-            (*quadrature_weights_1d)(si) *= 1./pow(2., _level);
-        }
-        _quadrature_weights = quadrature_weights_1d;
-    } else {
-        for(int si = 0; si < num_samples; si++)
-            (*_quadrature_weights)(si) *=1./pow(2.,_level);
-    }
-
-    for(int si = 0; si < num_samples; si++){
-        for(int sj = 0; sj < num_samples; sj++){
-            int index = si*num_samples + sj;
-
-            quad_weight(index) = 
-                (*_quadrature_weights)(si)*(*_quadrature_weights)(sj);
-
-        }
-    }
-
-    DblNumMat normals(DIM, num_samples*num_samples);
-    for(int i = 0; i < num_samples*num_samples; i++){
-        Point2 sample_uv(samples.clmdata(i));
-
-        vector<Point3> values(3, Point3());
-        this->xy_to_patch_coords(sample_uv.array(), 
-                PatchSamples::EVAL_VL|PatchSamples::EVAL_FD, 
-                (double*)values.data());
-
-        Point3 normal = cross(values[1], values[2]);
-        for(int d = 0; d < 3; d++)
-            normals(d, i) = normal(d);
-    }
-
-    _characteristic_length = characteristic_length(normals, quad_weight);
-    if(_quadrature_weights != NULL){
-        for(int si = 0; si < num_samples; si++)
-            (*_quadrature_weights)(si) *=pow(2.,_level);
-    }*/
-    //_near_zone_distance = compute_near_zone_distance();
-    // TODO might be slow
 
 }
 void FaceMapSubPatch::compute_near_zone_distance(){
@@ -195,18 +132,14 @@ int FaceMapSubPatch::estimate_jacobian(double* jac){
   Point3 ret[3];
   FaceMapSurf& face_map = ((PatchSurfFaceMap*)_face_map_patch->bdry())->face_map();
 
-  //face_map.eval(BdSurf::EVAL_VALUE|BdSurf::EVAL_1ST_DERIV, _face_map_patch->V(), xy, ret); //blendsurf v3
-  face_map.eval(BdSurf::EVAL_VALUE|BdSurf::EVAL_1ST_DERIV, _face_map_patch->V(), xy_scaled, ret); //blendsurf v3
+  face_map.eval(BdSurf::EVAL_VALUE|BdSurf::EVAL_1ST_DERIV, _face_map_patch->V(), xy_scaled, ret); 
 
   jac[0] = max(ret[1].l2(), ret[2].l2());
   return 0;
-    //return _face_map_patch->estimate_jacobian(ret);
 }
 
 void FaceMapSubPatch::inflated_bounding_box(Point3& bounding_box_min, Point3& bounding_box_max){
     bounding_box(bounding_box_min, bounding_box_max);
-    /*double inflation_factor = 
-        Options::get_double_from_petsc_opts("-adaptive_upsampling_bbox_inflation_factor");*/
     // Increase by the size of the near zone
     //double inflation_factor = error_estimate(n, target_accuracy);
     double target_accuracy = Options::get_double_from_petsc_opts("-target_accuracy");
@@ -214,10 +147,9 @@ void FaceMapSubPatch::inflated_bounding_box(Point3& bounding_box_min, Point3& bo
     int n = int(floor(1./spacing))+1;
     double mean_curvature = this->mean_curvature(Point2(.5, .5));
     double L = this->_characteristic_length;
-    //double inflation_factor = near_zone_approx_size_fit(n,1.,-L*mean_curvature, target_accuracy);
+    
     double inflation_factor = _near_zone_distance;
-    //double inflation_factor = 0.;
-//3*near_zone_approx_size(n, 1., -mean_curvature, target_accuracy);
+    
     bounding_box_max += Point3(inflation_factor);
     bounding_box_min -= Point3(inflation_factor);
 }
@@ -234,17 +166,8 @@ void FaceMapSubPatch::bounding_box(Point3& bounding_box_min, Point3& bounding_bo
               bounding_box_min, 
               bounding_box_max);
   }
-  /*
-  Point3 bounding_box_center =.5*( bounding_box_min + bounding_box_max);
-  bounding_box_max -= bounding_box_center;
-  bounding_box_min -= bounding_box_center;
-  
-  bounding_box_max *= (2.+_characteristic_length);
-  bounding_box_min *= (2.+_characteristic_length);
-  
-  bounding_box_max += bounding_box_center;
-  bounding_box_min += bounding_box_center;*/
 }
+
 DblNumMat FaceMapSubPatch::control_points(){
   FaceMapSurf& face_map = ((PatchSurfFaceMap*)_face_map_patch->bdry())->face_map();
 
@@ -301,10 +224,9 @@ void FaceMapSubPatch::mesh_bounding_box(DblNumMat& vertices, IntNumMat& triangle
     Point3 bbox_min;
     Point3 bbox_max;
     bounding_box(bbox_min, bbox_max);
-    //bbox_min -= Point3(.5*characteristic_length());
-    //bbox_max += Point3(.5*characteristic_length());
+    
     // enumerate the 8 vertex corners of the box
-    vertices.resize(3,8);
+    vertices.resize(DIM,8);
     for (int i = 0; i < 2; i++) { // 
         for (int j = 0; j < 2; j++) { // y
             for (int k = 0; k < 2; k++) { // z
@@ -316,7 +238,9 @@ void FaceMapSubPatch::mesh_bounding_box(DblNumMat& vertices, IntNumMat& triangle
         }
     }
 
-    // sorry future me
+    // TODO refactor 3 and 12 into const variables
+    // 3 is num verts per triangle, 12 is num triangles per bounding box (6
+    // faces with 2 triangles each)
     triangles.resize(3,12);
 
     // explicitly list indices that make up quad faces of bbox as enumerated
@@ -374,34 +298,13 @@ bool FaceMapSubPatch::is_patch_valid(Vec function_values_at_parent,
                     function_values_at_children_local(d,i));
             bool abs_err_tolerance = err < eps;
 
-            /*if(V() == 14 && !abs_err_tolerance)
-            cout << "i: " << i << ";" << interpolated_values(d,i) << " <= " << function_values_at_children_local(d,i) << ": " 
-               << err << endl;*/
             is_valid = is_valid && abs_err_tolerance;
             error_local(d,i) = err;
             error_abs_err += err*err;
         }
     }
-    //cout << "patch id:  " << V()  << endl;
-    //cout << "parent id:  " << _parent_id  << endl;
-    //cout << "coarse id:  " << _coarse_parent_patch<< endl;
-    /*if(V() == 14){
-        Vec pos;Petsc::create_mpi_vec(MPI_COMM_WORLD, DIM* uv_coordinates_single_patch_local.n(), pos);
-        {DblNumMat pl(DIM,pos);
-        for (int i = 0; i < uv_coordinates_single_patch_local.n(); i++) {
-            Point3 sample;
-            Point2 uv(uv_coordinates_single_patch_local.clmdata(i));
-            xy_to_patch_coords(uv.array(), 1, sample.array());
-            for (int d = 0; d < DIM; d++) {
-                pl(d, i) = sample(d);
-            }
-        }}
-        write_general_points_to_vtk(pos, 1, "patch_points_error.vtp",error, "data/");
-        VecDestroy(&pos);
-    }*/
     VecDestroy(&error);
     return is_valid;
-    //return sqrt(error_abs_err) < eps;
 }
 double FaceMapSubPatch::gaussian_curvature(Point2 xy){
     Point2 xy_scaled;

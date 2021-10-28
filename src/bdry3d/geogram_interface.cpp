@@ -8,7 +8,6 @@ BEGIN_EBI_NAMESPACE
 using GEO::index_t;
 using GEO::signed_index_t;
 void AABBTree::initialize_mesh(DblNumMat vertices, IntNumMat faces){
-    //_mesh = std::move(unique_ptr<GEO::Mesh>(new GEO::Mesh(3,false)));
     _mesh = new GEO::Mesh(3,false);
     int num_vertices = vertices.n();
     int num_faces = faces.n();
@@ -39,18 +38,11 @@ AABBTree::AABBTree(PatchSamples* samples){
 }
 
 void AABBTree::mesh_patches_and_build_tree(vector<Patch*> patches){
-    // here, we're meshing patch bounding boxes and passing them to geogram
-    //int num_patches = surface->num_patches();
     int num_patches = patches.size();
-    //const int verts_per_bbox = 8;
-    //const int triangles_per_bbox = 12;
-    //double spacing = 0.090909;
     double spacing = .25;
     int num_samples_1d = int(round(1./spacing))+1;
     const int verts_per_bbox = num_samples_1d*num_samples_1d;
     const int triangles_per_bbox = 2*(num_samples_1d-1)*(num_samples_1d-1);
-    //const int verts_per_bbox = 25;
-    //const int triangles_per_bbox = 32;
     int num_total_vertices = num_patches*verts_per_bbox;
     int num_total_triangles = num_patches*triangles_per_bbox; // 
 
@@ -64,10 +56,8 @@ void AABBTree::mesh_patches_and_build_tree(vector<Patch*> patches){
     for (int pi = 0; pi < num_patches; pi++) {
         auto patch = FaceMapSubPatch::as_subpatch(patches[pi]);
         
-        // mesh the bounding box
         DblNumMat vertices;
         IntNumMat triangles;
-        //patch->mesh_bounding_box(vertices, triangles);
         patch->mesh_patch(spacing, Rectangle(Interval(0.,1.), Interval(0.,1.)), vertices, triangles);
 
         assert(vertices.m() == DIM);
@@ -95,7 +85,8 @@ void AABBTree::mesh_patches_and_build_tree(vector<Patch*> patches){
         }
         // save the mapping
         patch_to_triangle_id_map[pi] = triangles_on_patch;
-        // sanity check
+        
+        // reset temp storage
         setvalue(vertices, 0.);
         setvalue(triangles, 0);
     }
@@ -107,13 +98,8 @@ void AABBTree::mesh_patches_and_build_tree(vector<Patch*> patches){
             _triangle_ids_to_patch_ids[triangle_id] = pi;
         }
     }
-    // dump triangle mesh for visualization
-    //vector<int> pids;
-    //pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
-    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/surface", pids);
 
     initialize_mesh(_surface_vertices, _surface_triangles);
-    //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
     _tree = new GEO::MeshFacetsAABB(*_mesh,false);
 
 }
@@ -168,7 +154,6 @@ void AABBTree::mesh_near_zone_and_build_tree(vector<Patch*> patches){
     _surface_vertices.resize(DIM, num_total_vertices);
     _surface_triangles.resize(DIM, num_total_triangles);
     
-    //vector<vector<uint> > patch_to_triangle_id_map(num_patches, vector<uint>());
     _triangle_ids_to_patch_ids.resize(num_total_triangles);
 #pragma omp parallel for
     for (int pi = 0; pi < num_patches; pi++) {
@@ -204,17 +189,6 @@ void AABBTree::mesh_near_zone_and_build_tree(vector<Patch*> patches){
         setvalue(triangles, 0);
         _triangle_ids_to_patch_ids[pi] = pi;
     }
-    // compute inverted indexing
-    /*_triangle_ids_to_patch_ids.resize(num_total_triangles);
-    for(int pi =0; pi < num_patches; pi++){
-        const auto& triangles_on_patch = patch_to_triangle_id_map[pi];
-        for(const int triangle_id : triangles_on_patch){
-            _triangle_ids_to_patch_ids[triangle_id] = pi;
-        }
-    }*/
-    //vector<int> pids;
-    //pids.assign(_triangle_ids_to_patch_ids.begin(), _triangle_ids_to_patch_ids.end());
-    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/", pids);
 
     initialize_mesh(_surface_vertices, _surface_triangles);
     //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
@@ -300,10 +274,8 @@ AABBTree::AABBTree(PatchSurf* surface){
             _triangle_ids_to_patch_ids[triangle_id] = pi;
         }
     }
-    //write_triangle_mesh_to_vtk( _surface_vertices, _surface_triangles, 0, "data/");
 
     initialize_mesh(_surface_vertices, _surface_triangles);
-    //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
     _tree = new GEO::MeshFacetsAABB(*_mesh);
 }
 
@@ -311,7 +283,6 @@ AABBTree::AABBTree(PatchSurf* surface){
 AABBTree::AABBTree(DblNumMat vertices, IntNumMat faces){
     initialize_mesh(vertices, faces);
     _tree = new GEO::MeshFacetsAABB(*_mesh);
-    //_tree = std::move(unique_ptr<GEO::MeshFacetsAABB>(new GEO::MeshFacetsAABB(*(_mesh.get()))));
 }
 
 uint AABBTree::closest_patch_to_point(Point3 query_point){
@@ -338,49 +309,6 @@ vector<uint> AABBTree::patches_intersecting_bbox(Point3 query_box_min,Point3 que
     memcpy(bounding_box.xyz_min, query_box_min.array(), sizeof(double)*3);
     memcpy(bounding_box.xyz_max, query_box_max.array(), sizeof(double)*3);
     
-    /*DblNumMat vertices;
-    IntNumMat triangles;
-    vertices.resize(3,8);
-    for (int i = 0; i < 2; i++) { // 
-        for (int j = 0; j < 2; j++) { // y
-            for (int k = 0; k < 2; k++) { // z
-                int index = 4*i+2*j+k;
-                vertices(0,index) = i ? query_box_min(0) : query_box_max(0);
-                vertices(1,index) = j ? query_box_min(1) : query_box_max(1);
-                vertices(2,index) = k ? query_box_min(2) : query_box_max(2);
-            }
-        }
-    }
-
-    // sorry future me
-    triangles.resize(3,12);
-
-    // explicitly list indices that make up quad faces of bbox as enumerated
-    // above
-    vector<vector<int> > bbox_quads(6);
-    bbox_quads[0]= {0,2,3,1};
-    bbox_quads[1]= {1,3,7,5};
-    bbox_quads[2]= {4,0,1,5};
-    bbox_quads[3]= {4,6,2,0};
-    bbox_quads[4]= {5,7,6,4};
-    bbox_quads[5]= {2,6,7,3};
-    for (int i = 0; i < 6; i++) {
-        const auto& quad = bbox_quads[i];
-
-        // index set for the two triangles that make up each quad
-        vector<int> t1 = {0,1,2};
-        vector<int> t2 = {0,2,3};
-        for (int d = 0; d < 3; d++) {
-            // copy them into the output array
-            triangles(d,2*i) = quad[t1[d]];
-            triangles(d,2*i+1) = quad[t2[d]];
-        }
-    }
-    cout << vertices << endl;
-    cout << triangles<< endl;
-    write_triangle_mesh_to_vtk(
-            vertices, triangles, it, "data/query_box");
-    */
 
     TrianglesNearBBox triangle_aggregator;
     _tree->compute_bbox_facet_bbox_intersections(bounding_box, triangle_aggregator);
@@ -389,20 +317,7 @@ vector<uint> AABBTree::patches_intersecting_bbox(Point3 query_box_min,Point3 que
         patch_ids_set.insert(_triangle_ids_to_patch_ids[index]);
     }
     vector<uint> unique_patch_ids(patch_ids_set.begin(), patch_ids_set.end());
-    /*
-    cout << "patches near bbox " << it << ": ";
-    for(const auto pid: unique_patch_ids){
-        cout << pid << ", ";
-        
-    }
-    cout << endl;
-    cout << "triangles near bbox " << it << ": ";
-    for(const auto tid: triangle_aggregator.triangle_ids){
-        cout << tid << ", ";
-        
-    }
-    cout << endl;
-    it++;*/
+    
     return unique_patch_ids;
 
 }
@@ -422,49 +337,7 @@ vector<uint> AABBTree::patches_near_point(Point3 query_point){
     for(const auto& index : triangle_aggregator.triangle_ids){
         patch_ids_set.insert(_triangle_ids_to_patch_ids[index]);
     }
-    /*{
-    DblNumMat vertices;
-    IntNumMat triangles;
-    vertices.resize(3,8);
-    for (int i = 0; i < 2; i++) { // 
-        for (int j = 0; j < 2; j++) { // y
-            for (int k = 0; k < 2; k++) { // z
-                int index = 4*i+2*j+k;
-                vertices(0,index) = i ? bbox_min(0) : bbox_max(0);
-                vertices(1,index) = j ? bbox_min(1) : bbox_max(1);
-                vertices(2,index) = k ? bbox_min(2) : bbox_max(2);
-            }
-        }
-    }
-
-    // sorry future me
-    triangles.resize(3,12);
-
-    // explicitly list indices that make up quad faces of bbox as enumerated
-    // above
-    vector<vector<int> > bbox_quads(6);
-    bbox_quads[0]= {0,2,3,1};
-    bbox_quads[1]= {1,3,7,5};
-    bbox_quads[2]= {4,0,1,5};
-    bbox_quads[3]= {4,6,2,0};
-    bbox_quads[4]= {5,7,6,4};
-    bbox_quads[5]= {2,6,7,3};
-    for (int i = 0; i < 6; i++) {
-        const auto& quad = bbox_quads[i];
-
-        // index set for the two triangles that make up each quad
-        vector<int> t1 = {0,1,2};
-        vector<int> t2 = {0,2,3};
-        for (int d = 0; d < 3; d++) {
-            // copy them into the output array
-            triangles(d,2*i) = quad[t1[d]];
-            triangles(d,2*i+1) = quad[t2[d]];
-        }
-    }
-    write_triangle_mesh_to_vtk(
-            vertices, triangles, 50, "data/query_box");
-
-    }*/
+    
 
     vector<uint> unique_patch_ids(patch_ids_set.begin(), patch_ids_set.end());
     return unique_patch_ids;
@@ -472,10 +345,7 @@ vector<uint> AABBTree::patches_near_point(Point3 query_point){
 
 
 
-/*AABBTree::~AABBTree(){
-}*/
 
-//void convex_hull(FaceMapSubPatch* patch, GEO::Mesh& mesh){
  void convex_hull(FaceMapSubPatch* patch, DblNumMat& vertices, IntNumMat& faces){
      GEO::Mesh mesh(3);
     DblNumMat control_points = patch->control_points();

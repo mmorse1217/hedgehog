@@ -69,18 +69,6 @@ void dump_vtk_data_for_paraview(DblNumMat qbkix_points,
 
 vector<FaceMapSubPatch*> collect_face_map_subpatches(p4est_t* p4est){
     vector<FaceMapSubPatch*> patches= collect_patches<FaceMapSubPatch>(p4est);
-    /*
-    vector<FaceMapSubPatch*> patches;
-    for(size_t tree_id = 0; tree_id < p4est->trees->elem_count; tree_id++){
-        p4est_tree_t* tree = p4est_tree_array_index(p4est->trees, tree_id);
-
-        for(size_t quad_id = 0; quad_id < tree->quadrants.elem_count; quad_id++){
-            p4est_quadrant_t* quad = p4est_quadrant_array_index(&tree->quadrants, quad_id);
-            auto r = static_cast<RefinementData<FaceMapSubPatch>*>(quad->p.user_data);
-            patches.push_back(r->patch);
-        }
-    }*/
-
     return patches;
 }
 
@@ -131,8 +119,7 @@ void find_leaf_quad_containing_points(p4est_t* p4est, vector<OnSurfacePoint> poi
 
     }
 
-   assert(0); // lets not use this yet.
-    //doesn't allow for concurrent access...
+   assert(0); //doesn't allow for concurrent access...
    PointInQuad* functor = static_cast<PointInQuad*>(p4est->user_pointer);
    functor->quadrant_containing_points.resize(points_to_process.size());
 
@@ -148,14 +135,12 @@ void find_leaf_quad_containing_points(p4est_t* p4est, vector<OnSurfacePoint> poi
 struct Storage{
     PatchSurfFaceMap* face_map;
     int quad_counter;
-    //IntNumVec quad_counters;
 
 };
 extern "C" void reinitialize_subpatches(p4est_iter_volume_info_t * info, void *user_data){
     p4est_quadrant_t* quad = info->quad;
     int tree_id = info->treeid;
     
-    //auto r = static_cast<RefinementData<FaceMapSubPatch>*>(quad->p.user_data);
     auto r = get_refinement_data(quad);
     // only call this function initially before any refinement or processing...
     
@@ -256,10 +241,7 @@ vector<Patch*> p4est_to_face_map_subpatches(p4est_t* p4est,
     vector<FaceMapSubPatch*> subpatches_to_convert = collect_face_map_subpatches(p4est);
     
     subpatches.assign(subpatches_to_convert.begin(), subpatches_to_convert.end());
-    /*subpatches.resize(subpatches_to_convert.size());
-    for(int i =0; i < subpatches_to_convert.size(); i++){
-        subpatches[i] = subpatches_to_convert[i];
-    }*/
+    
     for(int i =0; i < subpatches_to_convert.size(); i++){
         assert(subpatches_to_convert[i] != NULL);
         assert(subpatches[i] != NULL);
@@ -282,24 +264,14 @@ void update_face_map(p4est_t* p4est,
     auto temp_face_map = intermediate_face_map;
 
 
-    /*if(temp_face_map!= NULL){
-        temp_face_map->partial_teardown();
-    }*/
-    // make a new face-map based on the original base surface
+    
+    // Construct face-map patches from current p4est quads and the original face-map, 
+    // and assign them to the intermediate face-map 
     intermediate_face_map = new PatchSurfFaceMap("BD3D_", "bd3d_");
     intermediate_face_map->_surface_type = face_map->_surface_type;
     intermediate_face_map->setFromOptions();
     intermediate_face_map->setup_from_existing_face_map(face_map);
-    //delete intermediate_face_map->_p4est; // MEMORY LEAK  possible fix; hopefully doesn't introduce bugs.
     intermediate_face_map->initialize_with_existing_p4est(p4est);
-    //intermediate_face_map->setup();
-    //intermediate_face_map->_p4est = face_map->_p4est;
-
-    // Construct face-map patches from current p4est quads and the original face-map, 
-    // and assign them to the intermediate face-map 
-    //assert(0); // BUG TODO now broken due to new p4est based connectivity
-    //intermediate_face_map->patches() = p4est_to_face_map_subpatches(face_map->_p4est, face_map);
-
 
     // Re-sample the new set of patches
     vector<int> partition(intermediate_face_map->num_patches(), 0);
@@ -338,42 +310,7 @@ void update_and_resample_face_map(p4est_t* p4est,
                 intermediate_face_map, intermediate_patch_samples);
         resample_qbkix_points(p4est,
                 intermediate_patch_samples, qbkix_points, qbkix_indices);
-/*
-    if(intermediate_patch_samples != NULL)
-        delete intermediate_patch_samples;
 
-    if(qbkix_points != NULL)
-        VecDestroy(&qbkix_points);
-    
-    cout << "after delete" << endl;
-
-    // make a new face-map based on the original base surface
-    intermediate_face_map = new PatchSurfFaceMap("BD3D_", "bd3d_");
-    intermediate_face_map->_surface_type = face_map->_surface_type;
-    intermediate_face_map->setFromOptions();
-    intermediate_face_map->setup_from_existing_face_map(face_map);
-    cout << "setup from existing face_map..." << endl;
-    //intermediate_face_map->setup();
-    //intermediate_face_map->_p4est = face_map->_p4est;
-
-    // Construct face-map patches from current p4est quads and the original face-map, 
-    // and assign them to the intermediate face-map 
-    //assert(0); // BUG TODO now broken due to new p4est based connectivity
-    //intermediate_face_map->patches() = p4est_to_face_map_subpatches(face_map->_p4est, face_map);
-
-
-    // Re-sample the new set of patches
-    vector<int> partition(intermediate_face_map->num_patches(), 0);
-    intermediate_patch_samples = new PatchSamples("", "");
-    intermediate_patch_samples->bdry() = intermediate_face_map;
-    intermediate_patch_samples->patch_partition() = partition;
-    intermediate_patch_samples->setup();
-    
-    // generate qbkix targets from the new samples
-    vector<int> invalid_face_map_patches = face_map_patch_ids_to_refine(p4est);
-    qbkix_points = 
-        intermediate_patch_samples->generate_qbkix_points_from_sample_points(qbkix_indices, invalid_face_map_patches);
-*/
 }
 
 
@@ -430,8 +367,6 @@ vector<int> face_map_patch_ids_to_refine(p4est_t* p4est){
 
 void store_p4est(string filename, p4est_t* p4est){
     p4est_save(filename.c_str(), p4est, 1);
-    //string connectivity_filename = filename + "conn";
-    //p4est_connectivity_save(connectivity_filename.c_str(), p4est->connectivity, 0);
 }
 
 void load_p4est(string filename, 

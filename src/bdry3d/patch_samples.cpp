@@ -134,8 +134,6 @@ int PatchSamples::initialize_sampling_indices(){
                     } else {
                         // MJM 1/2018 non-standard spacing for blendsurf points.
                         // leaving this alone.
-                        //xy[0] = init + i*step;
-                        //xy[1] = init + j*step;
                         xy = init*Point2(1) + Point2(i,j)*step;
                     }
                     bool is_valid;
@@ -323,8 +321,6 @@ void PatchSamples::sample_patches(){
                         } else {
                             // MJM 1/2018 non-standard spacing for blendsurf points.
                             // leaving this alone.
-                            //xy[0] = init + i*step;
-                            //xy[1] = init + j*step;
                             xy = init*Point2(1) + Point2(i,j)*step;
                         }
 
@@ -333,11 +329,8 @@ void PatchSamples::sample_patches(){
 
                         double alpha;  
                         Point3 pdd[3];
-                        // DZ: bad name for xy_to_patch_coords -- produces 3d position?
-                        // MJM: Suggestions for alternative? produces 3d position on
-                        // surface (pdd[0]) and 1st partial derivatives in x/y
-                        // direction 
                         curpch->xy_to_patch_coords(xy.array(), EVAL_VL|EVAL_FD, (double*)pdd);
+
                         // blending function value at xy
                         curpch->xy_to_patch_value(xy.array(), EVAL_VL, &alpha);
                         blend_func_value(index) = alpha;
@@ -383,7 +376,6 @@ void PatchSamples::sample_patches(){
                          * 
                          * where L_i(x) is the ith lagrange basis polynomial.
                          *
-/bin/bash: :341: command not found
                          * weight needs an additional multplicative factor of 
                          * \int_P L_i(x)L_j(y) dP.
                          */
@@ -396,8 +388,6 @@ void PatchSamples::sample_patches(){
                         //combined integration weight
                         combined_weight(index) = len * alpha * quad_weight(index) ; //jac * alf * wgt
 
-                        // combined integration weight
-                        //combined_weight(index) = len * alpha * step*step; //jac * alf * wgt
 
                         parametric_preimage(0,index) = xy.x();
                         parametric_preimage(1,index) = xy.y();
@@ -465,15 +455,6 @@ int PatchSamples::setup(bool refined)
     }
     ebiFunctionBegin;
     
-    // TODO MJM remove this pattern
-    // translate "solver spacing" to "surface discretization spacing"
-    // DZ what's the difference? Why is this needed?
-    /*
-    // MJM BUG this code is called in the executable, and passed to PatchSurf
-    // surface rep; since _spacing was never used in PatchSurf, it's a wonder why
-    // it was ever done.
-    */
-
     // If we're using a refined surface (i.e. for near-evaluation) and blendsurf, reduce the
     // spacing appropriately.
     if (refined && dynamic_cast<PatchSurfBlended*>(_bdry)){
@@ -532,7 +513,7 @@ int PatchSamples::setup(bool refined)
     //int64_t interpolant_num_samples = Options::get_int_from_petsc_opts("-LL");
 
 
-    // Cache quadrature weights; we alwasys used num_samples x num_samples
+    // Cache quadrature weights; we always used num_samples x num_samples
     // points per patch, so we'll store the weights so we don't need to
     // recompute the integrals each time.
     int num_samples = 0; 
@@ -738,17 +719,12 @@ Vec interpolate_and_resample(int dof, Vec function,
     //      and the  fine func_values and uv_coordinates to evaluate at 
 
     // figure out which fine patches are contained in each coarse patch
-    // TODO fix 
-    // make num_interp_samples and num_eval_samples getting numpts from patchsamples
-    /*double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
-    int num_samples_per_patch_1d = floor(1./spacing)+1; // TODO factor out bug prone
-    int num_samples_per_patch = num_samples_per_patch_1d*num_samples_per_patch_1d;
-*/
     int num_interp_samples_1d = interp_samples->num_sample_points()[0];
     int num_interp_samples_per_patch =num_interp_samples_1d*num_interp_samples_1d;
     int num_eval_samples_1d = eval_samples->num_sample_points()[0];
     int num_eval_samples_per_patch =num_eval_samples_1d*num_eval_samples_1d;
     int num_patches= surface->num_patches();
+
     // make the output vector of size
     // num_samples_per_patch*num_refined_patches*dof
     Vec refined_func;
@@ -763,9 +739,6 @@ Vec interpolate_and_resample(int dof, Vec function,
     //for(auto patch : surface->patches()){
     for(int pi= 0; pi < num_patches; pi++){
 
-        //int parent_face_map_id = subpatch->_face_map_patch->V();
-        //auto parent_patch = dynamic_cast<FaceMapSubPatch*>(coarse_surf->patches()[parent_id]);
-        //auto parent_patch = surface->subpatch(parent_id);
         
         // Interpolation points and function values to interpolate
         DblNumMat interp_function_values(interp_samples->sample_point_data(pi, dof, function));
@@ -776,20 +749,6 @@ Vec interpolate_and_resample(int dof, Vec function,
         DblNumMat eval_function_values(eval_samples->sample_point_data(pi, dof, refined_func));
         DblNumMat eval_sample_uv_coords(eval_samples->sample_point_parametric_preimage(pi));
         
-        /*// unscale samples to interpolate properly
-        for(int si =0; si < fine_sample_uv_coords.n(); si++){
-            // shift from [0,1]^2 w.r.t to the child patch to [a,b]^2 \subset
-            // [0,1]^2 w.r.t the parent patch
-            Point2 subpatch_sample(fine_sample_uv_coords.clmdata(si));
-            Point2 patch_sample;
-            subpatch->rescale(subpatch_sample.array(), patch_sample.array());
-            
-
-
-            for(int d =0; d < 2; d++){
-                fine_sample_uv_coords_scaled(d,si) = patch_sample(d);
-            }
-        }*/
 
         // interpolate values 
         Interpolate::evaluate_barycentric_interpolant_2d(dof, 
@@ -835,12 +794,9 @@ Vec refine_function(int dof, Vec function,
 #pragma omp parallel for
     for(int pi = 0; pi < fine_surf->num_patches(); pi++){
         auto subpatch = fine_surf->subpatch(pi);
-        //auto subpatch = FaceMapSubPatch::as_subpatch(patch);
         int child_id = subpatch->V();
         int parent_id = subpatch->_coarse_parent_patch;
 
-        //int parent_face_map_id = subpatch->_face_map_patch->V();
-        //auto parent_patch = dynamic_cast<FaceMapSubPatch*>(coarse_surf->patches()[parent_id]);
         auto parent_patch = coarse_surf->subpatch(parent_id);
         
         // Interpolation points and function values to interpolate
@@ -881,6 +837,7 @@ Vec refine_function(int dof, Vec function,
             }
         }
         // interpolate values 
+        // TODO precompute barycentric weights
         Interpolate::evaluate_barycentric_interpolant_2d(dof, 
                 coarse_sample_uv_coords_scaled, 
                 coarse_function_values, 
@@ -931,9 +888,7 @@ int PatchSamples::interpolated_position_and_derivatives(int pi, double* xy,
 {
   ebiFunctionBegin;
   vector<Patch*>& patches = _bdry->patches(); //get patches
-  //double start = omp_get_wtime();
   patches[pi]->xy_to_patch_coords(xy, flag, res);
-  //stats.result_plus_equals("singular surface eval time", omp_get_wtime() - start);
   ebiFunctionReturn(0);
 }
 // ---------------------------------------------------------------------- 
@@ -1046,7 +1001,6 @@ int PatchSamples::get_sample_on_patch(int pi, int* ij, double* pos, double* nor,
 int PatchSamples::get_sample_point(int pi, int* ij, int dof, Vec dat, double* res)
 {
   ebiFunctionBegin;
-  //int num_samples = _num_sample_points[pi];
   IntNumMat& patch_sampling_index = _patch_sampling_index[pi];
   int index = patch_sampling_index(ij[0],ij[1]);
   DblNumMat sample_point_data( this->sample_point_data(pi, dof, dat) );
@@ -1323,12 +1277,11 @@ void generate_samples_on_child_patches(MPI_Comm comm,
             DblNumMat parametric_samples = 
                 DblNumMat(2, num_samples_per_patch, true, 
                     sample_2d<chebyshev1>(num_samples_1d, child_domain).data());
-            //cout << i << ", " << j << endl;
-            //cout << parametric_samples << endl;
+  
+
             // copy
             for (int k = 0; k < parametric_samples.n(); k++) {
                 for (int d = 0; d < parametric_samples.m(); d++) {
-            //cout << k << ", " <<d  << "; " << (2*i+j)*num_samples_1d*num_samples_1d +k << endl;
                    uv_coords_local(d,(2*i+j)*num_samples_per_patch + k) = parametric_samples(d,k); 
                 }
             }

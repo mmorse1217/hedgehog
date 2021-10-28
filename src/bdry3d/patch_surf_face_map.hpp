@@ -99,13 +99,13 @@ class FaceMapPatch: public Patch
 {
     protected:
 
-        // _V  - the global index of the vertex that corresponds to the center of the
-        // patch. Global index is with respect to the entire surface mesh
+        // _V  - the global index of the face that corresponds to the patch. 
+        // Global index is with respect to the entire surface mesh
         int _V;
 
         // _characteristic_length = square root of linear approximation to patch area
         //double _characteristic_length;
-        // _bnd - the half-width of the bounding box that encloses the entire patch.
+        // _bnd - unused
         double _bnd;
     public:
 
@@ -113,11 +113,6 @@ class FaceMapPatch: public Patch
         // All figures referred to are in A Simple Manifold-Based Construction of
         // Surfaces of Arbitrary Smoothness - L. Ying & D. Zorin
 
-        /*
-         * Initialize a blended patch object. Constructor really only updates member
-         * variables and determined the value of _bnd, which is determined by 
-         * internally by blendsurf.
-         */
         FaceMapPatch(PatchSurf* b, int pi, int V); 
         ~FaceMapPatch(){;}
         int& V() { 
@@ -160,45 +155,14 @@ class FaceMapPatch: public Patch
 
 
         /*
-         * Determines if a point (x,y) \in D (Figure 1) is in the region of the regular 
-         * star  shaped wedge in domain S of Figure 1, where (0,0) corresponds to the
-         * vertex center, that corresponds to a valid evaluation region [0,EVAL_UB]x[0,EVAL_UB],
-         * where EVAL_UB is set in the options file. Might be a reminant from when things 
-         * weren't quite working; appears to be rather redundant in blendsurf v3 where
-         * EVAL_UB() == 1.
-         *
-         * a point (x,y) is considered valid (in this sense) with respect to the
-         * current patch if it is contained within the evaluation domain for any of
-         * the k faces that are valent to vertex _V. If this isn't the case, (x,y)
-         * will evaluate to zero using the current patch and will contribute
-         * negligibly. 
-         *        ------------* <--- (1,1)
-         *      /            /
-         *     /            / <--- current face containing the point (x,y)
-         *    /            /       region where is_valid == true is [0,EVAL_UB()]x[EVAL_UB]
-         *   /            /
-         *  *------------  
-         *  ^--V = (0,0)
-         *
+         * Determines if a point (x,y) is in the box [0,1]^2
          *  @param double *   xy      position in (x,y) coordinates w.r.t to V
          *  @param bool&      is_valid     whether (x,y) is contained in the current face
          */
         int is_xy_valid( double* xy, bool& is_valid); // returns whether point is within chart upper boundary
 
         /*
-         * Determines if a point (x,y) \in D (Figure 1) is in a box [0,.5]x[0,.5] in the regular star 
-         * shaped wedge in domain S of Figure 1, where (0,0) corresponds to the vertex
-         * center.
-         *         ------------* <--- (1,1)
-         *       /            /
-         *      /            / <--- Face containing the point (x,y)
-         *     *------*     /
-         *    /      /     /
-         *   /      /     /
-         *  *------*-----  
-         *  |  ^---- region where (x,y) is dominant
-         *  ^--V = (0,0)
-         *
+         *  Unused legacy function from blendsurf
          *  @param double *   xy      position in (x,y) coordinates w.r.t to V
          *  @param bool&      dominant     whether (x,y) is dominant, i.e. contained in the 
          *                            box described above 
@@ -208,10 +172,8 @@ class FaceMapPatch: public Patch
         int xy_to_face_point(double* xy, FacePointOverlapping* face_point);
 
         /*
-         * Interface to Blendsurf::BdSurf::eval(...). Evaluates the surface position, 
-         * 1st and 2nd derivatives (depending on flags) from xy-coordinates in the 
-         * coordinate system of global vertex _V, using contributions from all (4)
-         * charts that share the face containing (x,y) ((x,y) \in D in Figure 1.)
+         * Terrible named function that evaluates a 2d coordinate xy and returns
+         * its value on the patch
          * @param double *    xy      position in (x,y) coordinates w.r.t V
          * @param int         flag    BdSurf::EVAL_VALUE| BdSurf::EVAL_1ST_DERIV | 
          *                            BdSurf::EVAL_2ND_DERIV
@@ -221,16 +183,12 @@ class FaceMapPatch: public Patch
          *                            2nd derivatives.
          * @param double *            surface positions + 1st/2nd derivatives
          *                            (if applicable).
-         * @param int         LL      number of legendre points (TODO: remove param)
          */
         int xy_to_patch_coords(double* xy, int flag, double*);
         void eval_unsafe(double* xy, int flag, double*);
 
         /*
-         * Computes the value of the patch centered at vertex _V at the point
-         * (x,y) ((x,y) \in D in Figure 1). First, it transforms an xy point in D to
-         * cd coordinates in S (Figure 1), the regular star-shaped domain. The value of 
-         * the patch centered at _V  is then evaluated.
+         *  Unused legacy function from blendsurf, should return 1
          * @param double*     xy      position in (x,y) coordinates in D
          * @param int         flag    always EVAL_VALUE (TODO: remove param)        
          * @param double *            value of the patch at position c^{-1}_{_V}(x,y)
@@ -239,7 +197,7 @@ class FaceMapPatch: public Patch
         int xy_to_patch_value(double* xy, int flag, double*);
 
         /*
-         * Estimate the jacobian of the surface at the point (0,0) (w.r.t to the
+         * Estimate the jacobian of the patch at the point (.5, .5) (w.r.t to the
          * vertex-centered coordinates) using the current patch.
          *
          * @param double*             The resulting jacobian of the surface
@@ -263,12 +221,10 @@ class FaceMapPatch: public Patch
 };
 //----------------------------------------------------------
 class FacePointFaceMap: public FacePointOverlapping
-                        /* 
-                         * Unique representation of a sample point in the chart-independent coordinate
-                         * system of the global face F. Note that F lives in the S-domian of Figure 1 of 
-                         * Blendsurf paper (v1), i.e. in a single regular wedge with arbitrary origin.
-                         *
-                         */
+/* 
+* Unique representation of a sample point in the chart-independent coordinate
+* system of the global face F.
+*/
 {
     protected:
         int _F;

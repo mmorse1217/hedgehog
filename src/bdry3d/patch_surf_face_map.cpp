@@ -88,7 +88,7 @@ int PatchSurfFaceMap::setFromOptions()
                 double spacing= Options::get_double_from_petsc_opts("-bdsurf_interpolant_spacing");
                 double interpolate= Options::get_double_from_petsc_opts("-bdsurf_interpolate");
                 //_pdeg= Options::get_int_from_petsc_opts("-bd3d_bdsurf_pdeg");
-                _pdeg = 5; // i think might be worse than the petsc error above.
+                _pdeg = 5; 
 
                 //FaceMapSurf& bdsurf = new FaceMapSurf(  );
                 BdSurf* bdsurf = new BdSurf();
@@ -174,7 +174,6 @@ void PatchSurfFaceMap::initialize_with_existing_p4est(p4est_t*& p4est){
 }
 void PatchSurfFaceMap::partial_teardown(){
     for(const auto& patch : _patches){
-        //cout << "deleting Patch [" << patch  << "]" << endl;
         delete patch;
     }
     _patches.resize(0);
@@ -397,32 +396,6 @@ FaceMapPatch::FaceMapPatch(PatchSurf* b, int pi, int V): Patch(b, pi), _V(V)
     estimate_jacobian(&_approx_jacobian);
   //FaceMapSurf& face_map = ((PatchSurfFaceMap*)bdry())->face_map();
   
-
- /* 
-  _bnd = .5;
-  
-  double patch_size;
-  Point3 origin[1]; 
-  Point3 corner[1];
-  
-  double xy0[2]; 
-  xy0[0] = 0.;
-  xy0[1] = 0.;
-
-  double xy1[2];
-  xy1[0] = 0.;
-  xy1[1] = 1.;
-
-  xy_to_patch_coords(xy0, PatchSamples::EVAL_VL, (double*)origin);
-  xy_to_patch_coords(xy1, PatchSamples::EVAL_VL, (double*)corner);
-  patch_size = (origin[0]-corner[0]).l2();
-
-  xy1[0] = 1.;
-  xy1[1] = 0.;
-  xy_to_patch_coords(xy1, PatchSamples::EVAL_VL, (double*)corner);
-  patch_size *= (origin[0]-corner[0]).l2();
-  _characteristic_length = sqrt(patch_size);
-  */
   ebiFunctionReturnVoid;
 }
 
@@ -568,24 +541,9 @@ int FaceMapPatch::xy_to_patch_coords(double* xy, int flag, double* ret)
       // need to flip
           normal_flip = true;
        }
-      /*if(normal_flip){
-      // flip the normals by interchanging derivative order
-     Point3* point_ret = (Point3*) ret;
-     // flip the normals by interchanging derivative order
-     Point3 temp = point_ret[1];
-     point_ret[1] = point_ret[2];
-     point_ret[2] = temp;
-      }*/
-      /*if(flag & EVAL_2ND_DERIV){
-     Point3* point_ret = (Point3*) ret;
-     Point3 temp = point_ret[3];
-     point_ret[3] = point_ret[5];
-     point_ret[5] = temp;
-
-      }*/
  
   }
-  // MJM NOTE 4/18 this breaks for second derivatives, I think
+  // MJM NOTE 4/2018 this breaks for second derivatives, I think
 
   ebiFunctionReturn(0);
 }
@@ -631,31 +589,14 @@ int FaceMapPatch::xy_to_patch_value(double* xy, int flag, double* ret)
 void FaceMapPatch::bounding_box(Point3& bounding_box_min, Point3& bounding_box_max){
     FaceMapSurf& face_map = ((PatchSurfFaceMap*)bdry())->face_map();
     face_map.bounding_box(_V, bounding_box_min, bounding_box_max);
-    /*
-    Vector<Point3> control_points = face_map.control_points(_V);
-
-    bounding_box_min = Point3(DBL_MAX, DBL_MAX, DBL_MAX);
-    bounding_box_max = -Point3(DBL_MAX, DBL_MAX, DBL_MAX);
-    //bounding_box_max = Point3(DBL_MIN, DBL_MIN, DBL_MIN);
-
-    for(int i = 0; i < control_points.length(); i++){
-        Point3 control_point = control_points(i);
-        bounding_box_min.x() = min(control_point.x(), bounding_box_min.x());
-        bounding_box_min.y() = min(control_point.y(), bounding_box_min.y());
-        bounding_box_min.z() = min(control_point.z(), bounding_box_min.z());
-        
-        bounding_box_max.x() = max(control_point.x(), bounding_box_max.x());
-        bounding_box_max.y() = max(control_point.y(), bounding_box_max.y());
-        bounding_box_max.z() = max(control_point.z(), bounding_box_max.z());
-    }
-    */
+    
 }
 
 PatchChildrenMap PatchSurfFaceMap::find_subpatches(
         PatchSurfFaceMap* refined_face_map){
     PatchChildrenMap patch_children;
     //assert(0); // TODO BUG subpatch->_parent_id points to the global p4est tree id. 
-               //Need yet another index that points to the coarse patch the
+               //Need another index that points to the coarse patch the
                //refined one is derived from.
     for(auto patch : refined_face_map->patches()){
         auto subpatch = dynamic_cast<FaceMapSubPatch*>(patch);
