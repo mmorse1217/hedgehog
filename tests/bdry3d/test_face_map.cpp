@@ -22,14 +22,7 @@ void compute_polynomial_density(int poly_degree,
     for(int i =0; i < num_local_points; i++){
         for(int d = 0; d < sdof; d++){
             density_local(d,i) = 1. + sample_point_local(0,i)*sample_point_local(1,i)*sample_point_local(2,i);
-            /*
-            for(int kk = 0; kk <= poly_degree; kk++){
-                double kkth_term = 1.;
-                for(int j = 0; j < DIM; j++)
-                    kkth_term *= pow(sample_point_local(j,i), kk);
-
-                density_local(d,i) += kkth_term;
-            }*/
+            
         }
     }
 }

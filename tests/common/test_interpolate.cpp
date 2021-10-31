@@ -216,9 +216,6 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
         double computed_integral = dot(f, integrals_of_lagrange_polys); 
         double true_integral = 1. - cos(1.);
 
-        //cout << "Approx integral: " << computed_integral << endl;
-        //cout << "True integral:   " << true_integral<< endl;
-        //cout <<  fabs(true_integral - computed_integral)/fabs(true_integral) << endl;
         CHECK( fabs(true_integral - computed_integral)/fabs(true_integral) <=1e-14);
 
         // Approximate integral of sin(3x), which is 2/3*(sin(3/2)^2
@@ -228,10 +225,6 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
         }
 
         computed_integral = dot(f, integrals_of_lagrange_polys);
-        //cout << "Approx integral: " << computed_integral << endl;
-        //cout << "True integral:   " << true_integral<< endl;
-        //cout <<  fabs(true_integral - computed_integral)/fabs(true_integral) << endl;
-        cout << fabs(true_integral - computed_integral)/fabs(true_integral) << endl;
         CHECK( fabs(true_integral - computed_integral)/fabs(true_integral) <=5e-12);
 
 
@@ -248,9 +241,6 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
         }
 
         computed_integral = dot(f, integrals_of_lagrange_polys);;
-        //cout <<  fabs(true_integral - computed_integral)/fabs(true_integral) << endl;
-        //cout << "Approx integral: " << computed_integral << endl;
-        //cout << "True integral:   " << true_integral<< endl;
         CHECK( fabs(true_integral - computed_integral)/fabs(true_integral) <=1e-15);
 
 
@@ -454,7 +444,7 @@ TEST_CASE("Test common/interpolate.cpp", "[interpolate][no-fmm][common][critical
                         sample_2d<chebyshev1>(num_samples, domain).data());
 
                 // copy them into the array to passed to interpolate func
-                // TODO kill all these terrible loops
+                // TODO Clean up
                 int stride = 2*i+j;
                 for(int sj=0; sj < num_samples; sj++){
                     for(int si=0; si < num_samples; si++){
@@ -685,9 +675,5 @@ TEST_CASE("Test patch h-refinement with adaptive refinement","[refine][interpola
             CHECK(fabs(computed_value - true_value) <=fabs(true_value)*1e-14 +1e-14);
         }
     }
-    /*delete coarse_face_map;
-    delete coarse_samples;
-    delete fine_face_map;
-    delete fine_samples;*/
 
 }

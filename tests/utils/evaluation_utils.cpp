@@ -55,7 +55,6 @@ void setup_target_data_constant_density(unique_ptr<SolverGMRESDoubleLayer>& solv
     int target_dof= kernel.get_tdof();
     Petsc::create_mpi_vec(solver->mpiComm(),
             num_target_points*target_dof,
-            //(num_target_points*target_dof + pole_dof),
             computed_potential);
     
     VecDuplicate(computed_potential, &true_potential);
@@ -97,8 +96,6 @@ void tear_down(Vec targets, Vec true_potential, Vec computed_potential, TestConf
         }
         VecDestroy(&error);
         VecDestroy(&potential_abs);
-        // MJM LAST EPISODE: added point sheet to target to evaluate. 
-        // add code to mesh the points and save them here
 
     }
     
@@ -137,8 +134,6 @@ Vec compute_error_petsc_vec(Vec true_potential, Vec computed_potential){
         error_local(0,i) = error_local(0,i) < 1e-16 ? 1e-16 : error_local(0,i);
     }
     error_local.restore_local_vector(); 
-    //VecLog(error); // WARNING CHANGE TO BASE 10
-    //VecScale(error, 1./log(10.));
     return error;
 }
 
@@ -190,13 +185,10 @@ void setup_singularities(TestConfig test, unique_ptr<SolverGMRESDoubleLayer>& so
              break;
         case SingularityType::SPHERE:
              positions = generate_targets_on_sphere(15, test.sphere_radius_bc);
-             //Petsc::create_mpi_vec(solver->mpiComm(), k.get_sdof()*15, strengths);
              strengths = Test::generate_random_vector(
                      Petsc::get_vec_local_size(positions)/DIM*k.get_sdof(), 0., 1.);
-             //Petsc::create_mpi_vec(solver->mpiComm(), Petsc::get_vec_local_size(positions)/DIM*k.get_sdof(), strengths);
-             //VecSet(strengths, 0.);
-             //VecSet(strengths, 4*M_PI);
              break;
+
         case SingularityType::SINGLE:
              Petsc::create_mpi_vec(solver->mpiComm(), 3*1, positions);
              Petsc::create_mpi_vec(solver->mpiComm(), k.get_sdof()*1, strengths);
@@ -212,12 +204,6 @@ void setup_singularities(TestConfig test, unique_ptr<SolverGMRESDoubleLayer>& so
         default:
              assert(0);
     }
-            /*{ // dump potential values for debugging
-                //string s = string("explicit_eval_potential.vtp");
-                int rank; MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-                write_general_points_to_vtk(positions, k.get_sdof(), 
-                        "singularities_"+to_string(rank)+".vtp", strengths, stats._file_prefix);
-            }*/
     
 }
 
@@ -247,13 +233,7 @@ Vec generate_targets_in_cube(int num_samples_1d, Cube target_domain){
 unique_ptr<SolverGMRESDoubleLayer> setup_solver(PatchSurf* surface, 
         EvaluationType eval_type, bool compute_refined_surface){
 
-    /*
-    vector<int> patch_partition(surface->patches().size(), 0);  //All in one processor
-    unique_ptr<SolverGMRESDoubleLayer> solver( new SolverGMRESDoubleLayer("BIS3D_", "bis3d_"));
-    solver->bdry() = surface;
-    solver->patch_partition() = patch_partition;
-    solver->dom() = Options::get_int_from_petsc_opts("-dom");
-    */
+    
     unique_ptr<SolverGMRESDoubleLayer> solver( new SolverGMRESDoubleLayer(surface));
     solver->set_evaluation_type(eval_type);
     solver->_compute_refined_surface = compute_refined_surface;
@@ -471,9 +451,7 @@ void set_target_potential(unique_ptr<SolverGMRESDoubleLayer>& solver,
     int target_dof= kernel.get_tdof();
 
     Petsc::create_mpi_vec(solver->mpiComm(),
-            target_dof*num_target_points, //MJM NOTE this was commented out
-            //and it's not clear why
-            //solver->local_total_dof(),
+            target_dof*num_target_points, 
             potential);
 
     DblNumMat potential_local = get_local_vector(
@@ -520,32 +498,8 @@ void set_target_potential(unique_ptr<SolverGMRESDoubleLayer>& solver,
                 }
             potential_local.restore_local_vector();
             } else {
-                /*{
-                    //VecSet(potential_local, 0.);
-                    //DblNumVec bd(boundary_data);
-                    DblNumMat trg(DIM, targets);
-                    //int idx = 3132;
-                    //int idx = 169447;
-                    int idx = 68245;
-                    Point3 t(trg.clmdata(idx));
-                    assert(pot.m() == trg.n());
-                    int pou_radius;
-                    //radmult_spacing(Options::get_double_from_petsc_opts("-bis3d_spacing"), pou_radius); // approximate
-                    for(int i =0; i < potential_local.n(); i++){
-                        Point3 tt(trg.clmdata(i));
-                        if((t-tt).length() <= 1e-3){
-                            potential_local(0,i) = .5;
-                        }
-                    }
-                }          */
                 potential_local.restore_local_vector();
-                //true_potential_value = test_type.target_type == TargetType::COLLOCATION_POINTS ? .5 : 1.;
-                /*if(test_type.evaluation_scheme == EvaluationScheme::ON_SINGULAR){
-                    VecSet(potential, .5);
-
-                } else {*/
-                    VecSet(potential, 1.);
-                //}
+                VecSet(potential, 1.);
             }
 
             break;
@@ -596,24 +550,7 @@ void setup_boundary_data(unique_ptr<SolverGMRESDoubleLayer>& solver,
             Petsc::create_mpi_vec(solver->mpiComm(),
                     source_dof*solver->patch_samples()->local_num_sample_points(),
                     boundary_data_values);
-           /*{
-                VecSet(boundary_data, 0.);
-                DblNumVec bd(boundary_data);
-                DblNumMat trg(DIM, solver->patch_samples()->sample_point_3d_position());
-                //int idx = 3132;
-                //int idx = 169447;
-                int idx = 68245;
-                Point3 t(trg.clmdata(idx));
-                assert(pot.m() == trg.n());
-                int pou_radius;
-                //radmult_spacing(Options::get_double_from_petsc_opts("-bis3d_spacing"), pou_radius); // approximate
-                for(int i =0; i < bd.m(); i++){
-                    Point3 tt(trg.clmdata(i));
-                    if((t-tt).length() <= 1e-3){
-                        bd(i) = 1.;
-                    }
-                }
-            }*/
+           
 
             VecSet(boundary_data_values, 1.);
             break;
@@ -656,7 +593,6 @@ void setup_boundary_data(unique_ptr<SolverGMRESDoubleLayer>& solver,
     {
         DblNumVec bd(boundary_data);
         DblNumVec bd_values(boundary_data_values);
-        //cout << bd.m() << "> " <<  bd_values.m() << endl;
         assert(bd.m() >= bd_values.m());
         for (int i = 0; i < bd_values.m(); i++) {
             bd(i) = bd_values(i);
@@ -800,32 +736,6 @@ void solve_and_evaluate(unique_ptr<SolverGMRESDoubleLayer>& solver,
     Petsc::create_mpi_vec(solver->mpiComm(), 
             solver->patch_samples()->local_num_sample_points(),
             target_in_out);
-    //VecSet(target_in_out, 4);
-
-       // reset spacing back to original so we don't break anything
-    /*if(test_type.target_type == TargetType::COLLOCATION_POINTS){
-        //VecDuplicate(solver->patch_samples()->sample_as_face_point(), &target_as_face_point);
-        //VecCopy(solver->patch_samples()->sample_as_face_point(), target_as_face_point);
-
-    } else if (test_type.target_type == TargetType::ON_SURFACE_NON_COLLOCATION){
-        double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
-        // coarse targets that are too coarse to bother solving on
-        Options::set_value_petsc_opts("-bis3d_spacing", 
-            to_string(sqrt(2.)*spacing));
-
-        unique_ptr<PatchSamples> samples(new PatchSamples("",""));
-        samples->patch_partition() = solver->patch_partition();
-        samples->bdry() = solver->bdry();
-        samples->setup();
-
-        VecDuplicate(samples->sample_as_face_point(), &target_as_face_point);
-        VecCopy(samples->sample_as_face_point(), target_as_face_point);
-
-        // reset spacing back to original so we don't break anything
-        Options::set_value_petsc_opts("-bis3d_spacing", to_string(spacing));
-    } else {
-        //assert(0); // figure out a fix for this horror
-    }*/
         double spacing = Options::get_double_from_petsc_opts("-bis3d_spacing");
         Options::set_value_petsc_opts("-bis3d_spacing", 
             to_string(sqrt(2.)*spacing));
@@ -930,15 +840,7 @@ Vec interpolated_density;
                     vector<int> qbkix_ids;
                     for(int i = 0; i < qbkix_id; i++)
                         qbkix_ids.push_back(i);
-                    /*
-                    vector<int> patch_ids;
-                    for(int i= 0; i < solver->bdry()->patches().size(); i++)
-                        patch_ids.push_back(i);
-
-                    Vec qbkix_points =  
-                        solver->patch_samples()->generate_qbkix_points_from_sample_points(
-                            qbkix_ids,
-                            patch_ids);*/
+                    
                     Vec id;
                     VecDuplicate(solver->patch_samples()->sample_point_normal(), &id);
                     VecCopy(solver->patch_samples()->sample_point_normal(), id);
@@ -959,14 +861,7 @@ Vec interpolated_density;
                             singularity_densities,
                             qbkix_points,
                             qbkix_points);
-                    /*{
-                        write_general_points_to_vtk(qbkix_points, kernel.get_tdof(),
-                                "solution_at_check_points_"+to_string(solver->mpiRank())+"_iter_"+Options::get_string_from_petsc_opts("-debug_test_iter")+".vtp", 
-                                potential_at_check_points, "output/");
-            write_general_points_to_vtk(solver->patch_samples()->sample_point_3d_position(), kernel.get_tdof(),
-                    "boundary_data_"+to_string(solver->mpiRank())+"_iter_"+Options::get_string_from_petsc_opts("-debug_test_iter")+".vtp", 
-                    boundary_data, "output/");
-                    }*/
+                    
                     VecDestroy(&qbkix_points);
                     VecDestroy(&id);
                     VecDestroy(&potential_at_check_points);
@@ -981,14 +876,7 @@ Vec interpolated_density;
                             closest_points,
                             targets,
                             solver.get());
-                /*
-                computed_potential = 
-                    greens_identity(solver->mpiComm(), 
-                            single_layer_kernel,
-                            singularity_positions,
-                            singularity_densities,
-                            targets,
-                            solver.get());*/
+                
             } else if (test_type.bc_type == BoundaryDataType::CONSTANT_DENSITY){
                 VecDuplicate(boundary_data, &neumann_data);
                 VecSet(neumann_data, 0.);
@@ -1008,7 +896,6 @@ Vec interpolated_density;
         case EvaluationScheme::SMOOTH_QUAD:
 
             solver->fareval(targets, VAR_U, solved_density, computed_potential);
-            //VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
             break;
 
             //  - near-singular quadrature
@@ -1027,21 +914,11 @@ Vec interpolated_density;
             solver->roneval(targets,
                     target_as_face_point, // wrong for general targets!
                     VAR_U, solved_density, computed_potential);
-            /*{ // dump potential values for debugging
-                string s = string("explicit_eval_potential.vtp");
-                write_general_points_to_vtk(solver->patch_samples()->sample_point_3d_position(), 1, 
-                        s, computed_potential, "output/");
-            }*/
+            
 
             // compute interior value
            VecAXPY(computed_potential, .5, solved_density);
-            /*potential_local = get_local_vector(kernel.get_tdof(), num_local_targets, computed_potential);
-            density_local = get_local_vector(kernel.get_tdof(), num_local_targets, solved_density);
-            for(int i = 0; i < num_local_targets; i++){
-                for(int d = 0; d < kernel.get_tdof(); d++){
-                    potential_local(d,i) -= .5*density_local(d,i);
-                }
-            }*/
+            
             break;
         case EvaluationScheme::ON_QBKIX:
 
@@ -1074,11 +951,9 @@ Vec interpolated_density;
                     VAR_U,
                     solved_density, 
                     computed_potential);
-            //VecAXPY(computed_potential, .5, solved_density);
 
-            //assert(test_type.target_type == TargetType::ON_SURFACE_NON_COLLOCATION);
             // TODO interpolating from source points to non-collocation target
-            // points I'm a bad person
+            // points 
             interpolated_density = interpolate_and_resample(
                     kernel.get_tdof(), solved_density,
                     solver->patch_samples(),
@@ -1086,11 +961,7 @@ Vec interpolated_density;
                     samples.get());
 
             // compute interior value
-           //cout << "Before: " << Petsc::get_vec_size(interpolated_density) << endl;
-           //VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
            VecAXPY(computed_potential, .5, interpolated_density);
-           //cout << "After: " << endl;
-//           VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
            VecDestroy(&interpolated_density);
 
             break;
@@ -1109,8 +980,6 @@ Vec interpolated_density;
         default:
             break;
     }
-    //VecDestroy(&target_in_out);
-    //VecDestroy(&interpolation_directions);
 
 }
 void run_coarse_fmm(unique_ptr<SolverGMRESDoubleLayer>& solver,
@@ -1125,8 +994,6 @@ void run_coarse_fmm(unique_ptr<SolverGMRESDoubleLayer>& solver,
     PetscRandomCreate(PETSC_COMM_WORLD,&rctx);
     VecSetRandom(t,rctx);
     PetscRandomDestroy(&rctx);
-    /*VecCopy(solver->patch_samples()->sample_point_3d_position(), t);
-    VecAXPY(t,5., solver->patch_samples()->sample_point_3d_position());*/
     
     Kernel3d k(solver->equation_type() + DOUBLE_LAYER + VAR_U, solver->eqcoefs());
     
@@ -1156,10 +1023,7 @@ void run_test(PatchSurf* surface,
     Vec solved_density;
 
     auto solver = setup_solver(surface, test_type.solver_matvec_type);
-    /*{
-    write_general_points_to_vtk(solver->patch_samples()->sample_point_3d_position(), DIM, 
-        "_points_and_normals", solver->patch_samples()->sample_point_normal(), "data/");
-    }*/
+    
 
     NumVec<OnSurfacePoint> closest_points;
     setup_target_data(solver, test_type, targets, closest_points, 
@@ -1180,12 +1044,7 @@ void run_test(PatchSurf* surface,
     if(test_type.time_coarse_fmm){
         run_coarse_fmm(solver, boundary_data, targets);
     }
-    /*
-    VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
-    VecView(true_potential, PETSC_VIEWER_STDOUT_SELF);
-    cout << "computed size: " << Petsc::get_vec_size(computed_potential) << endl;
-    cout << "true size: " << Petsc::get_vec_size(true_potential) << endl;
-*/
+    
     Kernel3d kernel = solver->problem_kernel();
     int target_dof= kernel.get_tdof();
     tear_down(targets, true_potential, computed_potential, test_type, target_dof, 1e-6, 1e-6, dump_values);
@@ -1310,12 +1169,7 @@ void test_qbkix_constant_density(unique_ptr<SolverGMRESDoubleLayer>& solver,
     VecCopy(temp, targets);
     VecScale(targets, .999);
 
-    /*VecScale(targets, .2);
-    Vec o;
-    VecDuplicate(targets, &o);
-    VecCopy(targets, o);
-    VecSet(o,1.);
-    VecAXPY(targets, 2., o);*/
+    
     //Vec targets;
     Vec true_potential;
     Vec computed_potential;
@@ -1478,8 +1332,6 @@ void test_qbkix_extrapolation_no_quad(PatchSurf* surface,
             qbkix_function_values_local,
             node_spacing_local,
             expansion_dist_from_boundary_local,
-            //Options::get_double_from_petsc_opts("-bis3d_spacing"), // unused
-            //Options::get_double_from_petsc_opts("-interpolation_spacing_ratio"), // unused
             target_dof, 
             &extrapolation_eval_point_blendsurf,
             computed_function_values_local);
@@ -1550,31 +1402,13 @@ void test_gmres_solve_near_eval(
     if(is_adaptive){
         if (Test::get_domain() == "interlocking_torii_flip"){
             test.bc_type = BoundaryDataType::CONSTANT_DENSITY;
-//test.singularity_type= SingularityType::SINGLE;
-            //test.single_singularity_location= Point3(0.,0.,.85);
-            //Options::set_value_petsc_opts("-upsampling_type", "adaptive");
         }
         
     }
 
     test.target_type   = TargetType::ON_SURFACE_NON_COLLOCATION;
-    // Evaluate solution at points in the far-field
-    /*if(Test::get_domain() == "newtorus"){
-        test.target_type   = TargetType::RING;
-        test.sphere_radius_targets= .5;
-    } else if (Test::get_domain() == "ppp"){
-        test.target_type   = TargetType::SPHERE_FAR;
-        test.sphere_radius_targets= .1;
-    } else if (Test::get_domain() == "ttorus" || Test::get_domain() == "squished_cube"){
-        test.target_type   = TargetType::SPHERE_FAR;
-        test.sphere_radius_targets= .01;
-    } else {
-        test.target_type   = TargetType::SPHERE_FAR;
-        test.sphere_radius_targets= .2;
-    }*/
-    // ... via Green's Identity
+    // Evaluate solution at points in the far-field via Green's Identity
     test.evaluation_scheme = EvaluationScheme::ON_QBKIX_AVERAGE;
-   //test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
     // no solve step need
     test.solution_scheme   = SolutionScheme::GMRES_SOLVE;
     //test.solver_matvec_type = INTERIOR_EXTRAPOLATION;
@@ -1856,27 +1690,10 @@ void laplace_singluarity_cube(Vec samples, int dof,Vec& potential){
     Kernel3d laplace(111, vector<double>(2,1.));
     DblNumMat potential_local(laplace.get_tdof(), potential);
     for (int i = 0; i < potential_local.n(); i++) {
-        //Point3 x(.05,.8,.05);
-        //Point3 x(0., 2.,.0);
         Point3 x(20.,0.,0.);
-        //Point3 x( 0.0169549, 0.80484258, 0.00534813);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);
-        //potential_local(0,i) = 1./(x-y).l2();
-        /*
-        Point3 x(0.,0.,.01);
-        Point3 y(samples_local.clmdata(i));
-        Point3 x_minus_y = x-y;
-        potential_local(0,i) = 1./pow((x-y).l2(),3)*dot(x_minus_y, Point3(0.,0.,1.))*1./(4*M_PI);
-         */
-        
     }
-    /*
-    DblNumMat x(3,1);
-    setvalue(x,0.);
-    x(1,0) = .7;
-    setvalue(potential_local, 1.);*/
-   //laplace.kernel(samples_local, normals, x, potential_local);
 
 }
 void laplace_singluarity_flat_patch(Vec samples, int dof,Vec& potential){
@@ -1885,21 +1702,12 @@ void laplace_singluarity_flat_patch(Vec samples, int dof,Vec& potential){
     Kernel3d laplace(111, vector<double>(2,1.));
     DblNumMat potential_local(laplace.get_tdof(), potential);
     for (int i = 0; i < potential_local.n(); i++) {
-        //Point3 x(.05,.8,.05);
         Point3 x(0.,0.,.08);
-        //Point3 x(0.,0.,.12);
-        //Point3 x( 0.0169549, 0.80484258, 0.00534813);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);
-        //potential_local(0,i) = 1./(x-y).l2();
         
     }
-    /*
-    DblNumMat x(3,1);
-    setvalue(x,0.);
-    x(1,0) = .7;
-    setvalue(potential_local, 1.);*/
-   //laplace.kernel(samples_local, normals, x, potential_local);
+    
 
 }
 void laplace_singluarity_propeller(Vec samples, int dof,Vec& potential){
@@ -1909,7 +1717,6 @@ void laplace_singluarity_propeller(Vec samples, int dof,Vec& potential){
     DblNumMat potential_local(laplace.get_tdof(), potential);
 #pragma omp parallel for
     for (int i = 0; i < potential_local.n(); i++) {
-        //Point3 x(-.05, .85, .45);
         Point3 x(0., 0., 1.);
         Point3 y(samples_local.clmdata(i));
         potential_local(0,i) = 1./pow((x-y).l2(),2);

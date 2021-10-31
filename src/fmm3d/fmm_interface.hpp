@@ -3,7 +3,7 @@
 #include "common/ebi.hpp"
 #include "common/numtns.hpp"
 #include "common/vecmatop.hpp"
-//#include "common/syms.hpp"
+
 #include "common/numvec.hpp"
 #include <vec3t.hpp>
 #include "common/kernel3d.hpp"
@@ -31,7 +31,6 @@ class FMM {
 
     public:
         FMM();
-        //virtual ~FMM(){;}
         virtual ~FMM();
         
         void collect_fmm_data(Vec source_positions, Vec source_normals,
@@ -39,10 +38,6 @@ class FMM {
         virtual int setFromOptions() = 0;
         virtual int setup() = 0;
 
-        /* Required evaluation function of the FMM library.
-         * Call from inside GMRES matvec.
-         */
-        // Note: function signature may need to change.
         virtual void evaluate( const Vec& srcDen, Vec& trgVal) = 0;
         virtual void evaluate(const DblNumVec& srcDen, DblNumVec& trgVal) = 0;
         virtual void interaction_matrix(DblNumMat source_positions, 
@@ -51,7 +46,6 @@ class FMM {
         
         virtual void set_kernel(Kernel3d& kernel) = 0;
 
-        // TODO MJM verify that thse &'s are needed
         virtual void set_src_positions(DblNumMat*& src_positions) = 0;
         virtual void set_src_normals(DblNumMat*& src_normals) = 0;
         virtual void set_trg_positions(DblNumMat*& trg_positions) = 0;

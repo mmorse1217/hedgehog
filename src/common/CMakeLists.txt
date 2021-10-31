@@ -2,7 +2,6 @@ set(Hedgehog_common_src
     Dcuhre.cpp
     numvec.cpp
     boundary_data.cpp
-    results_writer.cpp
     ebi.cpp
     stats.cpp
     ebi_uti.cpp
@@ -15,7 +14,6 @@ set(Hedgehog_common_src
     memAlloc.cpp
     vtk_writer.cpp
     nummat.cpp
-    write_latex.cpp
 )
 set(Hedgehog_common_header
     Dcuhre.hpp
@@ -37,7 +35,6 @@ set(Hedgehog_common_header
     ebi_uti.hpp
     offvec.hpp
     ebiobject.hpp
-    results_writer.hpp
     ebiobject_inline.hpp
     rotation.hpp
     exsol3d.hpp
@@ -51,7 +48,6 @@ set(Hedgehog_common_header
     mat3t.hpp
     vtk_writer.hpp
     memAlloc.hpp
-    write_latex.hpp
 )
 PREPEND(Hedgehog_common_src)
 PREPEND(Hedgehog_common_header)

@@ -76,7 +76,6 @@ double compute_integral(PatchSurfFaceMap* face_map, Point3 target_point){
             density_local(0,i) = 1./(y-charge_location).length();
         }
     }
-    //VecSet(density, 1.);
     Vec potential;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, 1, potential);
     VecSet(potential, 0.);
@@ -95,21 +94,13 @@ double compute_integral(PatchSurfFaceMap* face_map, Point3 target_point){
 }
 
 double error_estimate(int q, double delta, double phi, double max_jacobian){
-    //double phi = 1.;
-    //double max_jacobian = 2.;
-    //double r= dist_to_patch; // TODO fix
-    //double delta = max_jacobian*r; // TODO fix
-    //double delta = dist_to_patch; // TODO fix
     double r = 1./(max_jacobian)*delta;
     double temp = 1./log(q);
     if(max_jacobian > 1.)
         temp *= pow(max_jacobian,3);
     else
         temp *= 1./pow(max_jacobian,3);
-    //temp *= 3;
-    //return .5*phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-2*q*r);
     return phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-4*q*r)*temp; // works for flat patch and both sides of curved patch
-    //return phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-4*q*r)*temp*1./(pow(max_jacobian,3)); 
 }
 
 void perturb_flat_patch(unique_ptr<PatchSurfFaceMap>& face_map, double tx, double ty){

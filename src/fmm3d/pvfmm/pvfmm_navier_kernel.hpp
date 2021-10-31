@@ -1,6 +1,3 @@
-//#include <mpi.h>
-//#include <omp.h>
-//#include <iostream>
 #include <pvfmm.hpp>
 #include <math_utils.hpp>
 #include <string>
@@ -211,7 +208,6 @@ void navier_dl(T* r_src, int src_cnt, T* v_src, int dof, T* r_trg, int trg_cnt, 
     for(int t=0;t<trg_cnt;t++){
         T p[3]={0, 0, 0};
         for(int s=0;s<src_cnt;s++){
-            //std::cout << s << ", " << i<< ", " << t<< ", " << dof << std::endl;
             T dR[3]={r_trg[3*t  ]-r_src[3*s  ],
                 r_trg[3*t+1]-r_src[3*s+1],
                 r_trg[3*t+2]-r_src[3*s+2]};
@@ -261,12 +257,9 @@ const pvfmm::Kernel<real_t> ker_navier_sl=pvfmm::BuildKernel<real_t, navier_sl>(
 	NULL			            /* s2m   */,
 	NULL			            /* s2l   */,
 	NULL        	            /* s2t   */,
-    NULL,
-    NULL,
-    NULL,
-	//&ker_navier_sl_m2l	/* m2m   */,
-	//&ker_navier_sl_m2l	/* m2l   */,
-	//&ker_navier_sl_m2l	/* m2t   */,
+    NULL			            /* m2m   */,
+    NULL			            /* m2l   */,
+    NULL        	            /* m2t   */,
 	NULL			            /* l2l   */,
 	NULL			            /* l2t   */);
 

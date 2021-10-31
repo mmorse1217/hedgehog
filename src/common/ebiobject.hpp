@@ -46,7 +46,6 @@ protected:
   bool view_;
   void *user_context; 
 };
-//LEXING: InfoObject(char* n, char* p) : name_(n), prefix_(p), view_(false), user_context(NULL) {}
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -61,26 +60,6 @@ public:
 };
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-
-
-//EbiObject(MPI_Comm comm):MpiObject(comm), InfoObject("","") {}
-//EbiObject(MPI_Comm comm, const string& name, const string& prefix): MpiObject(comm), InfoObject(name, prefix) { }
-//protected:
-//EbiObject& operator=( const EbiObject & rhs); 
-//LEXING: EbiObject(MPI_Comm incomm, char *in_name=(char *)"EO", char *in_prefix=(char*)"eo_" ):  MpiObject(incomm), InfoObject(in_name, in_prefix) { }
-//EbiObject(MPI_Comm comm, const string& name="EO_", const string& prefix="eo_"):
-//  EbiObject(MPI_Comm incomm) : MpiObject(incomm), InfoObject("eo", "eo") { }
-//  EbiObject(MPI_Comm incomm, char* n, char* p) : MpiObject(incomm), InfoObject(n, p) { }
-/*
-/// light parrent  (cannot be EbiObject and LightObject at the same time.
-class LightEbiObject{
-public:
-  LightEbiObject () {}
-  virtual ~LightEbiObject() {}
-protected:
-  LightEbiObject& operator=( const LightEbiObject & rhs); 
-};
-*/
 
 #include "ebiobject_inline.hpp"
 

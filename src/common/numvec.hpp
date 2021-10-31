@@ -152,8 +152,8 @@ template <class F> inline void clear(NumVec<F>& V)
 typedef NumVec<bool>   BolNumVec;
 typedef NumVec<int>    IntNumVec;
 typedef NumVec<char>   ChrNumVec;
-typedef NumVec<double> DblNumVec; //typedef NumVec<double> SclNumVec;
-typedef NumVec<imaginary> ComplexNumVec; //typedef NumVec<double> SclNumVec;
+typedef NumVec<double> DblNumVec; 
+typedef NumVec<imaginary> ComplexNumVec; 
 
 NumVec<double> get_local_vector(int m, Vec v);
 template<>

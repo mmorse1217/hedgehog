@@ -104,7 +104,7 @@ string Regression::build_prefix(string class_name){
     } else if(bdtype == 0){
         prefix += "analytic/";
     } else { 
-        assert(0);//????
+        assert(0);
     }
     cout << "prefix: " << prefix << endl;
     cout << "bdtype: " << bdtype << endl;

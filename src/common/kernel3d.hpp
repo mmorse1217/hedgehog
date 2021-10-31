@@ -260,7 +260,6 @@ public:
         if(_kernel_var == VAR_P){
             _tdof = 1; // TODO MJM this is bug. Pressure eval with blended surfaces 
                         // doesn't initialize this properly inside core_evaluation
-                        // However, trgDOF does work, weirdly.
         } else{
             _tdof = 3;
         }

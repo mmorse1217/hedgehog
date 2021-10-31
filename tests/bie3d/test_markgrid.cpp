@@ -51,7 +51,6 @@ void test_closest_point_two_patches(DblNumMat targets, PatchSurfFaceMap* face_ma
         vector<OnSurfacePoint> near_points = closest_points[i];
         Point3 true_position(actual_closest_points.clmdata(i));
         Point3 target(targets.clmdata(i));
-        //assert(near_points.size() == 2);
         
         OnSurfacePoint first_closest_point = near_points[0]; 
         OnSurfacePoint second_closest_point = near_points[1]; 
@@ -59,7 +58,6 @@ void test_closest_point_two_patches(DblNumMat targets, PatchSurfFaceMap* face_ma
         temp(0) = first_closest_point;
         vector<int> pids = {0,1};
         DblNumMat target_temp(3,1,false,target.array());
-        //dump_vtk_data_for_paraview(target_temp, temp, i, pids, face_map );
 
     // Check that the distance from the closest point on each patch is
     // the same
@@ -182,12 +180,7 @@ void test_in_out_marking_parallel_copy_of_targets(size_t num_samples,
 
     Vec e;
     VecCreateMPI(MPI_COMM_WORLD, patch_samples->local_num_sample_points(), PETSC_DETERMINE, &e);
-    //write_general_points_to_vtk(patch_samples->sample_point_3d_position(), 
-            //1, "true_points.vtp", e, "output/");
-    //write_general_points_to_vtk(points, 1, "points_to_mark.vtp", e, "output/");
-    // find the closest on surface point and verify the points are in/out
-    //NumVec<OnSurfacePoint> on_surface_points = 
-    //    Markgrid::compute_closest_on_surface_points(points_on_sphere,face_map);
+    
     NumVec<OnSurfacePoint> on_surface_points = 
         Markgrid::mark_target_points(points_on_sphere, face_map,false);
     Vec computed_closest;
@@ -212,7 +205,6 @@ void test_in_out_marking_parallel_copy_of_targets(size_t num_samples,
         cout << ret << ", "<< true_point << ", " << ret - true_point << endl;
         CHECK((ret - true_point).l2() <=1e-6);
     }
-    //write_general_points_to_vtk(computed_closest, 1, "computed_closest.vtp", e, "output/");
 
     points_on_sphere.restore_local_vector();
     VecDestroy(&points);
@@ -238,16 +230,6 @@ vector<double> create_scale_factors(){
         double scale_factor = 1. - pow(10, -(i) );
         scale_factors.push_back(scale_factor);
     }
-    // scale_factor = 1.000001, 1.00001, 1.0001, 1.001
-    //int num_near_ext = 4;
-    /*
-    int num_near_ext = 1;
-    for(int i = num_near_ext; i > 0; i--){
-        double scale_factor = 1. + pow(10., -(i) );
-        scale_factors.push_back(scale_factor);
-    }*/
-    // scale_factor = 1.025, 1.05, 1.075, 1.1
-    //int num_exterior= 4;
     int num_exterior= 3;
     for(int i = 1; i < num_exterior ; i++){
         double scale_factor = 1. + 1e-1*double(i)/double(num_exterior);
@@ -297,10 +279,8 @@ TEST_CASE("Test closest point on single patch",
                     for(int z = -1; z < 2; z++){
                         Point3 target(targets.clmdata(index));
                         target = Point3(x_sign*2., y_sign*2., 2.*double(z));
-                        //Point3 target(x_sign*2., y_sign*2., 2.*double(z));
                         Point3 closest_point(closest_points.clmdata(index));
                         closest_point = Point3(x_sign, y_sign, 0.);
-                        //Point3 actual_closest_point(x_sign, y_sign, 0.);
                         index++;
                     }
                 }
@@ -1060,6 +1040,7 @@ p4est_t* p4est = face_map->_p4est;
     }*/
 
 
+:sa
     stats.print_results();
     stats.clear();
 }

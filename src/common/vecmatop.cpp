@@ -229,16 +229,11 @@ ebiEC pinv(const DblNumMat& M, double epsilon, DblNumMat& R, const int type)
 	 double mx = max((double)(M.m()),(double)(M.n()));
 	 cutoff = (svd.S())(0)*mx * 2e-15;
 	 cutoff = mx * 2e-15;
-	 //std::cout << cutoff << endl;
-	 //if (cutoff > 1e-15) { cutoff = 1e-15; }
-	 //cutoff = 1e-10;
-	 //std::cout << cutoff << endl;
   }
   for(int i=0; i<svd.S().m(); i++) {
     if( svd.S()(i) >= cutoff) {
       svd.S()(i) = 1.0/(svd.S()(i));
 	 } else {
-		//ebiAssert(0);
 		svd.S()(i) = 0.0;
 	 }
   }
@@ -279,10 +274,7 @@ ebiEC pinv_mult(const DblNumMat& M, const DblNumVec& f, DblNumVec& c)
   double mx = max((double)(M.m()),(double)(M.n()));
   cutoff = (svd.S())(0)*mx * 2e-15;
   cutoff = mx * 2e-15;
-  //std::cout << cutoff << endl;
   if (cutoff > 1e-15) { cutoff = 1e-15; }
-  //cutoff = 1e-12;
-  //std::cout << cutoff << endl;
   
   
   DblNumMat UT(svd.U().n(),  svd.U().m());
@@ -290,8 +282,6 @@ ebiEC pinv_mult(const DblNumMat& M, const DblNumVec& f, DblNumVec& c)
   iC( tran(svd.U(), UT) );
   iC( tran(svd.VT(), V) );
 
-  //cout << UT << " " << f << endl;
-  //cout << c << " " << c.m() << endl;
   DblNumVec resid(c.m());
   iC( dgemv(1.0, UT, f, 0.0, resid));
   cout << resid << endl;
@@ -303,9 +293,7 @@ ebiEC pinv_mult(const DblNumMat& M, const DblNumVec& f, DblNumVec& c)
 		resid(i) = 0.0;
 	 }
   }
-  //cout << svd.S() <<  " " << resid << endl;
   iC( dgemv(1.0, V, resid, 0.0, c));
-  //std::cout << c << std::endl; exit(0);
   ebiFunctionReturn(0);
 }
 
@@ -599,47 +587,7 @@ int lagev2d(int evflag, int dmflag, int dof, double* data, int* mn, double* ef, 
           ebiAssert(j>=1 && j<=n-3);
           for(int k=0; k<4; k++) js[k]=(j+k-1);
       }
-      /*
-      cout << "i: " << i << endl;
-      cout << "j: " << j << endl;
-      cout << "m: " << m << endl;
-      cout << "n: " << n << endl;
-      cout << "e: " << e << endl;
-      cout << "f: " << f << endl;
-      cout << "u: " << u << endl;
-      cout << "v: " << v << endl;
-         ebiAssert(i>=1 && i<=m-3);
-         for(int k=0; k<LL; k++)	
-         is[k]=(i+k-1);
-         ebiAssert(j>=1 && j<=n-3);
-         for(int k=0; k<LL; k++) 
-         js[k]=(j+k-1);
-         */
-      /*
-      if(i== 0){
-          for(int k=0; k<LL; k++)	
-              is[k]=(i+k);
-      } else if ( i > m-3){
-          int offset = i- (m-3);
-          for(int k=0; k<LL; k++)	
-              is[k]=(i+k -offset);
-      } else{
-          for(int k=0; k<LL; k++)	
-              is[k]=(i+k-1);
-      }
-      if(j == 0){
-          for(int k=0; k<LL; k++) 
-              js[k]=(j+k);
-
-      } else if ( j > n-3){
-
-          int offset = j- (n-3);
-          for(int k=0; k<LL; k++)	
-              js[k]=(j+k - offset);
-      } else {
-          for(int k=0; k<LL; k++) 
-              js[k]=(j+k-1);
-      }*/
+      
   }
   DblNumMat M(dof,m*n,false,data);
   
@@ -943,7 +891,6 @@ int lagcoef(int num, int evflag, double u, double* us)
 	 
   } else if(evflag==EVFLAG_FD) {
 	 int n = num;
-	 //cerr << "NOT CALLED!" << endl; exit(0);
      if (n == 4){
          us[0] = (3*u2-6*u+2)/(-6.0);
          us[1] = (3*u2-4*u-1)/(2.0);

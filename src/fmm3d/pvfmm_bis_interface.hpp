@@ -60,13 +60,10 @@ void _unscale_potential(int ntrg, int target_dof, real_t *pot) ;
     public:
 
         PvFMM();
-        /*PvFMM(Vec source_positions,
-                Vec target_positions, Kernel3d kernel);*/
         PvFMM(Vec source_positions, Vec source_normals,
                 Vec target_positions, Kernel3d kernel);
         ~PvFMM();
         
-        //PvFMMTree* tree(){ return _tree; }
         int setup();
         int setFromOptions();
 
@@ -80,7 +77,7 @@ void _unscale_potential(int ntrg, int target_dof, real_t *pot) ;
                 DblNumMat target_position, DblNumMat& interaction_matrix);
         double scale_sources_and_targets(vec sources, vec targets);
         int compute_pvfmm_to_kifmm_scaling(const DblNumVec& srcDen, DblNumVec& trgVal);
-        //void initialize_tree(DblNumVec srcDen);
+        
         void clear_tree();
         void transpose_data();
         void set_src_positions(DblNumMat*& src_positions); 
@@ -104,9 +101,7 @@ void laplace_sldl_pvfmm(const size_t &sl_nsrc, const real_t *sl_src,
 void pvfmm_direct_summation(
         vec source_positions, vec source_densities, vec target_positions,
         vec& target_potentials);
-/*void pvfmm_direct_summation(size_t num_source_points, real_t *source_positions,
-                            real_t *source_densities, size_t ntrg, real_t *trg,
-                            real_t *pot);*/
+
 void pvfmm_interaction_matrix(const size_t &sl_nsrc, const real_t *sl_src, 
                     const real_t *sl_den, const size_t &dl_nsrc, 
                     const real_t *dl_src, const real_t *dl_den_nor,

@@ -153,7 +153,6 @@ void hedgehog::STKFMM::interaction_matrix(DblNumMat source_positions,
 
 void hedgehog::STKFMM::set_kernel(Kernel3d& kernel){}
 
-// TODO MJM verify that thse &'s are needed
 void hedgehog::STKFMM::set_src_positions(DblNumMat*& src_positions){}
 void hedgehog::STKFMM::set_src_normals(DblNumMat*& src_normals){}
 void hedgehog::STKFMM::set_trg_positions(DblNumMat*& trg_positions){}

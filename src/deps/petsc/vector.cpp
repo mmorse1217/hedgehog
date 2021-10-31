@@ -295,7 +295,6 @@ namespace Petsc {
     PetscScalar& Vector::operator()(int i, int j){
         assert(_has_local);
         return _local_v(i,j);
-        //return _has_local ? _local_v(i,j) : &std::nan("");
     }
 
 

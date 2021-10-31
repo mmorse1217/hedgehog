@@ -54,26 +54,6 @@ TEST_CASE("Visualize QBKIX point generation by dumping to vtk", "[vtk][visualize
             write_face_map_patches_to_vtk(DblNumMat(0,0), 
                     patches_refined_relative_ids,
                     face_map, it++);
-        /*
-        p4est_connectivity_t* connectivity = build_connectivity_from_face_map(face_map);
-        p4est_t* p4est = p4est_new(MPI_COMM_WORLD, connectivity, sizeof(RefinementData), NULL, NULL);
-
-
-        store_p4est("cube_base", p4est);
-        refine_patches_for_qbkix_point_location(p4est, face_map);
-        store_p4est("cube_coarse_patches", p4est);
-        refine_patches_for_fixed_qbkix_points(p4est, face_map);
-        store_p4est("cube_refined_patches", p4est);
-        p4est_t* p4est_coarse;
-        p4est_t* p4est_refined;
-        p4est_connectivity_t* connectivity_coarse;
-        p4est_connectivity_t* connectivity_refined;
-
-        load_p4est("cube_coarse_patches", face_map->mpiComm(),p4est_coarse, &connectivity_coarse);
-        load_p4est("cube_refined_patches", face_map->mpiComm(),p4est_refined, &connectivity_refined);
-        vector<Patch*> subpatches = p4est_to_face_map_subpatches(p4est, face_map);
-        //_patches = (vector<Patch*>)subpatches;
-        face_map->patches() = subpatches;
-        */
+        
 }
 

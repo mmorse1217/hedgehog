@@ -19,8 +19,6 @@ NumMat<double> get_local_vector(int m, int n, Vec v){
 
 template<>
 void NumMat<double>::restore_local_vector(){
-    //double* v_ptr = _data;
-    //VecRestoreArray(_v, &v_ptr);
     VecRestoreArray(_v, &_data);
 }
 END_EBI_NAMESPACE

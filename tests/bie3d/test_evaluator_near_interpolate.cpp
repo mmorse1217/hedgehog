@@ -126,15 +126,7 @@ TEST_CASE("EvaluatorNearInterpolate tests", "[eval-near]"){
         DblNumMat targets_local(DIM, num_local_targets, patch_samples->sample_point_3d_position());
 
         double h = patch_samples->spacing();
-        /*
-        for(int i =0; i < num_local_targets; i++){
-            for(int l = 0; l < L; l++){
-                Point3 interpolation_point(interpolation_points_local.clmdata(i*L+l));
-                CAPTURE(l);
-                CAPTURE(interpolation_point);
-                CHECK(interpolation_point.length() <= (1.-h) );
-            }
-        }*/
+        
         // Correct evaluated potentials by +/-.5*\phi(x) at each interpolation
         // point to compute the on-surface potential
         
@@ -145,38 +137,24 @@ TEST_CASE("EvaluatorNearInterpolate tests", "[eval-near]"){
 
                 // Interior interpolation points
                 // Correct potential by -.5*\phi(x)
-                //for(int l = 0; l  < L/2; l++){
                 for(int l = 0; l  < L; l++){
-                    //cout << "before: " << exact_potentials_local(d,i*L+l) << ", ";
                     exact_potentials_local(d, i*L + l) += -.5*density_correction;
                     smooth_quad_potentials_local(d, i*L + l) += -.5*density_correction;
-                    //cout << "after: " << exact_potentials_local(d,i*L+l) << endl;
                 }
                 // Exterior interpolation points
                 // Correct potential by +.5*\phi(x)
-                /*
-                for(int l = L/2; l  < L; l++){
-                    //cout << "before: " << exact_potentials_local(d,i*L+l) << ", ";
-                    exact_potentials_local(d, i*L + l) += .5*density_correction;
-                    smooth_quad_potentials_local(d, i*L + l) += .5*density_correction;
-                    //cout << "after: " << exact_potentials_local(d,i*L+l) << endl;
-                }*/
+                
             }
         }
         
-        //for(int i =0; i < L*num_local_targets; i++){
         for(int i = 0; i < num_local_targets; i++){
             for(int l = 0; l < L; l++){
                 double error_at_point = 0;
                 double true_value_at_point = 0;
                 int index = i*L+l;
                 for(int d =0; d < stokes_kernel.get_tdof(); d++){
-                    //cout << "exact: " << exact_potentials_local(d,index) << ", ";
-                    //cout << "smooth_quad: " << smooth_quad_potentials_local(d,index) << endl;
-                    //cout << "interpolation_point("<< d<< "," << i << "): " << interpolation_points_local(d,index) << endl;
                     
                     absolute_error(d,index) = exact_potentials_local(d,index) - smooth_quad_potentials_local(d,index);
-                    //error(d,index) /= fabs(exact_potentials_local(d,index));
                     error_at_point += pow(absolute_error(d,index),2);
                     true_value_at_point += pow(exact_potentials_local(d,index),2);
 

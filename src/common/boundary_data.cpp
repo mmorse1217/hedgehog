@@ -104,16 +104,10 @@ vector<double> T(Point3 r, double mu, double nu){
                 double rj = r(j);
                 double rk = r(k);
 
-                // this is correct at the moment
                 double term1 = -1./R3*(delta(i,k)*rj + delta(i,j)*rk - delta(j,k)*ri);
                 double term2 = 1./R5*ri*rj*rk;
 
-                // derived signs for each term: -, +, +, -
-                // corrected signs for each term: -, -, +, +
                 E[Tidx(i,j,k)] = C*(C1*term1 + C2*term2);
-                //cout << r << ", " << 1./R3 << endl;
-                //cout << "value: " << E[Tidx(i, j, k)] <<", " << term1  <<", "  << term2 << endl;
-                //cout <<  C<<", " << C1<<", "<< C2 <<", " << endl;
             }
         }
     }
@@ -126,7 +120,7 @@ vector<double> stress_tensor(Point3 r, Point3 g, double mu, double nu){
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 3; k++) {
-                sigma[Midx(i,k)] += TT[Tidx(j,i,k)]*g(j); // TODO figure out why this is needed...
+                sigma[Midx(i,k)] += TT[Tidx(j,i,k)]*g(j); 
             }
         }
     }
@@ -170,15 +164,6 @@ void Kernel3d::navier_dirichlet(DblNumMat source_positions,
                 boundary_data(0, ti) += coeff *((3.-4.*nu)/norm_r*f(0) + r(0)*r_dot_f/r3);
                 boundary_data(1, ti) += coeff *((3.-4.*nu)/norm_r*f(1) + r(1)*r_dot_f/r3);
                 boundary_data(2, ti) += coeff *((3.-4.*nu)/norm_r*f(2) + r(2)*r_dot_f/r3);
-                //  * delta(i,j)* f(j)// source_strengths(j,si)
-                    //+ coeff * r(i)*r(j)*f(j) / r3;
-                /*for(int i = 0; i < _tdof; i++){
-                    for(int j = 0; j < _sdof; j++){
-                        boundary_data(i, ti) += coeff * (3.-4.*nu)/norm_r * delta(i,j)* f(j)// source_strengths(j,si)
-                            + coeff * r(i)*r(j)*f(j) / r3;
-                    }
-                    //boundary_data(i, ti) = 14;//+= sigma[Midx(t,s)]*n_x(s);
-                }*/
             }
         }
 
@@ -223,13 +208,11 @@ void Kernel3d::navier_neumann(DblNumMat source_positions,
                     for(int s = 0; s < _sdof; s++){
                         boundary_data(t, ti) += sigma[Midx(t,s)]*n_x(s);
                     }
-                        //boundary_data(t, ti) = 0;//+= sigma[Midx(t,s)]*n_x(s);
                 }
             }
         }
 
     }
-    //exit(0);
 }
 
 
@@ -247,7 +230,6 @@ void Kernel3d::dirichlet_bc_from_singularities(
         case MOD_HELMHOLTZ:
             assert(0);
         case STOKES:
-            // NOTE ensure \nu =.5
             temp = _coefs[1];
             _coefs[1] = .5;
             navier_dirichlet(source_positions, source_strengths, 
@@ -280,7 +262,6 @@ void Kernel3d::neumann_bc_from_singularities(
         case MOD_HELMHOLTZ:
             assert(0);
         case STOKES:
-            // NOTE ensure \nu =.5
             temp = _coefs[1];
             _coefs[1] = .5;
             navier_neumann(source_positions, source_strengths, 

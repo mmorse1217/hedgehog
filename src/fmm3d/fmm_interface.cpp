@@ -21,7 +21,6 @@ void FMM::initialize_fmm(Vec source_positions, Vec source_normals,
 
     // Gather global source points/normals and target points for all processes
 
-   // MJM NOTE probably breaks with mpi
   
   DblNumMat srcPos = get_local_vector(DIM, num_local_points(source_positions), source_positions);
   DblNumMat srcNor = get_local_vector(DIM, num_local_points(source_normals), source_normals);

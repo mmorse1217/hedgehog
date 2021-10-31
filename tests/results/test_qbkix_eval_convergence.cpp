@@ -271,42 +271,30 @@ TEST_CASE("Test evaluation convergence with qbkix", "[results][qbkix-eval]"){
             TestConfig test;
             // data generated from singularities on a sphere outside the domain
             test.bc_type = BoundaryDataType::HARMONIC;
-            //test.bc_type = BoundaryDataType::CONSTANT_DENSITY;
             test.singularity_type = SingularityType::SPHERE;
             test.sphere_radius_bc= 2;
 
             // target on a sphere in the far field
             test.target_type   = TargetType::RING;
             test.sphere_radius_targets = .5;
-            //test.target_type   = TargetType::COLLOCATION_POINTS;
 
             // Solve with GMRES using two-sided qbkix 
             test.solver_matvec_type = EvaluationType::EXTRAPOLATION_AVERAGE;
-            //test.solution_scheme = SolutionScheme::GMRES_SOLVE;
             test.solution_scheme = SolutionScheme::EXPLICIT_DENSITY;
             
             // evaluate at targets with smooth quad
             test.evaluation_scheme = EvaluationScheme::SMOOTH_QUAD;
-            //test.evaluation_scheme = EvaluationScheme::ON_QBKIX_AVERAGE;
-            //test.evaluation_scheme = EvaluationScheme::ON_QBKIX;
             
-            //string filename = to_string(num_coarse_patches)+string("_patches_abs_error_singularity_radius_")+
-                //to_string(test.sphere_radius_bc)+string(".vtp");
             string filename = string("ref_lvl_")+to_string(i);
             string full_path= output_folder + filename + string(".vtp");
 
-            /*stats._file_prefix = output_folder +to_string(num_coarse_patches)+
-                string("_patches_singularity_radius_") +
-                to_string(test.sphere_radius_bc);*/
             
             stats._file_prefix = output_folder + filename;
             test.error_filename = full_path;
 
             test.dump_values = true;
             run_test(surface.get(),test);
-            //cout << string("output/"+test_name+filename << endl;
             stats.dump_key_values("", stats._file_prefix);
-                    //to_string(num_coarse_patches)+string("_patches"));
         }
     }
 }

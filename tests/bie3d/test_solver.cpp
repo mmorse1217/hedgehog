@@ -294,9 +294,6 @@ TEST_CASE("Test solver evaluation", "[green][eval]"){
     int num_targets = Petsc::get_vec_size(targets)/DIM;
 
 
-    //VecView(singularity_positions, PETSC_VIEWER_STDOUT_SELF);
-    //cout << endl;
-    //VecView(singularity_densities, PETSC_VIEWER_STDOUT_SELF);
     Vec computed_potential = 
         greens_identity(solver->mpiComm(), 
                 single_layer_kernel,
@@ -304,7 +301,6 @@ TEST_CASE("Test solver evaluation", "[green][eval]"){
                 singularity_densities,
                 targets,
                 solver);
-    //VecView(computed_potential, PETSC_VIEWER_STDOUT_SELF);
  
     eval_time = omp_get_wtime() - eval_time;
         stats.add_result("total running time", eval_time);

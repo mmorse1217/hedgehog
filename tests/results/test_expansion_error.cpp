@@ -71,35 +71,18 @@ TEST_CASE("Test qbkix evaluation error", "[results][qbkix-error]"){
                 double singularity_dist = 1.;
                 double R_over_rho = double(dist_i)/num_iter*.25;
                 double r_over_R = double(spacing_i)/num_iter*2.;
-                //cout << "R/\\rho: " << R_over_rho << endl;
-                //cout << "r/R: " << r_over_R<< endl;
-                //double expansion_spacing = 
                 double distance_from_target = R_over_rho*singularity_dist;
                 double expansion_spacing = r_over_R*distance_from_target;
-                //double expansion_spacing = double(spacing_i)/num_iter;
-                //double distance_from_target = double(dist_i)/num_iter;
 
                 VecSet(expansion_point_spacing, expansion_spacing);
                 VecSet(expansion_distance_from_target, distance_from_target);
                 // target point at the origin
-                //VecSet(target,0.);
                 target.set_all(0.);
-
-
-
-                // artificial closet point along x axis 
-                //DblNumMat closest_point_mock_local = get_local_vector(1,3,closest_point_mock);
-                //closest_point_mock_local(0,0) = 0;
-                //closest_point_mock_local.restore_local_vector();
-
 
                 // make qbkix points
                 Vec qbkix_points =  generate_interior_qbkix_points(target.v_, 
                         closest_point_mock.v_,qbkix_points_to_generate,interp_dir,
                         expansion_distance_from_target,expansion_point_spacing);
-
-
-
 
                 // compute function values at interpolation nodes
                 Vec interp_node_values  = 
@@ -116,12 +99,7 @@ TEST_CASE("Test qbkix evaluation error", "[results][qbkix-error]"){
                 assert(int(interpolation_nodes.size()) == num_qbkix_points);
                 DblNumMat interpolated_value(1,1);
                 target.get_local(3,1);
-                //DblNumMat target_local = get_local_vector(3,1,target);
-                //DblNumMat qbkix_pts_local= get_local_vector(3,8,qbkix_points);
-                //Point3 first_pt(qbkix_pts_local.clmdata(0));
-                //Point3 t(target_local.clmdata(0));
-                //cout.precision(14);
-                //cout << distance_from_target << ", " << (first_pt - t).l2()<< endl;
+
             DblNumMat expansion_distance_from_target(1,1);
             expansion_distance_from_target(0,0) = distance_from_target;
             DblNumMat node_spacing(1,1);
@@ -137,12 +115,12 @@ TEST_CASE("Test qbkix evaluation error", "[results][qbkix-error]"){
                         &extrapolation_eval_point_qbkix,
                         interpolated_value);
 
-                //closest_point_mock_local.restore_local_vector();
-                //target_local.restore_local_vector();
+                
+               
                 target.restore_local();
                 DblNumMat true_potential_local = get_local_vector(1,1,true_potential);
                 double abs_error = fabs( interpolated_value(0,0) - true_potential_local(0,0));
-                //cout << interpolated_value << endl;
+              
                     cout << "computed: " << interpolated_value(0,0) << ", actual: " <<  true_potential_local(0,0) << endl;
                 if(abs_error > 1e12 && distance_from_target > .5){
 
@@ -157,8 +135,6 @@ TEST_CASE("Test qbkix evaluation error", "[results][qbkix-error]"){
                     cout << endl << endl;
                     exit(0);
                 }
-                //Result result = make_tuple(abs_error, distance_from_target, 
-                        //expansion_spacing, singularity_dist);
                 Result result = make_tuple(abs_error, R_over_rho, 
                         r_over_R, singularity_dist);
                 error_results.push_back(result);

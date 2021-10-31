@@ -25,9 +25,6 @@ string build_filename(int iteration, Filetype filetype, string prefix){
     std::ostringstream ss;
     ss << iteration;
 
-    //string file_name = Options::get_string_from_petsc_opts("-bd3d_meshfile");
-    //file_name.erase(file_name.begin(), file_name.begin()+10); // chop off "wrl_files/" from file name
-    //file_name.erase(file_name.end()-4, file_name.end()); // chop off ".wrl" from file name
     string file_name = Test::get_domain();
     cout << file_name << endl;
     if(prefix.empty()){
@@ -130,8 +127,6 @@ void write_general_points_to_vtk(Vec point_positions, int degrees_of_freedom,
   vector<double> points;
   vector<double> values;
 
-  // int num_values = Petsc::get_vec_size(values)/degrees_of_freedom;
-  // int num_points= Petsc::get_vec_size(points)/DIM;
   int64_t num_values;
   int64_t num_points;
   VecGetLocalSize(point_values, &num_values);
@@ -386,7 +381,6 @@ void write_face_map_patch_bounding_boxes_to_vtk(
   relative_patch_ids.reserve(num_vertices_per_face * num_faces_per_bbox * num_patches);
 
   // 3 x (4*num_patches) double array to contain patch corner locations
-  cout << "bbox ids: " << endl;
   for (int pi = 0; pi < num_patches; pi++) {
 
     auto patch = face_map->subpatch(pi);

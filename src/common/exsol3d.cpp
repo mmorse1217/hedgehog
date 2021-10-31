@@ -48,8 +48,6 @@ int Exsol3d::tdof(int qt)
 int Exsol3d::quantity(int qt, const DblNumMat& trgpos, DblNumVec& trgval)
 {
   ebiFunctionBegin;
-  //cout << "LHS: " << trgpos.n() << "*" << tdof(qt) << endl;
-  //cout << "RHS: " << trgval.m() << endl;
   if (_ct != CHS_EMPTY) { ebiAssert(trgpos.n()*tdof(qt)==trgval.m()); }
   double L = 250.0;
   if(       _et==KNL_LAP_S_U) {
@@ -69,9 +67,6 @@ int Exsol3d::quantity(int qt, const DblNumMat& trgpos, DblNumVec& trgval)
 		if(       qt==QNT_U) {
 		  for(int i=0; i<trgpos.n(); i++) {
 			 trgval(i) = 1;
-			 //double x = trgpos(0,i);		double y = trgpos(1,i);		double z = trgpos(2,i);
-			 //double r2 = x*x + y*y + z*z;
-			 //double r = sqrt(r2);
 		  }
 		} else if(qt==QNT_RHS) {
 		  for(int i=0; i<trgpos.n(); i++) {

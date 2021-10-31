@@ -776,8 +776,8 @@ TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
     surface->_coarse = true;
     surface->setFromOptions();
     surface->setup();
-    surface->refine_test();
-    //surface->refine(); //CHANGED
+    //surface->refine_test();
+    surface->refine(); //CHANGED
     //surface->resolve_rhs(&singularity_torii_exterior, 1, 1e-9 ); //CHANGED
     
     unique_ptr<SolverGMRESDoubleLayer> solver( new SolverGMRESDoubleLayer(surface.get()));
@@ -1005,6 +1005,9 @@ TEST_CASE("Dump surface mesh template: single proc torii", "[render][torii]"){
             "mpirank_"+to_string(surface->mpiRank()), 
             //"/scratch/mjm1030/mpirank2_"+to_string(surface->mpiRank()), 
             pids, surface_values);
+    write_general_points_to_vtk(target_points, 1, 
+            "mpirank_"+to_string(surface->mpiRank()), 
+         error, "data/");
     stats.add_result("num coarse patches", num_patches);
     stats.add_result("dist to boundary", Options::get_double_from_petsc_opts("-boundary_distance_ratio"));
     stats.add_result("check pt spacing", Options::get_double_from_petsc_opts("-interpolation_spacing_ratio"));

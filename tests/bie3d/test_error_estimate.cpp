@@ -77,7 +77,6 @@ double compute_integral2(PatchSurfFaceMap* face_map, Point3 target_point){
             density_local(0,i) = 1./(y-charge_location).length();
         }
     }
-    //VecSet(density, 1.);
     Vec potential;
     Petsc::create_mpi_vec(MPI_COMM_WORLD, 1, potential);
     VecSet(potential, 0.);
@@ -149,12 +148,6 @@ void test_pullback_and_pushforward(string filename, bool inside_domain, Curvatur
     // Push forward the computed pullback t.
     DblNumMat push_forward = ErrorEstimate::push_forward(pullbacks, closest_points, 
             curvature_direction, face_map.get());
-    //write_qbkix_points_to_vtk(targets_local, closest_points, 0, "output/pullback_true_targets_");
-    //write_qbkix_points_to_vtk(push_forward, closest_points, 0, "output/pullback_approx_targets_");
-
-    //write_face_map_mesh_to_vtk( face_map.get(), 0,"output/pullback_surface_", 12);
-
-
 
     // Check |targets - P(P^{-1}(t))| < \eps = 1e-7
     assert(push_forward.n() == targets_local.n());

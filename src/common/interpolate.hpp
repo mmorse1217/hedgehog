@@ -43,12 +43,6 @@ namespace Interpolate{
         DblNumMat function_values_at_nodes,
         DblNumVec evaluation_points);
 
-    /*
-    //template<typename T>
-    DblNumMat evaluate_barycentric_interpolant_1d(DblNumVec interpolation_nodes,
-            DblNumVec barycentric_weights, DblNumMat function_values_at_nodes,
-            DblNumVec evaluation_points);
-    */
     double integrate_ith_lagrange_basis_func(int i, double a, double b,int basis_degree, 
             DblNumVec interpolation_nodes, int quad_order, double jacobian);
 

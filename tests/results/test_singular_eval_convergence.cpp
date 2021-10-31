@@ -20,20 +20,6 @@ TEST_CASE("Test singular eval convergence", "[results][singular-eval]"){
     surface->setup();
     
     auto solver = setup_solver(surface.get(), SINGULAR_EVAL);
-    /*
-    test.evaluation_scheme = EvaluationScheme::SMOOTH_QUAD;
-    test.solve = false;
-    test.target_type = TargetType::GRID;
-    test.problem_type = ProblemType::CONSTANT_DENSITY;
-
-    run_test(surface.get(),test);
-    
-    //TestType test;
-    test.evaluation_scheme = EvaluationScheme::SMOOTH_QUAD;
-    test.solve = false;
-    test.target_type = TargetType::COLLOCATION_POINTS;
-    test.problem_type = ProblemType::CONSTANT_DENSITY;
-    run_test(surface.get(),test,false);*/
 
     TestConfig test;
     test.bc_type = BoundaryDataType::HARMONIC;

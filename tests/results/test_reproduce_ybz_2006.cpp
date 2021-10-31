@@ -22,8 +22,6 @@ TEST_CASE("Reproduce table 1 in Ying, Biros, Zorin 2006 paper", "[ybz][table-1]"
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/pipe.wrl"); // blob
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/pipe.wrl");
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".125");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".03125");
     Options::set_value_petsc_opts("-bis3d_spacing", ".1");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".5");
     Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
@@ -57,8 +55,8 @@ TEST_CASE("Reproduce table 1 in Ying, Biros, Zorin 2006 paper", "[ybz][table-1]"
             /*check_potential(surface, EvaluationType::EXTRAPOLATION_AVERAGE,  
                     "qbx_", output_folder, i);
             */
-            //check_potential(surface, EvaluationType::SINGULAR_EVAL,  
-             //       "singular_eval_", output_folder, i);
+            check_potential(surface, EvaluationType::SINGULAR_EVAL,  
+                    "singular_eval_", output_folder, i);
             // half the surface spacing
             double h = Options::get_double_from_petsc_opts("-bis3d_spacing");
             double h_up = Options::get_double_from_petsc_opts("-bis3d_rfdspacing");

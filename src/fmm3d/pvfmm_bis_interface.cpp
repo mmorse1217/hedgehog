@@ -48,7 +48,6 @@ class hedgehog::PvFMM::PVFMMImpl{
     periodic = false;
     dense_eval = Options::get_int_from_petsc_opts("-direct_eval");
     
-    // TODO factor this out when user specified communicators are added
     comm = MPI_COMM_WORLD;
   };
 
@@ -96,15 +95,12 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
     kernel = &ker_stokes_dl;
     break;
   case hedgehog::KNL_STK_D_P:
-    // kernel = &pvfmm::StokesKernel<double>::pressure();
     kernel = &ker_stokes_pressure_dl;
     break;
   case hedgehog::KNL_LAP_D_U:
-    // kernel = &pvfmm::LaplaceKernel<double>::potential();
     kernel = &ker_laplace_dl;
     break;
   case hedgehog::KNL_LAP_S_U:
-    // kernel = &pvfmm::LaplaceKernel<double>::potential();
     kernel = &ker_laplace_sl;
     break;
   case hedgehog::KNL_MODHEL_D_U:
@@ -130,7 +126,6 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
     kernel = &ker_navier_dl;
     POISS = navier_nu();
     SHEAR = navier_mu();
-    // kernel = &ElasticKernel<double>::Disp();
     const_cast<std::string &>(kernel->ker_name) = navier_name(false);
     // kernel->ker_poten = navier_sl;
     break;
@@ -140,7 +135,6 @@ const pvfmm::Kernel<double>* get_pvfmm_kernel(int _kernel_type,
     navier_nu(_kernel_opts.navier_nu);
     POISS = navier_nu();
     SHEAR = navier_mu();
-    // kernel = &ElasticKernel<double>::Disp();
     kernel = &ker_navier_dl;
     const_cast<std::string &>(kernel->ker_name) = navier_name(false);
     break;

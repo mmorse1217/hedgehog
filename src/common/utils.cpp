@@ -236,29 +236,11 @@ Vec Test::compute_dirichlet_boundary_data(
     DblNumMat source_positions_local = get_local_vector(DIM, num_sources, singularity_positions);
     DblNumMat singularity_densities_local =get_local_vector(target_dof, num_sources, singularity_densities); 
     DblNumMat target_positions_local = get_local_vector(DIM, num_targets, target_positions);
-    //DblNumMat target_normals_local = get_local_vector(DIM, num_targets, target_normals);
     DblNumMat boundary_data_local = get_local_vector(target_dof, num_targets, boundary_data);
     setvalue(boundary_data_local, 0.); 
     kernel.dirichlet_bc_from_singularities(source_positions_local,
             singularity_densities_local, target_positions_local, boundary_data_local);
-    /*
-    for(int ti = 0; ti < num_targets; ti++){
-        Point3 x(target_positions_local.clmdata(ti));
-        //Point3 n_y(source_normals_local.clmdata(ti));
-        for(int si = 0; si < num_sources; si++){
-            Point3 y(source_positions_local.clmdata(si));
-            Point3 r = x - y;
-            double norm_r = r.length();
-
-            // if x is close to y, return 0.
-            if(norm_r <= 1e-14)
-                norm_r = 1.;
-
-            double coeff = 1./(4*M_PI);
-            boundary_data_local(0, ti) += coeff * 1./norm_r;
-
-        }
-    }*/
+    
     boundary_data_local.restore_local_vector();
     target_positions_local.restore_local_vector();
     source_positions_local.restore_local_vector();
@@ -269,19 +251,16 @@ Vec Test::compute_neumann_boundary_data(
         MPI_Comm comm,
         hedgehog::Kernel3d kernel,
         Vec singularity_positions,
-        //Vec singularity_normals,
         Vec singularity_densities,
         Vec target_positions,
         Vec target_normals){
 
-    //assert(kernel.kernelType() == 111);
     Vec boundary_data;
     
     int source_dof = kernel.get_sdof();
     int num_sources = Petsc::get_vec_local_size(singularity_positions)/DIM;
     
     int target_dof = kernel.get_tdof();
-    //assert(target_dof == 1);
     int num_targets = Petsc::get_vec_local_size(target_positions)/DIM;
     VecCreateMPI(comm, num_targets*target_dof, PETSC_DETERMINE, &boundary_data);
 
@@ -297,27 +276,7 @@ Vec Test::compute_neumann_boundary_data(
             target_positions_local, 
             target_normals_local,
             boundary_data_local);
-    //setvalue(boundary_data_local, 0.); 
-    /*
-    for(int ti = 0; ti < num_targets; ti++){
-        Point3 x(target_positions_local.clmdata(ti));
-        Point3 n_x(target_normals_local.clmdata(ti));
-        for(int si = 0; si < num_sources; si++){
-            Point3 y(source_positions_local.clmdata(si));
-            Point3 r = x - y;
-            double norm_r = r.length();
-
-            // if x is close to y, return 0.
-            if(norm_r <= 1e-14)
-                norm_r = 1.;
-
-            double r3 = norm_r*norm_r*norm_r;
-            double r_dot_nx = dot(r, n_x);
-            double coeff = 1./(4*M_PI);
-            boundary_data_local(0, ti) += coeff * 1./r3 *r_dot_nx;
-
-        }
-    }*/
+    
     boundary_data_local.restore_local_vector();
     source_positions_local.restore_local_vector(); 
     singularity_densities_local.restore_local_vector();
@@ -374,7 +333,7 @@ Point3 Test::cartesian_to_spherical(Point3 p){
 
 double Test::associated_legendre_function(int m, int n, double x){
     assert(m <= 3 && n <=3);
-    // Sorry future me.
+    // TODO refactor into template function on m and n
     // taken from http://mathworld.wolfram.com/AssociatedLegendrePolynomial.html
     if(m == -1 && n == 1){
         return -.5*sqrt(1. - x*x);
@@ -426,7 +385,6 @@ double Test::spherical_harmonic(int m, int n, Point3 x){
     for(int i = 0; i < 2*abs(m); i++){
         factorial *= double(n + abs(m) - i);
     }
-    //factorial = sqrt(1./factorial);
 
     double coeff = sqrt((2.*n + 1.)/(4*M_PI)/factorial);
         return coeff * associated_legendre_value * cos(m*phi);

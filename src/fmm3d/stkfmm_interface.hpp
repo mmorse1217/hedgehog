@@ -19,10 +19,6 @@ namespace hedgehog {
 			int setFromOptions();
 			int setup();
 
-			/* Required evaluation function of the FMM library.
-			 * Call from inside GMRES matvec.
-			 */
-			// Note: function signature may need to change.
 			void evaluate( const Vec& srcDen, Vec& trgVal);
 			void evaluate(const DblNumVec& srcDen, DblNumVec& trgVal);
 			void interaction_matrix(DblNumMat source_positions, 
@@ -31,7 +27,6 @@ namespace hedgehog {
 
 			void set_kernel(Kernel3d& kernel);
 
-			// TODO MJM verify that thse &'s are needed
 			void set_src_positions(DblNumMat*& src_positions);
 			void set_src_normals(DblNumMat*& src_normals);
 			void set_trg_positions(DblNumMat*& trg_positions);

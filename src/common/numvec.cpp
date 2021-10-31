@@ -19,8 +19,6 @@ NumVec<double> get_local_vector(int m, Vec v){
 
 template<>
 void NumVec<double>::restore_local_vector(){
-    //double* v_ptr = _data;
-    //VecRestoreArray(_v, &v_ptr);
     VecRestoreArray(_v, &_data);
 }
 

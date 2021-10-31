@@ -33,10 +33,6 @@ TEST_CASE("Test blendsurf interpolation code", "[blendsurf][interpolate]"){
         double step = 1./double(num_samples-1);
         int num_eval= 11;
 
-         /*
-        NumMatrix interpolation_nodes=//(2,num_samples*num_samples,true, 
-            sample_2d<equispaced>(num_samples, base_domain);
-          */
         NumMatrix interpolation_nodes(2,num_samples*num_samples);
         for (int i = 0; i < num_samples; i++) {
             for (int j = 0; j < num_samples; j++) {
@@ -45,8 +41,7 @@ TEST_CASE("Test blendsurf interpolation code", "[blendsurf][interpolate]"){
                 interpolation_nodes(1,index) = double(j)*step;
             }
         } 
-        NumMatrix evaluation_points = //(2,num_eval*num_eval,true, 
-            sample_2d<equispaced>(num_eval, 
+        NumMatrix evaluation_points = sample_2d<equispaced>(num_eval, 
                     Rectangle(Interval(.3, .7),Interval(.3, .7)));
 
         NumMatrix function_values(3,num_samples*num_samples);
@@ -59,7 +54,7 @@ TEST_CASE("Test blendsurf interpolation code", "[blendsurf][interpolate]"){
                 int index = i*num_samples+j;
                 Point2 p(interpolation_nodes.clmdata(index));
                 for (int d = 0; d < 3; d++) {
-                    function_values(d,index) = p.x()*p.y();//cos(2*M_PI*p.y())*cos(2*M_PI*p.x());
+                    function_values(d,index) = p.x()*p.y();
 
                 }
 
@@ -72,7 +67,7 @@ TEST_CASE("Test blendsurf interpolation code", "[blendsurf][interpolate]"){
                 int index = i*num_eval+j;
                 Point2 p(evaluation_points.clmdata(index));
                 for (int d = 0; d < 3; d++) {
-                    true_values(d,index) = p.x()*p.y();//cos(2*M_PI*p.y())*cos(2*M_PI*p.x());
+                    true_values(d,index) = p.x()*p.y();
 
                 }
             }
@@ -93,24 +88,16 @@ TEST_CASE("Test blendsurf interpolation code", "[blendsurf][interpolate]"){
                 bary2d_2(index_xy, 3, interpolation_nodes, function_values, 
                          bary_weights.data(), p, f);
 
-               /*cout << index_xy << endl;
-               cout << p << endl;
-               cout << f << endl;*/
                 for (int d = 0; d < 3; d++) {
                 interpolated_values(d,index) = f(d);
                 }
             }
         }
-                /*cout << temp_mat<< endl;
-                cout << bary_weights<< endl;
-                cout << interpolation_nodes << endl;
-                cout << function_values<< endl;*/
         for (int i = 0; i < num_eval; i++) {
             for (int j = 0; j < num_eval; j++) {
                 int index = i*num_eval+j;
                 Point3 p_f(interpolated_values.clmdata(index));
                 Point3 f(true_values.clmdata(index));
-                //cout << p_f << ", " << f << p_f.l2()/f.l2() << endl;
                 CHECK((f-p_f).length() <= 1e-3);
             }
         }

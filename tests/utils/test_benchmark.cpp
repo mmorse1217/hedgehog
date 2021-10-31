@@ -27,10 +27,6 @@ TEST_CASE("Benchmarking ", "[bench]"){
         int num_samples = num_samples_per_dim*num_samples_per_dim; 
         double step = 1./(num_samples_per_dim-1);
         DblNumMat targets(DIM, num_samples);
-       /* 
-                targets(0, 0) = 0;
-                targets(1, 0) = 0;
-               targets(2, 0) = 0;*/ 
         for(int i = 0; i < num_samples_per_dim; i++){
             for(int j = 0; j < num_samples_per_dim; j++){
                 int index = i*num_samples_per_dim + j;

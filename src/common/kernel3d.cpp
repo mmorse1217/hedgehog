@@ -206,7 +206,7 @@ DblNumMat Kernel3d::get_identity_matrix(int n){
 }
 
 // ---------------------------------------------------------------------- 
-// MJM TODO rename soruce to target and target to source here
+// MJM TODO rename source to target and target to source here
 DblNumMat Kernel3d::get_cross_product_matrix(DblNumVec source, DblNumVec target){
     // need to be the same size
     ebiAssert(source.m() == target.m());
@@ -243,7 +243,7 @@ int Kernel3d::kernel(const DblNumMat& srcPos, const DblNumMat& srcNor, const Dbl
   ebiAssert(srcPos.n()==srcNor.n());
   ebiAssert(srcPos.n()*srcDOF == inter.n());
   if(trgPos.n()*trgDOF != inter.m()){
-  cout << "trgPos.m(): " << trgPos.n() << ", trgDOF: " << trgDOF << ", inter.m(): " << inter.m() << endl;
+      cout << "Kernel size mismatch:  trgPos.n(): " << trgPos.n() << ", trgDOF: " << trgDOF << ", inter.m(): " << inter.m() << endl;
   }
   ebiAssert(trgPos.n()*trgDOF == inter.m());
   
@@ -251,7 +251,6 @@ int Kernel3d::kernel(const DblNumMat& srcPos, const DblNumMat& srcNor, const Dbl
 	 //----------------------------------------------------------------------------------
 	 //---------------------------------
 	 /*! One over four pi */
-	 //cout << "mindif = " << _mindif << endl;
 	 double OOFP = 1.0/(4.0*M_PI);
 	 for(int i=0; i<trgPos.n(); i++) {
 		for(int j=0; j<srcPos.n(); j++) {
@@ -324,7 +323,6 @@ int Kernel3d::kernel(const DblNumMat& srcPos, const DblNumMat& srcNor, const Dbl
 	 //----------------------------------------------------------------------------------
 	 //---------------------------------
 	 /*! One over four pi */
-	 //cout << "mindif = " << _mindif << endl;
 	 ebiAssert(_coefs.size()>=1);
 	 double lambda = _coefs[1]; //std::cerr << lambda << std::endl;
 	 double OOFP = 1.0/(4.0*M_PI);

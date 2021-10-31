@@ -255,14 +255,6 @@ double Interpolate::integrate_ith_lagrange_basis_func(int i, double a, double b,
     setvalue(function_values, 0.); 
 function_values(i) = 1.*jacobian;
 
-    /*
-    DblNumVec nodes(quad_order);
-    DblNumVec quad_weights(quad_order);
-    clenshaw_curtis_compute(quad_order, nodes, quad_weights);
-    rescale(a, b, quad_order, nodes, quad_weights);
-    */
-
-    //assert(0); // TODO BUG chebyshev quad weights are wrong!!!!
     DblNumVec cheb_coefficients = 
         compute_chebyshev_coefficients(a, b, interpolation_nodes, function_values);
     
@@ -275,25 +267,6 @@ function_values(i) = 1.*jacobian;
         }
     }
     
-/*
-    // Compute barycentric interpolation weights
-    DblNumVec weights= compute_barycentric_weights_1d(interpolation_nodes);
-    DblNumVec integration_node_values = evaluate_barycentric_interpolant_1d(
-            interpolation_nodes, 
-            weights, 
-            function_values, 
-            nodes);
-    // Trapezoidal rule
-
-    // Form chebyshev Vandermonde matrix to form coefficients of the basis
-    // function
-    
-    double integral = 0;
-    for(int k = 0; k < quad_order; k++){
-        //cout << "(node, weight) " << k << ": " << nodes(k) << ", " << quad_weights(k) << endl;
-        integral += integration_node_values(k)*quad_weights(k);
-    }*/
-
     double exact_integral = dot(cheb_weights, cheb_coefficients);
     return exact_integral;
 }
@@ -325,7 +298,7 @@ void Interpolate::evaluate_barycentric_interpolant_2d(
     }
 
 
-    // TODO implement 2d barycentric interpolation
+    // TODO cache barycentric weights properly
 
     // O(n^2) precomputation of weights; we assume that the x and y
     // interpolation nodes are the same.

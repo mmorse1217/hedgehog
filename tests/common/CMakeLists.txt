@@ -4,7 +4,6 @@ set(Hedgehog_test_common_src
      test_fft_refinement.cpp
      test_utils.cpp
      test_interpolate.cpp
-     test_write_latex.cpp
 )
 PREPEND(Hedgehog_test_common_src)
 

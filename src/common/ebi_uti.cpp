@@ -9,93 +9,44 @@ using std::ostringstream;
 using std::endl;
 
 #define MAXSTRLEN 10000
+// MJM All error estimates here are buggy and inaccurate
 double error_estimate(int n, double target_accuracy){
     double temp= 1.;
     return -1./(2*n)*log(target_accuracy)*temp;
 }
 double working_error_estimate(int q, double delta, double phi, double max_jacobian){
-    //double phi = 1.;
-    //double max_jacobian = 2.;
-    //double r= dist_to_patch; // TODO fix
-    //double delta = max_jacobian*r; // TODO fix
-    //double delta = dist_to_patch; // TODO fix
     double r = 1./(max_jacobian)*delta;
     double temp = 1./log(q);
     if(max_jacobian > 1.)
         temp *= pow(max_jacobian,3);
     else
         temp *= 1./pow(max_jacobian,3);
-    //temp *= 3;
-    //return .5*phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-2*q*r);
     return phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-4*q*r)*temp; // works for flat patch and both sides of curved patch
-    //return phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-4*q*r)*temp*1./(pow(max_jacobian,3)); 
 }
 double error_constant(int q, double phi, double max_jacobian){
-    //double temp = 1./log(q)*(4*M_PI*M_PI);
     double temp = 1./log(q);
     double fudge_factor= 2*100.;
     temp *= fudge_factor;
-    //if(max_jacobian > 1.)
-        //temp *= pow(max_jacobian,2);
-    //else
-        //temp *= 1./pow(max_jacobian,2);
     return phi*sqrt(M_PI)/tgamma(4)*2*q*temp*(max_jacobian);
 
 }
 double error_estimate2(int q, double delta, double phi, double max_jacobian){
-    //double phi = 1.;
-    //double max_jacobian = 2.;
-    //double r= dist_to_patch; // TODO fix
-    //double delta = max_jacobian*r; // TODO fix
-    //double delta = dist_to_patch; // TODO fix
-    //temp *= 3;
-    //return .5*phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-2*q*r);
     
     double r = delta/(max_jacobian);
     double constant = error_constant(q,phi,max_jacobian);
     return constant*delta*exp(-4*q*r); // works for flat patch and both sides of curved patch
-    //return phi*max_jacobian*sqrt(M_PI)/tgamma(4)*sqrt(2*q*2*q)*delta*exp(-4*q*r)*temp*1./(pow(max_jacobian,3)); 
 }
 double error_estimate3(int q, double delta, double phi, double max_jacobian){
     delta = fabs(delta);
-    cout << "jac:" <<  max_jacobian << endl;
-    //double r = 2*delta/max_jacobian;
-    //return 16./(4*M_PI*tgamma(3.5)*pow(r, 4))*r*sqrt((M_PI*r))*exp(-r*(q-1));//*1./pow(max_jacobian,3);
-    // vaguely working
     double r = 4*delta/max_jacobian;
     return 16./(4*M_PI*tgamma(3.5)*pow(r, 4))*r*sqrt((M_PI*r))*exp(-r*(q-1));//*1./pow(max_jacobian,3);
-    
-    
-    //return 8./(tgamma(3.5)*pow(2*2*delta, 3.5))*delta*1./(2*q)*exp(-2*r*q)*max_jacobian;//*1./pow(max_jacobian,3);
-    //return 8./(tgamma(3.5)*pow(2*2*delta, 3.5))*(delta/(2.*q))*exp(-2*r*q)*max_jacobian;//*1./pow(max_jacobian,3);
 }
 double error_estimate_fit(double q, double delta, double phi, double max_jacobian){
     
     double H = max_jacobian;
-    //vector<double> c = {  -0.7194,  -0.6945,  0.0071};
-    //vector<double> c = {-0.82207252,0.21929627,-0.51105122,0.08497819,0.00208908,0.08778897  };
-     //double s =  -0.81417011 ;
-    /*vector<double> c = { 0.07562064, -0.04479058, 0.00443401, 0.02537857, 
-        0.88204874, -0.04963572, 0.45872447, -0.02664137};
-    double s = 0.117006644786;
-    vector<double> values = { 
-        H, H*H*H, q*delta, log10(q), log10(q)*H*H, log10(delta), log10(delta)*H*H
-    };*/
-   //vector<double> c = { -0.06206106,-0.03847751,-0.82671431,0.55786321  };
-    ////double s =  0.64899458 ;
-    //vector<double> c = { 0.43882073,0.89574204,-0.07052429,0.01043488  };
-     //double s =  0.30365267 ;
-     //vector<double> c = { -0.43954992,-0.89789702,0.02052794,0.01246691  };
-      //double s =  -0.30196938 ;
-      //vector<double> c = { 0.43669588,0.89421950,-0.02620255,0.09271910,0.01956943,-0.00135144  };
-       //double s =  0.37761694 ;
-       //vector<double> c = { 0.45774468,0.88653077,0.02107063,0.04271104,0.04756030,-0.00167631  };
-        //double s =  0.15809456 ;
         vector<double> c = { 0.45805428,0.88738207,0.02135794,0.04775302,-0.00168032  };
         double s =  0.13446854 ;
     vector<double> values = { 
-        //sqrt(q*delta), q, log(delta), log10(q), sqrt(q*delta)*H*H
-        //q*delta, log10(q), log10(delta), delta*H,q*H
         q*delta, log10(q), delta*H,q*H
     };
     double error_exponent = 0.;
@@ -121,28 +72,22 @@ double near_zone_approx_size_fit(int q, double phi, double max_jacobian,
     double kappa= c[4];
 
     double H = max_jacobian;
-    //cout << 1./(beta*q + eta*H) <<", " << alpha*log10(target_accuracy)  << ", " <<  lambda*log10(q) << ", " <<  kappa*q*H << endl;
     return -1./(beta*q + eta*H)*(alpha*log10(target_accuracy) - lambda*log10(q) - kappa*q*H);
 
 }
 bool is_quad_accurate_at_target_fit(int q, double delta, double phi, 
         double max_jacobian, double target_accuracy){
-    //double constant = error_constant(q, phi, max_jacobian);
     return error_estimate_fit(q,delta, phi, max_jacobian) < target_accuracy;
-    //return delta > near_zone_approx_size(q, phi, max_jacobian, target_accuracy);
 }
 
 double near_zone_approx_size(int q, double phi, double max_jacobian,
         double target_accuracy){
     double constant = error_constant(q, phi, max_jacobian);
-    //return -max_jacobian*q/4.*log(constant*target_accuracy*1e4);
     return max_jacobian/(q*4.)*log(constant/target_accuracy);
 }
 bool is_quad_accurate_at_target(int q, double delta, double phi, 
         double max_jacobian, double target_accuracy){
-    //double constant = error_constant(q, phi, max_jacobian);
     return error_estimate2(q,delta, phi, max_jacobian) < target_accuracy;
-    //return delta > near_zone_approx_size(q, phi, max_jacobian, target_accuracy);
 }
 
 
@@ -160,7 +105,7 @@ int radmult_spacing(const double spc, double& rad)
   rad = constant/sqrt(spc);
   //rad = 1.3/sqrt(spc);
   //rad = 1.6/sqrt(spc);
-    // MJM TODO REMOVE!!!!!!!!!!!
+    // MJM Legacy options setting for original radmult parameter.
   /*
   if (spc <= 0.2) { rad = 4; }
   if (spc <= 0.1) { rad = 7; }
@@ -194,6 +139,7 @@ int radmult_spacing(const double spc, double& rad)
 #undef __FUNCT__
 #define __FUNCT__ "bis3dspacing2bdsurfspacing"
 int bis3dspacing2bdsurfspacing(const double bisspac, double& bdspac){
+    // MJM Legacy options setting for original bis3dspacing parameter.
   ebiFunctionBegin;
   if (bisspac <= 0.2) { bdspac = 0.032; }
   if (bisspac <= 0.1) { bdspac = 0.016; }

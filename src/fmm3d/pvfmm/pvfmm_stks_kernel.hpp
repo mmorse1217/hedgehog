@@ -119,8 +119,6 @@ void stokes_dl(T* r_src, int src_cnt, T* v_src, int dof, T* r_trg, int trg_cnt, 
           T invR3=invR2*invR;
           T invR5=invR2*invR3;
 
-          //T* f=&v_src[(s*dof+i)*6+0];
-          //T* n=&v_src[(s*dof+i)*6+3];
           T* n=&v_src[(s*dof+i)*6+0];
           T* f=&v_src[(s*dof+i)*6+3];
 
@@ -200,8 +198,6 @@ void stokes_press_dl(T* r_src, int src_cnt, T* v_src_, int dof, T* r_trg, int tr
           T invR3=invR2*invR;
           T invR5=invR2*invR3;
 
-          //T* f = &v_src_[6*s + 0];
-          //T* n = &v_src_[6*s + 3];
           T* f = &v_src_[6*s + 3];
           T* n = &v_src_[6*s + 0];
 

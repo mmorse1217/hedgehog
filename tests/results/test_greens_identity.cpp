@@ -52,133 +52,13 @@ void test_greens_identity(PatchSurfFaceMap* surface, string output_folder, int i
 }
 
 void greens_identity_base_options(){
-    /*
-    Options::set_value_petsc_opts("-near_interpolation_num_samples", "8");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".075");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".06");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".075");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".075");
-    Options::set_value_petsc_opts("-upsampling_type", "uniform");
-    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "1");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".115");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".115");
-    // one level of upsampling, good  convergence rates on cube and torus
-    Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".090909090909");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".090909090909");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".058823");
-    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".058823");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
-    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
-    Options::set_value_petsc_opts("-bis3d_np", "12");
-    Options::set_value_petsc_opts("-dump_qbkix_points", "1");
-    Options::set_value_petsc_opts("-dom", "0");
-    Options::set_value_petsc_opts("-bdtype", "2");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "1000");
-    Options::set_value_petsc_opts("-bdsurf_interpolate", "0");
-
-    // DEBUG ONLY
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".016");
-    
-    // decent 
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".085");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".017");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".075");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".015");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".11");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".022");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".08");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".055");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".008125");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0125");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".065");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".02");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0125");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
-    //Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "2");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".047619");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".047619");
-    //Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "2");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".037037");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".06");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".01");
-    //Options::set_value_petsc_opts("-near_interpolation_num_samples", "10");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".015");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0039");
-    
-    // 8 digits!
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".033333");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0075");
-    
-    // last options
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".02941");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-    // 1e-1, 1e-2 4e-4
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".04");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".04");
+        
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".05");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "8000");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
-
-    Options::set_value_petsc_opts("-upsampling_type", "uniform");
-    //Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".043748");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".0333");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".06666");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-    
-    
-    // Holy magic 
-    Options::set_value_petsc_opts("-bis3d_ptsmax", "8000");
-    Options::set_value_petsc_opts("-bis3d_np", "16");
-    Options::set_value_petsc_opts("-bis3d_spacing", "0.0454545");
-    //Options::set_value_petsc_opts("-bis3d_spacing", "0.09090909");
-    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "2");
-    //Options::set_value_petsc_opts("-bis3d_spacing", "0.0588");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".066");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0111");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".02");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00333");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".015");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0025");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-*/    
-    Options::set_value_petsc_opts("-near_interpolation_num_samples", "6");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".045");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".045");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".006666");
     Options::set_value_petsc_opts("-upsampling_type", "uniform");
     Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "2");
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
-    //Options::set_value_petsc_opts("-bis3d_spacing", "0.14285");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", "0.14285");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".090909");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".090909");
     Options::set_value_petsc_opts("-bis3d_spacing", ".071428");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".071428");
     Options::set_value_petsc_opts("-dump_qbkix_points", "1");
@@ -191,24 +71,8 @@ void greens_identity_base_options(){
     Options::set_value_petsc_opts("-bis3d_spacing", "0.05");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".0475");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".00225");
-    // best for newtorus
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".0475");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".002");
-    // best for cube
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".004");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0013");
-    // Current best
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".03");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".005");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".0025");
-    /*
-    Options::set_value_petsc_opts("-uniform_upsampling_num_levels", "3");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".06666");
-    Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".006667");
-    */
 }
 
 void setup_and_run_greens_identity_test(
@@ -380,15 +244,11 @@ void test_greens_identity_mpi(PatchSurfFaceMap* surface, string output_folder, i
     // Singularity configuration defining boundary condition; sphere radius 2 of
     // point charges
     test.bc_type = BoundaryDataType::HARMONIC;
-    /*test.singularity_type= SingularityType::SINGLE;
-        test.single_singularity_location = Point3(2.,2.,2.);*/
     test.singularity_type= SingularityType::SPHERE;
     test.sphere_radius_bc = 1.;
 
     // Evaluate solution at the collocation points
     test.target_type   = TargetType::COLLOCATION_POINTS;
-    //test.target_type   = TargetType::RING;
-    //test.sphere_radius_targets= .5;
     // ... via Green's Identity
     test.evaluation_scheme = EvaluationScheme::GREENS_IDENTITY;
     // no solve step need
@@ -421,30 +281,11 @@ void test_greens_identity_mpi(PatchSurfFaceMap* surface, string output_folder, i
 
 void greens_identity_base_options_mpi(){
     Options::set_value_petsc_opts("-near_interpolation_num_samples", "8");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".04");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".04");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".075");
     Options::set_value_petsc_opts("-boundary_distance_ratio", ".06");
     Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".075");
     Options::set_value_petsc_opts("-upsampling_type", "uniform");
     Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "1");
-    //Options::set_value_petsc_opts("-boundary_distance_ratio", ".115");
-    //Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".115");
-    // one level of upsampling, good  convergence rates on cube and torus
-    /*Options::set_value_petsc_opts("-boundary_distance_ratio", ".135");
-    Options::set_value_petsc_opts("-interpolation_spacing_ratio", ".135");
-    Options::set_value_petsc_opts("-upsampling_type", "uniform");
-    Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "1");
-    Options::set_value_petsc_opts("-bis3d_spacing", ".125");
-    Options::set_value_petsc_opts("-bis3d_rfdspacing", ".125");
-    */
     Options::set_value_petsc_opts("-qbkix_convergence_type","classic");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".090909090909");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".090909090909");
-    //Options::set_value_petsc_opts("-bis3d_spacing", ".1");
-    //Options::set_value_petsc_opts("-bis3d_rfdspacing", ".1");
     Options::set_value_petsc_opts("-bis3d_spacing", ".058823");
     Options::set_value_petsc_opts("-bis3d_rfdspacing", ".058823");
     Options::set_value_petsc_opts("-bis3d_np", "16");

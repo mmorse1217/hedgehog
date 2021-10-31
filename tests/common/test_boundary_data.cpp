@@ -22,20 +22,12 @@ TEST_CASE("Navier Neumman condition", "[boundary-data][neumann][navier]"){
     Options::set_value_petsc_opts("-bdtype", "2"); // blended surface
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // blob
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
-        //Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/newtorus.wrl");
-        //Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/newtorus.wrl");
-        //Options::set_value_petsc_opts("-poly_coeffs_file", "wrl_files/poly/explicit_torus_patches.poly");
-        //Options::set_value_petsc_opts("-bd3d_facemap_patch_order", "3");
-    //Options::set_value_petsc_opts("-bis3d_spacing", "0.0078125");
     Options::set_value_petsc_opts("-bis3d_spacing", ".01");
     Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "1");
     Options::set_value_petsc_opts("-LL", "4");
     Options::set_value_petsc_opts("-dnref", "10");
-        //Options::set_value_petsc_opts("-upsampling_type", "uniform");
-        //Options::set_value_petsc_opts( "-uniform_upsampling_num_levels", "3");
 
-    // it's worth noting here that interpolating the blended surface messes up
-    // convergence; bottoms out at 1e-8
+    // interpolating the blended surface messes up convergence; bottoms out at 1e-8
     Options::set_value_petsc_opts("-bdsurf_interpolate", "0"); 
 
     Options::set_value_petsc_opts("-bis3d_np", "10");
@@ -44,12 +36,6 @@ TEST_CASE("Navier Neumman condition", "[boundary-data][neumann][navier]"){
     Kernel3d kernel(511, equation_coefficients);
 
     // Set up and sample a surface 
-        /*unique_ptr<PatchSurfFaceMap> surface(new PatchSurfFaceMap("BD3D_", "bd3d_"));
-        surface->_surface_type = PatchSurfFaceMap::POLYNOMIAL;
-        surface->_coarse = true;
-        surface->setFromOptions();
-        surface->setup();
-        surface->refine_test();*/
     unique_ptr<PatchSurfBlended> surface(new PatchSurfBlended("BD3D_", "bd3d_"));
     surface->setFromOptions();
     surface->setup();

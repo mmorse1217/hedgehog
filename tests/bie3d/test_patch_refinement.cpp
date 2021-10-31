@@ -591,20 +591,7 @@ TEST_CASE("right hand side refinement", "[geom][refine-rhs][cube]"){
         vector<int> partition(refined_face_map->patches().size(), 0);
         test_samples->patch_partition() = partition;
         test_samples->setup();
-        /*
-        DblNumMat sample_points_pos(DIM, test_samples->sample_point_3d_position());
-        Point3 center(0.);
-        for (int i = 0; i < sample_points_pos.n(); i++) {
-            Point3 p(sample_points_pos.clmdata(i));
-            center += p;
-        }
-        center.x()/= sample_points_pos.n();
-        center.y()/= sample_points_pos.n();
-        center.z()/= sample_points_pos.n();
-        cout << "CENTER OF CUBE: " << center << endl;
-        cout << "CENTER OF CUBE: " << center << endl;
-        */
-        
+                
         
         
         Vec func_values;

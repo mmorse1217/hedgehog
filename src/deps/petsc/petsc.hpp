@@ -26,13 +26,6 @@ class PetscContext
                   std::string filename,
                   std::string help )
     {
-        /*int ac = argc;
-        char** av = new char* [static_cast<size_t>( argc ) + 1];
-        for ( int i = 0; i < argc; i++ ) {
-            av[i] = new char[strlen( argv[i] ) + 1];
-            std::copy( argv[i], argv[i] + strlen( argv[i] ) + 1, av[i] );
-        }
-        av[ac] = NULL;*/
         PetscInitialize( &argc, &argv, filename.c_str(), help.c_str() );
         comm_ = PETSC_COMM_WORLD;
     }

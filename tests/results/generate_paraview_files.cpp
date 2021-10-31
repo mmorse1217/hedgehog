@@ -116,8 +116,6 @@ TEST_CASE("Generate data for qbkix schematic", "[results][images][schematic]"){
     VecDestroy(&closest_point);
     cout << "check" << endl;
     write_general_points_to_vtk(check_points, 1, "cube_schematic_check_point_values.vtp", check_point_value, prefix);
-    /*write_general_points_to_vtk(samples_fine->sample_point_3d_position(),
-            1, "cube_upsampled_sample_values.vtp", values, prefix);*/
     
     // upsampled patches
     write_face_map_patches_to_vtk(DblNumMat(0,0), vector<int>(face_map->num_patches(),0),
@@ -138,7 +136,6 @@ TEST_CASE("Generate data for qbkix schematic", "[results][images][schematic]"){
 }
 
 TEST_CASE("Generate data for patch coefficients", "[results][images][patch-coeffs]"){
-    //Options::set_value_petsc_opts("-dump_qbkix_points", "1");
     Options::set_value_petsc_opts("-bd3d_filename", "wrl_files/cube.wrl"); // blob
     Options::set_value_petsc_opts("-bd3d_meshfile", "wrl_files/cube.wrl");
     Options::set_value_petsc_opts("-bd3d_bdsurf_chttyp", "2");

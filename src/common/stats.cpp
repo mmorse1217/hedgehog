@@ -77,7 +77,7 @@ void SystemStats::store_relative_error(Vec true_potential, Vec computed_potentia
     VecDuplicate(true_potential, &difference);
     VecCopy(true_potential, difference); //difference = true_potential
     
-    const double minus_one = -1.; // TODO move to EbiGlobals this is annoying
+    const double minus_one = -1.; // TODO move to EbiGlobals 
     VecAXPY(difference, minus_one, computed_potential); //difference = true_potential - computed_potential
 
     VecNorm(difference, norm_type, &true_minus_computed_norm);
@@ -189,20 +189,7 @@ void SystemStats::dump(){
     s << endl;
 
     ofstream results;
-    ofstream lock;
-
-    // Try to open the lock file
-    // Got nervous about concurrent writes, so made each job write out resutls
-    // separately.
-    /*
-    lock.open("../results/results.lock",ios::out);
-    while(lock.fail()){
-        lock.open("../results/results.lock",ios::out);
-    }
-    cout << "opened lock" << endl;
-
-    lock << "open";
-    */
+    
     char outfile[100];
     PetscBool flg = PETSC_FALSE;
     PetscOptionsGetString(NULL, "", "-results", outfile, 100, &flg);
@@ -210,7 +197,6 @@ void SystemStats::dump(){
 
     string output_file(outfile);
     output_file = "../results/"+output_file;
-    //results.open("../results/results.csv", std::ios_base::app);
     if(this->append){ // add a line to the results file
         results.open(output_file.c_str(), std::ios_base::app);
     } else {  // overwrite final contents
@@ -219,15 +205,9 @@ void SystemStats::dump(){
     cout << "wrote result" << endl;
     results << s.str();
     results.close();
-    //lock.close();
-    //cout << "deleting lock" << endl;
-    //remove("../results/results.lock");
 }
 
 void SystemStats::dump_key_values(string test_name, string filename, string ext){
-    //string make_test_dir = string("mkdir ${MOBO_DIR}/output/")+test_name;
-    //cout << make_test_dir << endl;
-    //system(make_test_dir.c_str());
     ostringstream s;
     time_t t = time(0);
     struct tm* datetime = localtime(&t);
@@ -238,7 +218,6 @@ void SystemStats::dump_key_values(string test_name, string filename, string ext)
             "-" << datetime->tm_min <<
             "-" << datetime->tm_sec;
     string timestamp = s.str();
-    //filename += timestamp;
     filename += ext;
     s.str("");
     s << "{ " << endl;

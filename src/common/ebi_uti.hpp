@@ -49,54 +49,12 @@ bool is_quad_accurate_at_target_fit(int q, double delta, double phi,
 
 bool AE2C(double A, double B, int maxUlps=1);
 
-//typedef pair<int,int> intpair;//inline DimType min(DimType a, DimType b) { return DimType(a&b); }
 // ---------------------------------------------------------------------- 
 inline int pow2(int l) { if(l >=0) { return (1<<l); } else { return (int)(pow(2.0,(double)(l))); } }
 // ---------------------------------------------------------------------- 
 int file2string(MPI_Comm comm, const char* infile, string& str);
 int string2file(MPI_Comm comm, string& str, const char* outfile);
 
-// ---------------------------------------------------------------------- 
-//template <class F> inline int round(F f)  { return int(floor(f+0.5)); }
-//template <class F> inline F abs(F f )     { return (f>F(0)) ? f : -f ; }
-//template <class F> inline F min(F a, F b) { return (a<b) ? a: b; }
-//template <class F> inline F max(F a, F b) { return (a>b) ? a: b; }
-
-
-/***********************************************************************************************/
-/***********************************************************************************************/
-
-/*
-#undef __FUNCT__
-#define __FUNCT__ "ebiMatlabSaveVec"
-inline ebiEC ebiMatlabSaveVec(Vec v, const char *filename)
-{
-  ebiFunctionBegin;
-  PetscViewer viewer;
-  MPI_Comm comm;
-  iC( PetscObjectGetComm( (PetscObject)v, &comm));
-  iC( PetscViewerASCIIOpen( comm, filename, &viewer));
-  iC( PetscViewerSetFormat( viewer, PETSC_VIEWER_ASCII_MATLAB));
-  iC( VecView(v, viewer));
-  iC( PetscViewerDestroy(&viewer));
-  ebiFunctionReturn(0);
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "ebiBinarySaveVec"
-inline ebiEC ebiBinarySaveVec(Vec v, const char *filename)
-{
-  ebiFunctionBegin;
-  PetscViewer viewer;
-  MPI_Comm comm;
-  iC( PetscObjectGetComm( (PetscObject)v, &comm));
-  //  iC( PetscViewerBinaryOpen( comm, filename, PETSC_BINARY_CREATE,&viewer));
-  iC( PetscViewerBinaryOpen( comm, filename, PETSC_FILE_CREATE,&viewer));
-  iC( VecView(v, viewer));
-  iC( PetscViewerDestroy(&viewer));
-  ebiFunctionReturn(0);
-}
-*/
 
 END_EBI_NAMESPACE
 

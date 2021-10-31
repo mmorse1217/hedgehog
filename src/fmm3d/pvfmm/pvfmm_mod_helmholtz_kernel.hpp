@@ -1,6 +1,3 @@
-//#include <mpi.h>
-//#include <omp.h>
-//#include <iostream>
 #include <pvfmm.hpp>
 #include <math_utils.hpp>
 

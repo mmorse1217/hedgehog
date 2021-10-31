@@ -80,12 +80,9 @@ TEST_CASE("Interpolation point generation", "[eval-near]"){
             cout << "[ ";
         for(int i = 0; i < L; i++){
                 Point3 xi = (target + L/2*h*direction ) - direction*h*interpolation_nodes[i];
-                //cout << "i: " << i << endl;
                 cout << "[ ";
                 for(int d= 0; d < DIM; d++){
-                    //cout << xi(d) << ", " ;
                     cout << interpolation_points_local(d,i) << ", " ;
-                    //cout <<  interpolation_points_local(d,i) << endl;
                     CHECK( (xi(d) == Approx(interpolation_points_local(d,i)) ) );
                 }
                 cout  << " ]" << endl;
@@ -93,8 +90,6 @@ TEST_CASE("Interpolation point generation", "[eval-near]"){
         cout << "]" << endl;
         VecRestoreArray(target_point, &target_point_ptr);
         VecRestoreArray(interpolation_direction, &interpolation_direction_ptr);
-        //cout << interpolation_points_local << endl;
-        //interpolation_points_local.restore_local_vector();
 
 
     }

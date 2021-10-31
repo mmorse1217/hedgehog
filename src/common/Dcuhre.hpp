@@ -32,7 +32,6 @@ private:
   long _neval;     /* Number of function evaluations used */
   long _ifail;     /* Exit condition indicator */
   double *_work;    /* Work array */
-  /* End of Gaussian Quadrature junk */
 
   int _kt;
   int _nk;
