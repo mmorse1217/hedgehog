@@ -1040,7 +1040,6 @@ p4est_t* p4est = face_map->_p4est;
     }*/
 
 
-:sa
     stats.print_results();
     stats.clear();
 }
